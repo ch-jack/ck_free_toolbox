@@ -130,14 +130,27 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $archive = Get-ChildItem -LiteralPath .\dist -Filter *.zip -File | Select-Object -First 1
+          $assetName = "CK-Free-Toolbox-$($env:GITHUB_REF_NAME).zip"
+          $releaseArchive = Join-Path $archive.DirectoryName $assetName
+          Copy-Item -LiteralPath $archive.FullName -Destination $releaseArchive -Force
+
           $ErrorActionPreference = 'SilentlyContinue'
           gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
           $releaseExists = ($LASTEXITCODE -eq 0)
           $ErrorActionPreference = 'Stop'
           if ($releaseExists) {
-            gh release upload $env:GITHUB_REF_NAME $archive.FullName --clobber --repo $env:GITHUB_REPOSITORY
+            $existingAssets = @(gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name')
+            foreach ($existingAsset in $existingAssets) {
+              if (-not [string]::IsNullOrWhiteSpace($existingAsset)) {
+                gh release delete-asset $env:GITHUB_REF_NAME $existingAsset --yes --repo $env:GITHUB_REPOSITORY
+                if ($LASTEXITCODE -ne 0) {
+                  throw "Failed to remove existing release asset: $existingAsset"
+                }
+              }
+            }
+            gh release upload $env:GITHUB_REF_NAME $releaseArchive --clobber --repo $env:GITHUB_REPOSITORY
           } else {
-            gh release create $env:GITHUB_REF_NAME $archive.FullName --generate-notes --verify-tag --repo $env:GITHUB_REPOSITORY
+            gh release create $env:GITHUB_REF_NAME $releaseArchive --generate-notes --verify-tag --repo $env:GITHUB_REPOSITORY
           }
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release command exited with code $LASTEXITCODE"
