@@ -1,0 +1,10 @@
+/dist/
+/CK免费工具箱.exe
+/TestVeh/
+/.ck-component-backups/
+/*.log
+/.vs/
+/.vscode/
+/.idea/
+Thumbs.db
+Desktop.ini

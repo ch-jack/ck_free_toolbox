@@ -1,0 +1,139 @@
+name: Build and release
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Windows package
+    runs-on: windows-2022
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout toolbox
+        uses: actions/checkout@v4
+
+      - name: Validate PowerShell syntax
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $errors = @()
+          $files = Get-ChildItem -Recurse -File -Include *.ps1,*.psm1 |
+            Where-Object { $_.FullName -notmatch '[\\/]dist[\\/]' }
+          foreach ($file in $files) {
+            $tokens = $null
+            $parseErrors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              $file.FullName,
+              [ref]$tokens,
+              [ref]$parseErrors
+            )
+            if ($parseErrors.Count) {
+              $errors += $parseErrors | ForEach-Object { "$($file.FullName): $($_.Message)" }
+            }
+          }
+          if ($errors.Count) {
+            throw ($errors -join [Environment]::NewLine)
+          }
+          Write-Host "PowerShell syntax passed: $($files.Count) files"
+
+      - name: Build lightweight client
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePackage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Release builder exited with code $LASTEXITCODE"
+          }
+
+      - name: Verify release package
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archives = @(Get-ChildItem -LiteralPath .\dist -Filter *.zip -File)
+          if ($archives.Count -ne 1) {
+            throw "Expected one release ZIP, found $($archives.Count)."
+          }
+          $packages = @(Get-ChildItem -LiteralPath .\dist -Directory)
+          if ($packages.Count -ne 1) {
+            throw "Expected one release directory, found $($packages.Count)."
+          }
+          $package = $packages[0].FullName
+          $required = @(
+            'CK免费工具箱.exe',
+            'CKFreeToolbox.ps1',
+            'app\config\tools.json',
+            'app\workers\ComponentWorker.ps1',
+            'app\pages\ModelRenderPage.ps1',
+            'app\pages\NuiWallfixPage.ps1',
+            'package-manifest.json'
+          )
+          foreach ($relativePath in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $package $relativePath) -PathType Leaf)) {
+              throw "Missing release file: $relativePath"
+            }
+          }
+          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix')) {
+            if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
+              throw "Runtime component must not be bundled: $componentDirectory"
+            }
+          }
+          $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
+            Where-Object { $_.Name -ieq 'blender.exe' }
+          if ($forbidden -or (Test-Path -LiteralPath (Join-Path $package 'runtime\blender'))) {
+            throw 'Blender must not be bundled in the release.'
+          }
+          Write-Host "Release ZIP: $($archives[0].Name)"
+          Write-Host "SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $archives[0].FullName).Hash)"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: CK-Free-Toolbox-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Check release tag version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
+          $manifestPath = Get-ChildItem -LiteralPath .\dist -Directory |
+            ForEach-Object { Join-Path $_.FullName 'package-manifest.json' } |
+            Select-Object -First 1
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ([string]$manifest.version -ne $tagVersion) {
+            throw "Tag version $tagVersion does not match package version $($manifest.version)."
+          }
+
+      - name: Publish GitHub release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Get-ChildItem -LiteralPath .\dist -Filter *.zip -File | Select-Object -First 1
+          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
+          if ($LASTEXITCODE -eq 0) {
+            gh release upload $env:GITHUB_REF_NAME $archive.FullName --clobber --repo $env:GITHUB_REPOSITORY
+          } else {
+            gh release create $env:GITHUB_REF_NAME $archive.FullName --generate-notes --verify-tag --repo $env:GITHUB_REPOSITORY
+          }
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub release command exited with code $LASTEXITCODE"
+          }

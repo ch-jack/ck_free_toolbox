@@ -1,0 +1,46 @@
+﻿[
+    {
+        "id": "model-render",
+        "title": "模型自动截图",
+        "icon": "▧",
+        "page": "ModelRenderPage.ps1",
+        "factory": "New-CkModelRenderPage",
+        "sourceUrl": "https://github.com/ch-jack/vehicle_renderer",
+        "component": {
+            "repo": "ch-jack/vehicle_renderer",
+            "branch": "main",
+            "installDir": "vehicle_renderer",
+            "bootstrap": "vehicle-renderer",
+            "sollumzAssetUrl": "https://github.com/Sollumz/Sollumz/releases/download/v2.8.3/Sollumz.zip",
+            "requiredFiles": [
+                "render_all_vehicles.py",
+                "blender_render_vehicle.py",
+                "Sollumz/__init__.py",
+                "tools/7z.exe",
+                "tools/RpfTools.exe",
+                "tools/YtdTools.exe"
+            ]
+        },
+        "default": true
+    },
+    {
+        "id": "nui-wallfix",
+        "title": "NUI 自动去墙",
+        "icon": "▥",
+        "page": "NuiWallfixPage.ps1",
+        "factory": "New-CkNuiWallfixPage",
+        "sourceUrl": "https://github.com/ch-jack/nui-wallfix",
+        "component": {
+            "repo": "ch-jack/nui-wallfix",
+            "branch": "main",
+            "installDir": "nui-wallfix",
+            "bootstrap": "",
+            "requiredFiles": [
+                "nui-wallfix.py",
+                "providers.json",
+                "nuiwallfix/runtime_v11.py"
+            ]
+        },
+        "default": false
+    }
+]
