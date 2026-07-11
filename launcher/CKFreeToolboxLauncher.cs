@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Management.Automation;
@@ -13,8 +13,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("CK")]
 [assembly: AssemblyProduct("CK免费工具箱")]
 [assembly: AssemblyCopyright("Copyright (c) CK")]
-[assembly: AssemblyVersion("1.0.1.0")]
-[assembly: AssemblyFileVersion("1.0.1.0")]
+[assembly: AssemblyVersion("1.0.2.0")]
+[assembly: AssemblyFileVersion("1.0.2.0")]
 
 namespace CKFreeToolbox
 {

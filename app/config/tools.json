@@ -5,13 +5,13 @@
         "icon": "▧",
         "page": "ModelRenderPage.ps1",
         "factory": "New-CkModelRenderPage",
-        "sourceUrl": "https://github.com/ch-jack/vehicle_renderer",
+        "sourceUrl": "https://github.com/ch-jack/CK-model_renderer",
         "component": {
-            "repo": "ch-jack/vehicle_renderer",
-            "branch": "main",
+            "repo": "ch-jack/CK-model_renderer",
             "installDir": "vehicle_renderer",
             "bootstrap": "vehicle-renderer",
-            "sollumzAssetUrl": "https://github.com/Sollumz/Sollumz/releases/download/v2.8.3/Sollumz.zip",
+            "releaseAssetPattern": "CK-model_renderer-*-windows.zip",
+            "releaseChecksumAssetPattern": "CK-model_renderer-*-windows.zip.sha256",
             "requiredFiles": [
                 "render_all_vehicles.py",
                 "blender_render_vehicle.py",
@@ -32,9 +32,9 @@
         "sourceUrl": "https://github.com/ch-jack/nui-wallfix",
         "component": {
             "repo": "ch-jack/nui-wallfix",
-            "branch": "main",
             "installDir": "nui-wallfix",
             "bootstrap": "",
+            "releaseAssetPattern": "nui-wallfix-windows.zip",
             "requiredFiles": [
                 "nui-wallfix.py",
                 "providers.json",

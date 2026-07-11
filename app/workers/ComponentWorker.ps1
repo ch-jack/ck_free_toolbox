@@ -57,21 +57,14 @@ function Get-CkComponentPaths {
     }
 }
 
-function Get-CkLocalCommit {
+function Get-CkLocalVersion {
     param($Paths)
 
     if (Test-Path -LiteralPath $Paths.Manifest -PathType Leaf) {
         try {
             $manifest = Get-Content -LiteralPath $Paths.Manifest -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($manifest.commit) { return [string]$manifest.commit }
+            if ($manifest.releaseTag) { return [string]$manifest.releaseTag }
         } catch { }
-    }
-    if (Test-Path -LiteralPath (Join-Path $Paths.Target '.git')) {
-        $git = Get-Command git.exe -ErrorAction SilentlyContinue
-        if ($git) {
-            $commit = (& $git.Source -C $Paths.Target rev-parse HEAD 2>$null | Select-Object -First 1)
-            if ($LASTEXITCODE -eq 0 -and $commit) { return [string]$commit }
-        }
     }
     return ''
 }
@@ -89,39 +82,122 @@ function Get-CkLocalStatus {
     return [ordered]@{
         installed = ($missing.Count -eq 0)
         missingFiles = @($missing)
-        localCommit = Get-CkLocalCommit -Paths $Paths
+        localVersion = Get-CkLocalVersion -Paths $Paths
         target = $Paths.Target
     }
 }
 
-function Get-CkRemoteCommit {
+function Get-CkRemoteRelease {
     param($Tool)
 
     $repo = [string]$Tool.component.repo
-    $branch = [string]$Tool.component.branch
-    if ($repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') { throw "GitHub 仓库格式无效: $repo" }
-    if ($branch -notmatch '^[A-Za-z0-9._/-]+$') { throw "GitHub 分支格式无效: $branch" }
-    $headers = @{
-        'User-Agent' = 'CKFreeToolbox/1.0.1'
-        'Accept' = 'application/vnd.github+json'
+    $assetPattern = [string]$Tool.component.releaseAssetPattern
+    if ($repo -notmatch '^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$') {
+        throw "GitHub 仓库格式无效: $repo"
     }
-    $response = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/commits/$branch" -Headers $headers -TimeoutSec 20
-    $commit = [string]$response.sha
-    if ($commit -notmatch '^[0-9a-f]{40}$') { throw 'GitHub 未返回有效提交版本。' }
-    return $commit
+    if ([string]::IsNullOrWhiteSpace($assetPattern) -or $assetPattern.Contains('/') -or -not $assetPattern.EndsWith('.zip', [StringComparison]::OrdinalIgnoreCase)) {
+        throw "Release 附件规则无效: $assetPattern"
+    }
+    if (@($assetPattern.ToCharArray() | Where-Object { $_ -eq '*' }).Count -gt 1) {
+        throw "Release 附件规则最多允许一个版本通配符: $assetPattern"
+    }
+
+    Add-Type -AssemblyName System.Net.Http
+    $client = New-Object Net.Http.HttpClient
+    $client.Timeout = [TimeSpan]::FromSeconds(30)
+    $client.DefaultRequestHeaders.UserAgent.ParseAdd('CKFreeToolbox/1.0.2')
+    $response = $null
+    try {
+        $latestUrl = "https://github.com/$repo/releases/latest"
+        $response = $client.GetAsync($latestUrl, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
+        if (-not $response.IsSuccessStatusCode) {
+            throw "GitHub 仓库尚未发布稳定 Release: $repo"
+        }
+        $releaseUri = $response.RequestMessage.RequestUri
+        if ($releaseUri.Scheme -ne 'https' -or $releaseUri.Host -ne 'github.com') {
+            throw "GitHub Release 跳转地址无效: $releaseUri"
+        }
+        $segments = @($releaseUri.AbsolutePath.Trim('/').Split('/'))
+        if ($segments.Count -ne 5 -or
+            $segments[0] -ine ($repo -split '/')[0] -or
+            $segments[1] -ine ($repo -split '/')[1] -or
+            $segments[2] -ine 'releases' -or
+            $segments[3] -ine 'tag') {
+            throw "GitHub 最新 Release 跳转结构无效: $releaseUri"
+        }
+        $tag = [Uri]::UnescapeDataString($segments[4])
+        if ($tag -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$') {
+            throw "GitHub Release 标签无效: $tag"
+        }
+
+        $assetName = if ($assetPattern.Contains('*')) { $assetPattern.Replace('*', $tag) } else { $assetPattern }
+        if ($assetName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,200}\.zip$') {
+            throw "Release ZIP 附件名无效: $assetName"
+        }
+        $escapedTag = [Uri]::EscapeDataString($tag)
+        $escapedAssetName = [Uri]::EscapeDataString($assetName)
+        $assetUrl = "https://github.com/$repo/releases/download/$escapedTag/$escapedAssetName"
+
+        $assetRequest = New-Object Net.Http.HttpRequestMessage([Net.Http.HttpMethod]::Head, $assetUrl)
+        $assetResponse = $client.SendAsync($assetRequest, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
+        try {
+            if (-not $assetResponse.IsSuccessStatusCode) {
+                throw "GitHub Release 缺少附件: $assetName"
+            }
+        } finally {
+            $assetResponse.Dispose()
+            $assetRequest.Dispose()
+        }
+
+        $checksumUrl = ''
+        if ($Tool.component.PSObject.Properties['releaseChecksumAssetPattern']) {
+            $checksumPattern = [string]$Tool.component.releaseChecksumAssetPattern
+            if ([string]::IsNullOrWhiteSpace($checksumPattern) -or $checksumPattern.Contains('/') -or
+                @($checksumPattern.ToCharArray() | Where-Object { $_ -eq '*' }).Count -gt 1) {
+                throw "Release 校验附件规则无效: $checksumPattern"
+            }
+            $checksumName = if ($checksumPattern.Contains('*')) { $checksumPattern.Replace('*', $tag) } else { $checksumPattern }
+            if ($checksumName -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]{0,220}\.sha256$') {
+                throw "Release 校验附件名无效: $checksumName"
+            }
+            $checksumUrl = "https://github.com/$repo/releases/download/$escapedTag/$([Uri]::EscapeDataString($checksumName))"
+            $checksumRequest = New-Object Net.Http.HttpRequestMessage([Net.Http.HttpMethod]::Head, $checksumUrl)
+            $checksumResponse = $client.SendAsync($checksumRequest, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
+            try {
+                if (-not $checksumResponse.IsSuccessStatusCode) {
+                    throw "GitHub Release 缺少校验附件: $checksumName"
+                }
+            } finally {
+                $checksumResponse.Dispose()
+                $checksumRequest.Dispose()
+            }
+        }
+
+        return [pscustomobject]@{
+            Tag = $tag
+            AssetName = $assetName
+            AssetUrl = $assetUrl
+            AssetDigest = ''
+            ChecksumUrl = $checksumUrl
+            HtmlUrl = $releaseUri.AbsoluteUri
+        }
+    } finally {
+        if ($response) { $response.Dispose() }
+        $client.Dispose()
+    }
 }
 
 function Save-CkDownload {
     param([string]$Url, [string]$Destination, [long]$MaxBytes = 536870912)
 
     $uri = [Uri]$Url
-    if ($uri.Scheme -ne 'https' -or $uri.Host -notin @('github.com', 'codeload.github.com')) {
+    if ($uri.Scheme -ne 'https' -or $uri.Host -notin @('github.com')) {
         throw "拒绝非 GitHub 下载地址: $Url"
     }
     Add-Type -AssemblyName System.Net.Http
     $client = New-Object Net.Http.HttpClient
     $client.Timeout = [TimeSpan]::FromMinutes(10)
-    $client.DefaultRequestHeaders.UserAgent.ParseAdd('CKFreeToolbox/1.0.1')
+    $client.DefaultRequestHeaders.UserAgent.ParseAdd('CKFreeToolbox/1.0.2')
     $response = $null
     $input = $null
     $output = $null
@@ -145,6 +221,35 @@ function Save-CkDownload {
         if ($response) { $response.Dispose() }
         $client.Dispose()
     }
+}
+
+function Assert-CkReleaseArchiveHash {
+    param($Release, [string]$ArchivePath, [string]$StageRoot)
+
+    $expectedHashes = New-Object System.Collections.Generic.List[string]
+    if ($Release.AssetDigest) {
+        $expectedHashes.Add(([string]$Release.AssetDigest).Substring(7).ToLowerInvariant())
+    }
+    if ($Release.ChecksumUrl) {
+        $checksumPath = Join-Path $StageRoot 'component.zip.sha256'
+        Save-CkDownload -Url ([string]$Release.ChecksumUrl) -Destination $checksumPath -MaxBytes 1048576
+        $checksumText = [IO.File]::ReadAllText($checksumPath)
+        $match = [regex]::Match($checksumText, '(?i)(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])')
+        if (-not $match.Success) {
+            throw 'Release 校验附件没有有效的 SHA-256。'
+        }
+        $expectedHashes.Add($match.Value.ToLowerInvariant())
+    }
+
+    $actual = (Get-FileHash -LiteralPath $ArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $uniqueExpected = @($expectedHashes | Select-Object -Unique)
+    if ($uniqueExpected.Count -gt 1) {
+        throw 'GitHub digest 与 Release 校验附件不一致。'
+    }
+    if ($uniqueExpected.Count -eq 1 -and $actual -ne $uniqueExpected[0]) {
+        throw "Release ZIP 的 SHA-256 校验失败。期望: $($uniqueExpected[0])，实际: $actual"
+    }
+    return $actual
 }
 
 function Expand-CkSafeZip {
@@ -209,19 +314,13 @@ function Get-CkBlenderPython {
     throw '模型截图组件安装需要 Blender 4.2 或更高版本。请先安装 Blender。'
 }
 
-function Install-CkVehicleRendererDependencies {
-    param($Tool, [string]$SourceRoot, [string]$StageRoot)
+function Initialize-CkVehicleRendererDependencies {
+    param([string]$SourceRoot)
 
-    $releaseUrl = [string]$Tool.component.sollumzAssetUrl
-    $sollumzArchive = Join-Path $StageRoot 'sollumz.zip'
-    $sollumzExtract = Join-Path $StageRoot 'sollumz-extract'
-    Save-CkDownload -Url $releaseUrl -Destination $sollumzArchive -MaxBytes 104857600
-    Expand-CkSafeZip -ArchivePath $sollumzArchive -Destination $sollumzExtract
-    $sollumzSource = Join-Path $sollumzExtract 'Sollumz'
-    if (-not (Test-Path -LiteralPath (Join-Path $sollumzSource '__init__.py') -PathType Leaf)) {
-        throw 'Sollumz Release 结构无效。'
+    $sollumzRoot = Join-Path $SourceRoot 'Sollumz'
+    if (-not (Test-Path -LiteralPath (Join-Path $sollumzRoot '__init__.py') -PathType Leaf)) {
+        throw '模型 Release 未包含有效的 Sollumz。'
     }
-    Move-Item -LiteralPath $sollumzSource -Destination (Join-Path $SourceRoot 'Sollumz')
 
     $runtime = Get-CkBlenderPython
     $pythonVersion = (& $runtime.Python -c "import sys; print('%d.%d' % sys.version_info[:2])" | Select-Object -First 1).Trim()
@@ -247,12 +346,12 @@ function Install-CkVehicleRendererDependencies {
     $requirementsPath = Join-Path $dataRoot 'requirements.txt'
     New-Item -ItemType Directory -Path $dataRoot -Force | Out-Null
     [IO.File]::WriteAllText($requirementsPath, $requirements, (New-Object Text.UTF8Encoding($false)))
-    & $runtime.Python -m pip install --disable-pip-version-check --no-input --target $sitePackages --no-deps --require-hashes -r $requirementsPath
+    & $runtime.Python -m pip install --disable-pip-version-check --no-input --target $sitePackages --no-deps --require-hashes -r $requirementsPath | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Sollumz Python 依赖安装失败，退出码: $LASTEXITCODE" }
 }
 
 function Install-CkComponent {
-    param($Tool, $Paths, [string]$Commit)
+    param($Tool, $Paths, $Release)
 
     $repo = [string]$Tool.component.repo
     $stageBase = Join-Path ([IO.Path]::GetTempPath()) 'CKFreeToolbox'
@@ -262,22 +361,29 @@ function Install-CkComponent {
     $extractPath = Join-Path $stage 'extract'
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     try {
-        Save-CkDownload -Url "https://codeload.github.com/$repo/zip/$Commit" -Destination $archivePath
+        Save-CkDownload -Url ([string]$Release.AssetUrl) -Destination $archivePath
+        $archiveHash = Assert-CkReleaseArchiveHash -Release $Release -ArchivePath $archivePath -StageRoot $stage
         Expand-CkSafeZip -ArchivePath $archivePath -Destination $extractPath
-        $sourceRoot = @(Get-ChildItem -LiteralPath $extractPath -Directory | Select-Object -First 1)[0].FullName
-        if (-not $sourceRoot) { throw 'GitHub 组件 ZIP 没有项目目录。' }
+
+        $sourceDirectories = @(Get-ChildItem -LiteralPath $extractPath -Directory)
+        if ($sourceDirectories.Count -ne 1) {
+            throw "Release ZIP 顶层目录数量不是 1: $($sourceDirectories.Count)"
+        }
+        $sourceRoot = $sourceDirectories[0].FullName
         $shortSourceRoot = Join-Path $stage 'src'
         Move-Item -LiteralPath $sourceRoot -Destination $shortSourceRoot
         $sourceRoot = $shortSourceRoot
+
         if ([string]$Tool.component.bootstrap -eq 'vehicle-renderer') {
-            Install-CkVehicleRendererDependencies -Tool $Tool -SourceRoot $sourceRoot -StageRoot $stage
+            Initialize-CkVehicleRendererDependencies -SourceRoot $sourceRoot
         }
         foreach ($relative in @($Tool.component.requiredFiles)) {
             $required = Assert-CkChildPath -Path (Join-Path $sourceRoot ([string]$relative)) -Parent $sourceRoot
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
-                throw "下载的组件缺少必需文件: $relative"
+                throw "Release 组件缺少必需文件: $relative"
             }
         }
+
         $backupRoot = Join-Path $Paths.Workspace '.ck-component-backups'
         New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
         $backup = Assert-CkChildPath -Path (Join-Path $backupRoot ("$ToolId-" + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))) -Parent $backupRoot
@@ -289,11 +395,13 @@ function Install-CkComponent {
             }
             Move-Item -LiteralPath $sourceRoot -Destination $Paths.Target
             $manifest = [ordered]@{
-                schemaVersion = 1
+                schemaVersion = 2
                 toolId = $ToolId
                 repo = $repo
-                branch = [string]$Tool.component.branch
-                commit = $Commit
+                releaseTag = [string]$Release.Tag
+                assetName = [string]$Release.AssetName
+                sha256 = $archiveHash
+                source = 'github-release'
                 installedAt = (Get-Date).ToString('o')
             }
             [IO.File]::WriteAllText($Paths.Manifest, ($manifest | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding($false)))
@@ -302,7 +410,10 @@ function Install-CkComponent {
             if ($movedOld -and (Test-Path -LiteralPath $backup)) { Move-Item -LiteralPath $backup -Destination $Paths.Target }
             throw
         }
-        return $(if ($movedOld) { $backup } else { '' })
+        return [pscustomobject]@{
+            Backup = $(if ($movedOld) { $backup } else { '' })
+            Sha256 = $archiveHash
+        }
     } finally {
         if (Test-Path -LiteralPath $stage) { Remove-CkDirectory -Path $stage }
     }
@@ -313,30 +424,40 @@ try {
     $paths = Get-CkComponentPaths -Tool $tool
     $local = Get-CkLocalStatus -Tool $tool -Paths $paths
     $result = [ordered]@{
-        schemaVersion = 1
+        schemaVersion = 2
         action = $Action
         toolId = $ToolId
         title = [string]$tool.title
         repo = [string]$tool.component.repo
         installed = [bool]$local.installed
         missingFiles = @($local.missingFiles)
-        localCommit = [string]$local.localCommit
-        latestCommit = ''
+        localVersion = [string]$local.localVersion
+        latestVersion = ''
+        releaseAsset = ''
+        releaseUrl = ''
+        sha256 = ''
         updateAvailable = $false
         target = [string]$local.target
         backup = ''
         status = if ($local.installed) { 'installed' } else { 'missing' }
     }
+
+    $remoteRelease = $null
     if ($Action -in @('check', 'install')) {
-        $result.latestCommit = Get-CkRemoteCommit -Tool $tool
-        $result.updateAvailable = (-not $local.installed) -or (-not $local.localCommit) -or ($local.localCommit -ne $result.latestCommit)
+        $remoteRelease = Get-CkRemoteRelease -Tool $tool
+        $result.latestVersion = [string]$remoteRelease.Tag
+        $result.releaseAsset = [string]$remoteRelease.AssetName
+        $result.releaseUrl = [string]$remoteRelease.HtmlUrl
+        $result.updateAvailable = (-not $local.installed) -or (-not $local.localVersion) -or ($local.localVersion -ne $result.latestVersion)
     }
     if ($Action -eq 'install') {
-        $result.backup = Install-CkComponent -Tool $tool -Paths $paths -Commit $result.latestCommit
+        $installResult = Install-CkComponent -Tool $tool -Paths $paths -Release $remoteRelease
+        $result.backup = [string]$installResult.Backup
+        $result.sha256 = [string]$installResult.Sha256
         $local = Get-CkLocalStatus -Tool $tool -Paths $paths
         $result.installed = [bool]$local.installed
         $result.missingFiles = @($local.missingFiles)
-        $result.localCommit = [string]$local.localCommit
+        $result.localVersion = [string]$local.localVersion
         $result.updateAvailable = $false
         $result.status = 'installed'
     } elseif ($Action -eq 'check' -and $result.updateAvailable) {
@@ -346,7 +467,7 @@ try {
     exit 0
 } catch {
     [ordered]@{
-        schemaVersion = 1
+        schemaVersion = 2
         action = $Action
         toolId = $ToolId
         status = 'error'

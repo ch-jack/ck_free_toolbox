@@ -161,7 +161,7 @@ $shellXaml = @"
             </Grid>
           </Border>
           <TextBlock Text="CK免费工具箱" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock Text="v1.0.1" Foreground="#42464D" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
+          <TextBlock Text="v1.0.2" Foreground="#42464D" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
           <TextBlock Text="客户端直跑 · 无后端服务" Foreground="#6E7580" FontSize="13" Margin="0,3,16,0"/>
@@ -318,29 +318,22 @@ function Get-CkLocalComponentState {
         }
     }
 
-    $commit = ''
+    $version = ''
     $manifestPath = Join-Path $target '.ck-component.json'
     if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
         try {
             $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $commit = [string]$manifest.commit
+            $version = [string]$manifest.releaseTag
         } catch { }
-    }
-    if (-not $commit -and (Test-Path -LiteralPath (Join-Path $target '.git'))) {
-        $git = Get-Command git.exe -ErrorAction SilentlyContinue
-        if ($git) {
-            $commit = [string](& $git.Source -C $target rev-parse HEAD 2>$null | Select-Object -First 1)
-        }
     }
 
     return [pscustomobject]@{
         Installed = ($missing.Count -eq 0)
         MissingFiles = @($missing)
-        LocalCommit = $commit
+        LocalVersion = $version
         Target = $target
     }
 }
-
 function Update-CkComponentHeader {
     $tool = $toolConfigs[$componentState.CurrentToolId]
     if (-not $tool -or -not $tool.PSObject.Properties['component']) {
@@ -352,7 +345,7 @@ function Update-CkComponentHeader {
     $componentStatusText.Visibility = 'Visible'
     $componentActionButton.Visibility = 'Visible'
     if ($componentState.Process -and $componentState.Process.ToolId -eq $componentState.CurrentToolId) {
-        $componentStatusText.Text = if ($componentState.Process.Action -eq 'check') { '正在检查 GitHub' } else { '正在安装组件' }
+        $componentStatusText.Text = if ($componentState.Process.Action -eq 'check') { '正在检查 Release' } else { '正在安装组件' }
         $componentStatusText.Foreground = '#72B7F2'
         $componentActionButton.Content = if ($componentState.Process.Action -eq 'check') { '检查中...' } else { '安装中...' }
         $componentActionButton.IsEnabled = $false
@@ -371,7 +364,8 @@ function Update-CkComponentHeader {
         return
     }
     if ($remote -and $remote.updateAvailable) {
-        $componentStatusText.Text = '发现新版本'
+        $latestVersion = [string]$remote.latestVersion
+        $componentStatusText.Text = if ($latestVersion) { "发现新版本 $latestVersion" } else { '发现新版本' }
         $componentStatusText.Foreground = '#F4B860'
         $componentActionButton.Content = '更新组件'
         $componentActionButton.Tag = 'install'
@@ -379,7 +373,7 @@ function Update-CkComponentHeader {
         return
     }
 
-    $componentStatusText.Text = '组件已安装'
+    $componentStatusText.Text = if ($local.LocalVersion) { "已安装 $($local.LocalVersion)" } else { '组件已安装' }
     $componentStatusText.Foreground = '#31D69A'
     $componentActionButton.Content = '检查更新'
     $componentActionButton.Tag = 'check'
@@ -400,7 +394,7 @@ function Start-CkComponentOperation {
         $local = & $getLocalComponentStateAction $tool
         $verb = if ($local.Installed) { '更新' } else { '安装' }
         $answer = [System.Windows.MessageBox]::Show(
-            "即将从 GitHub $verb $($tool.title) 组件。`n`n仓库: $($tool.component.repo)`n现有组件会先备份。是否继续？",
+            "即将从 GitHub Release $verb $($tool.title) 组件。`n`n仓库: $($tool.component.repo)`n现有组件会先备份。是否继续？",
             "确认$verb组件",
             [System.Windows.MessageBoxButton]::YesNo,
             [System.Windows.MessageBoxImage]::Information

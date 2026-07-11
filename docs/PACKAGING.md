@@ -4,7 +4,7 @@
 
 ~~~text
 dist/
-  CK免费工具箱-v1.0.1/
+  CK免费工具箱-v1.0.2/
     CK免费工具箱.exe
     CKFreeToolbox.ps1
     app/
@@ -12,23 +12,25 @@ dist/
     TestVeh/
     使用说明.txt
     package-manifest.json
-  CK免费工具箱-v1.0.1.zip
+  CK免费工具箱-v1.0.2.zip
 ~~~
 
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer` 和 `nui-wallfix`。用户必须解压完整 ZIP，不能只复制 EXE。
 
-## 运行时组件
+## 运行时 Release 组件
 
-工具箱启动后根据 `app/config/tools.json` 检测当前页面的组件：
+工具箱启动后根据 app/config/tools.json 检测当前页面的组件：
 
-- 模型自动截图对应 [ch-jack/vehicle_renderer](https://github.com/ch-jack/vehicle_renderer)。
+- 模型自动截图对应 [ch-jack/CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)。
 - NUI 自动去墙对应 [ch-jack/nui-wallfix](https://github.com/ch-jack/nui-wallfix)。
-- 组件缺失时显示“安装组件”，用户确认后才访问 GitHub。
+- 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
+- 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 下载进入隔离 staging，限制大小并拒绝 ZIP 路径穿越。
+- 模型包校验 Release 发布的 .sha256 附件；所有组件都计算并记录实际 ZIP SHA-256。
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
-- 安装完成后写入 `.ck-component.json`，用于后续检查更新。
+- 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
-模型组件安装会额外获取 Sollumz v2.8.3，并通过 Blender 自带 Python 配置带哈希校验的依赖。NUI 组件只使用 Python 标准库。
+模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI 组件只使用 Python 标准库。旧版 commit 清单会在下一次更新时迁移。
 
 ## Blender 不进入发布包
 
@@ -73,7 +75,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 5. 验证发布包不含功能组件目录和 Blender。
 6. 上传 Actions Artifact。
 
-推送 `main`、创建 Pull Request 或手动运行会自动构建。推送与程序版本一致的 `v*` 标签会自动创建 GitHub Release 并上传 ZIP。当前版本标签为 `v1.0.1`。
+推送 `main`、创建 Pull Request 或手动运行会自动构建。推送与程序版本一致的 `v*` 标签会自动创建 GitHub Release 并上传 ZIP。当前版本标签为 `v1.0.2`。
 
 ## NUI 自动去墙安全流程
 

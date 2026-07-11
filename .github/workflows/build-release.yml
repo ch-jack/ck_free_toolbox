@@ -86,6 +86,19 @@ jobs:
               throw "Missing release file: $relativePath"
             }
           }
+          $toolConfig = Get-Content -LiteralPath (Join-Path $package 'app\config\tools.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+          foreach ($tool in $toolConfig) {
+            if (-not $tool.component.releaseAssetPattern) {
+              throw "Missing releaseAssetPattern for component: $($tool.id)"
+            }
+            if ($tool.component.PSObject.Properties['branch']) {
+              throw "Source branch configuration is forbidden: $($tool.id)"
+            }
+          }
+          $workerSource = Get-Content -LiteralPath (Join-Path $package 'app\workers\ComponentWorker.ps1') -Raw -Encoding UTF8
+          if ($workerSource -match 'api\.github\.com|codeload\.github\.com|/commits/') {
+            throw 'Source archive download code is forbidden.'
+          }
           foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix')) {
             if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
               throw "Runtime component must not be bundled: $componentDirectory"

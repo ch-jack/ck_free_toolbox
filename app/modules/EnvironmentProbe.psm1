@@ -60,6 +60,14 @@ function Get-CkToolboxEnvironment {
     $codewalkerOk = (Test-Path -LiteralPath (Join-Path $rendererDir 'tools\YtdTools.exe')) -and (Test-Path -LiteralPath (Join-Path $rendererDir 'tools\RpfTools.exe'))
     $sollumzOk = Test-Path -LiteralPath (Join-Path $rendererDir 'Sollumz\__init__.py')
     $rendererOk = Test-Path -LiteralPath $Context.Paths.RenderScript
+    $rendererLabel = if ($rendererOk) { '已安装' } else { '未找到脚本' }
+    $componentManifest = Join-Path $rendererDir '.ck-component.json'
+    if ($rendererOk -and (Test-Path -LiteralPath $componentManifest -PathType Leaf)) {
+        try {
+            $componentInfo = Get-Content -LiteralPath $componentManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+            if ($componentInfo.releaseTag) { $rendererLabel = [string]$componentInfo.releaseTag }
+        } catch { }
+    }
     $cpu = Get-CimInstance Win32_Processor -ErrorAction SilentlyContinue | Select-Object -First 1
     $workers = [Math]::Max(1, [Math]::Min(4, [int]([Environment]::ProcessorCount / 2)))
 
@@ -68,7 +76,7 @@ function Get-CkToolboxEnvironment {
         DotNet = $dotnet
         CodeWalker = [pscustomobject]@{ Ok = $codewalkerOk; Label = $(if ($codewalkerOk) { '已安装' } else { '缺少工具文件' }) }
         Sollumz = [pscustomobject]@{ Ok = $sollumzOk; Label = $(if ($sollumzOk) { '已安装' } else { '未检测到' }) }
-        Renderer = [pscustomobject]@{ Ok = $rendererOk; Label = $(if ($rendererOk) { 'v1.0.1' } else { '未找到脚本' }) }
+        Renderer = [pscustomobject]@{ Ok = $rendererOk; Label = $rendererLabel }
         CpuName = $(if ($cpu) { $cpu.Name } else { "$([Environment]::ProcessorCount) 线程 CPU" })
         MemoryGb = Get-CkMemoryGb
         RecommendedWorkers = $workers

@@ -1,8 +1,8 @@
 ﻿# CK免费工具箱
 
-CK免费工具箱 v1.0.1 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
+CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、模型扫描、环境检测、任务进程、日志、组件安装更新及两个功能页的客户端实现。模型渲染引擎与 NUI 重写引擎分别在 [vehicle_renderer](https://github.com/ch-jack/vehicle_renderer) 和 [nui-wallfix](https://github.com/ch-jack/nui-wallfix) 维护，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、模型扫描、环境检测、任务进程、日志、组件安装更新及两个功能页的客户端实现。模型渲染引擎与 NUI 重写引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer) 和 [nui-wallfix](https://github.com/ch-jack/nui-wallfix) 维护，工具箱运行后按需下载。
 
 ## 启动
 
@@ -25,7 +25,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
 - 写入使用说明、版本、运行时组件策略和 SHA-256 清单。
 
-默认产物位于 `dist/CK免费工具箱-v1.0.1/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender 仍需用户独立安装。
+默认产物位于 `dist/CK免费工具箱-v1.0.2/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender 仍需用户独立安装。
 
 命令行用法：
 
@@ -41,15 +41,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 - 推送到 `main`、创建面向 `main` 的 Pull Request 或手动运行时，自动检查 PowerShell 语法、构建 EXE、验证轻量包并上传 Actions Artifact。
 - 推送 `v*` 标签时，在构建通过后自动创建同名 GitHub Release 并上传 ZIP。
-- Release 标签必须和启动器中的版本一致。例如当前版本使用 `v1.0.1`。
+- Release 标签必须和启动器中的版本一致。例如当前版本使用 `v1.0.2`。
 - 自动构建和发布都不会下载或打包 Blender。
 
 发布命令：
 
 ~~~powershell
-git tag v1.0.1
-git push origin v1.0.1
+git tag v1.0.2
+git push origin v1.0.2
 ~~~
+
 ## 功能
 
 ### 模型自动截图
@@ -70,15 +71,15 @@ git push origin v1.0.1
 - 支持自定义 `providers.json`、未验证镜像、内网地址和冲突时强制恢复等高级选项。
 - 直接调用随包发布的 `nui-wallfix.py`，不需要后端服务；优先使用系统 Python，未安装时使用 Blender 自带 Python。
 
-### GitHub 组件管理
+### GitHub Release 组件管理
 
 - 当前工具页右上角显示对应项目的 GitHub 开源地址，使用系统默认浏览器打开。
-- 组件缺失时显示“安装组件”，从 `tools.json` 登记的 GitHub 仓库拉取，不接受任意下载地址。
-- 点击“检查更新”异步比较本地清单与 GitHub 最新提交；有更新时显示“更新组件”。
-- 下载先进入隔离 staging，限制大小并防止 ZIP 路径穿越；必需文件全部通过后才替换组件。
-- 更新前保留 `.ck-component-backups` 备份，安装失败会回滚，避免破坏当前可用版本。
-- 模型组件缺失安装会同时获取 Sollumz v2.8.3，并使用 Blender Python 安装带哈希校验的依赖。
-
+- 组件缺失时显示“安装组件”，只下载 tools.json 登记的最新稳定 GitHub Release ZIP，不再下载分支源码。
+- 点击“检查更新”通过公开 releases/latest 跳转比较本地 releaseTag 与最新稳定 Release 标签，不占用 GitHub API 配额。
+- 下载先进入隔离 staging，限制大小并防止 ZIP 路径穿越；模型包校验随 Release 发布的 SHA-256，所有组件记录实际下载哈希。
+- 更新前保留 .ck-component-backups 备份，安装失败会回滚，避免破坏当前可用版本。
+- 模型 Release 已内置 Sollumz v2.8.3；工具箱只使用 Blender Python 配置带哈希校验的运行依赖。
+- 旧版 commit 清单不会继续拉取源码，首次检查会提示更新，安装后迁移为 Release 版本清单。
 
 ## 交互可靠性
 
@@ -105,6 +106,8 @@ git push origin v1.0.1
 - 中文总进度：真实渲染期间未出现英文阶段文本，英文原始输出仅保留在日志。
 - 原完整 ZIP 已验证不含 blender.exe 和 runtime\blender；当前自动构建进一步改为不预装功能组件的轻量包。
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
+- Release 组件安装：CK-model_renderer v1.0.0 与 nui-wallfix v0.1.0 真实下载、安装和同版本检查通过。
+- Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
 
 ## 可扩展架构
 
@@ -120,13 +123,14 @@ ck_free_toolbox/
 
 当前工具注册表启用模型自动截图和 NUI 自动去墙。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 
-每个工具还可注册 sourceUrl 和 component 元数据。主窗口据此显示开源链接、检测必需文件、查询更新并调用隔离组件工作器。
+每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
 ## 开发与发布目录
 
 工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer` 或 `nui-wallfix`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
+
 ## 重新构建 EXE
 
 ~~~powershell
