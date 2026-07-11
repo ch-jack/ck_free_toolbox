@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout toolbox
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate PowerShell syntax
         shell: powershell
@@ -70,8 +70,10 @@ jobs:
             throw "Expected one release directory, found $($packages.Count)."
           }
           $package = $packages[0].FullName
+          $manifestPath = Join-Path $package 'package-manifest.json'
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
           $required = @(
-            'CK免费工具箱.exe',
+            [string]$manifest.entry,
             'CKFreeToolbox.ps1',
             'app\config\tools.json',
             'app\workers\ComponentWorker.ps1',
