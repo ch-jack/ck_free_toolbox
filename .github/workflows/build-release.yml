@@ -130,8 +130,11 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $archive = Get-ChildItem -LiteralPath .\dist -Filter *.zip -File | Select-Object -First 1
+          $ErrorActionPreference = 'SilentlyContinue'
           gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
-          if ($LASTEXITCODE -eq 0) {
+          $releaseExists = ($LASTEXITCODE -eq 0)
+          $ErrorActionPreference = 'Stop'
+          if ($releaseExists) {
             gh release upload $env:GITHUB_REF_NAME $archive.FullName --clobber --repo $env:GITHUB_REPOSITORY
           } else {
             gh release create $env:GITHUB_REF_NAME $archive.FullName --generate-notes --verify-tag --repo $env:GITHUB_REPOSITORY
