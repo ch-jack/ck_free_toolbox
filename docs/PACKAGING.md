@@ -26,6 +26,7 @@ dist/
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 下载进入隔离 staging，限制大小并拒绝 ZIP 路径穿越。
+- 检查和安装过程输出确定进度；组件下载按 Content-Length 显示实际百分比。
 - 模型包校验 Release 发布的 .sha256 附件；所有组件都计算并记录实际 ZIP SHA-256。
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
@@ -34,14 +35,14 @@ dist/
 
 ## Blender 不进入发布包
 
-发布包不复制 Blender，也不包含独立 Python。用户需要安装 Blender 4.2 或更高版本。工具箱会检测环境变量、PATH 和 Blender 默认安装目录，并使用 Blender 自带 Python。
+发布包不复制 Blender，也不包含独立 Python。
 
-未检测到 Blender 时，界面中的 Blender 环境依赖显示“官网下载”，点击后打开：
-
-~~~text
-https://www.blender.org/download/
-~~~
-
+- Blender 是唯一需要选择目录的外部依赖；工具箱提供官网和目录选择。
+- .NET Framework 4.8 使用 Windows 系统安装，只检测注册表并提供官网，不允许手动指定目录。
+- YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
+- Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
+- Blender 仍使用其自带 Python，最低支持版本为 4.2。
+- Blender 选择结果保存在 %LOCALAPPDATA%\CKFreeToolbox\settings.json。
 ## 本地一键打包
 
 双击：
@@ -91,7 +92,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - 首次启动时两个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
-- 未安装 Blender 时可以打开 Blender 官方下载页。
+- Blender 可打开官网并选择安装目录；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 关闭主窗口后没有残留工具箱、Python 或 Blender 进程。
 
 ## 正式分发

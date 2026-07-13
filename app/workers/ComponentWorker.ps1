@@ -11,6 +11,16 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
+function Write-CkProgress {
+    param([int]$Percent, [string]$Message)
+
+    $payload = [ordered]@{
+        percent = [Math]::Max(0, [Math]::Min(100, $Percent))
+        message = $Message
+    } | ConvertTo-Json -Compress
+    [Console]::Out.WriteLine("CK_PROGRESS $payload")
+}
+
 function Assert-CkChildPath {
     param([string]$Path, [string]$Parent)
 
@@ -188,7 +198,14 @@ function Get-CkRemoteRelease {
 }
 
 function Save-CkDownload {
-    param([string]$Url, [string]$Destination, [long]$MaxBytes = 536870912)
+    param(
+        [string]$Url,
+        [string]$Destination,
+        [long]$MaxBytes = 536870912,
+        [int]$StartPercent = 28,
+        [int]$EndPercent = 58,
+        [string]$Label = '正在下载组件'
+    )
 
     $uri = [Uri]$Url
     if ($uri.Scheme -ne 'https' -or $uri.Host -notin @('github.com')) {
@@ -210,11 +227,22 @@ function Save-CkDownload {
         $output = [IO.File]::Open($Destination, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
         $buffer = New-Object byte[] 1048576
         [long]$total = 0
+        $lastPercent = -1
+        Write-CkProgress -Percent $StartPercent -Message $Label
         while (($read = $input.Read($buffer, 0, $buffer.Length)) -gt 0) {
             $total += $read
             if ($total -gt $MaxBytes) { throw "组件下载超过大小限制: $MaxBytes bytes" }
             $output.Write($buffer, 0, $read)
+            if ($length -and $length -gt 0) {
+                $percent = $StartPercent + [int](($total / $length) * ($EndPercent - $StartPercent))
+                $percent = [Math]::Min($EndPercent, $percent)
+                if ($percent -gt $lastPercent) {
+                    Write-CkProgress -Percent $percent -Message ("$Label {0:N1}/{1:N1} MB" -f ($total / 1MB), ($length / 1MB))
+                    $lastPercent = $percent
+                }
+            }
         }
+        Write-CkProgress -Percent $EndPercent -Message "$Label 完成"
     } finally {
         if ($output) { $output.Dispose() }
         if ($input) { $input.Dispose() }
@@ -222,7 +250,6 @@ function Save-CkDownload {
         $client.Dispose()
     }
 }
-
 function Assert-CkReleaseArchiveHash {
     param($Release, [string]$ArchivePath, [string]$StageRoot)
 
@@ -232,7 +259,7 @@ function Assert-CkReleaseArchiveHash {
     }
     if ($Release.ChecksumUrl) {
         $checksumPath = Join-Path $StageRoot 'component.zip.sha256'
-        Save-CkDownload -Url ([string]$Release.ChecksumUrl) -Destination $checksumPath -MaxBytes 1048576
+        Save-CkDownload -Url ([string]$Release.ChecksumUrl) -Destination $checksumPath -MaxBytes 1048576 -StartPercent 59 -EndPercent 60 -Label '正在下载校验文件'
         $checksumText = [IO.File]::ReadAllText($checksumPath)
         $match = [regex]::Match($checksumText, '(?i)(?<![0-9a-f])[0-9a-f]{64}(?![0-9a-f])')
         if (-not $match.Success) {
@@ -258,14 +285,18 @@ function Expand-CkSafeZip {
     Add-Type -AssemblyName System.IO.Compression
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     New-Item -ItemType Directory -Path $Destination -Force | Out-Null
-    $destinationRoot = [IO.Path]::GetFullPath($Destination).TrimEnd('\') + '\'
+    $separator = [IO.Path]::DirectorySeparatorChar
+    $destinationRoot = [IO.Path]::GetFullPath($Destination).TrimEnd($separator) + $separator
     $archive = [IO.Compression.ZipFile]::OpenRead($ArchivePath)
     [long]$expandedBytes = 0
+    [long]$totalBytes = ($archive.Entries | Measure-Object -Property Length -Sum).Sum
+    $lastPercent = 64
+    Write-CkProgress -Percent 64 -Message '正在解压组件'
     try {
         foreach ($entry in $archive.Entries) {
             $expandedBytes += $entry.Length
             if ($expandedBytes -gt 1073741824) { throw '组件解压后超过 1 GB 限制。' }
-            $relative = $entry.FullName.Replace('/', '\')
+            $relative = $entry.FullName.Replace([char]'/', $separator)
             if ([string]::IsNullOrWhiteSpace($relative)) { continue }
             $destinationPath = [IO.Path]::GetFullPath((Join-Path $Destination $relative))
             if (-not $destinationPath.StartsWith($destinationRoot, [StringComparison]::OrdinalIgnoreCase)) {
@@ -280,14 +311,44 @@ function Expand-CkSafeZip {
             $source = $entry.Open()
             $target = [IO.File]::Open($destinationPath, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
             try { $source.CopyTo($target) } finally { $target.Dispose(); $source.Dispose() }
+            if ($totalBytes -gt 0) {
+                $percent = 64 + [int](($expandedBytes / $totalBytes) * 14)
+                if ($percent -gt $lastPercent) {
+                    Write-CkProgress -Percent ([Math]::Min(78, $percent)) -Message '正在解压组件'
+                    $lastPercent = $percent
+                }
+            }
         }
     } finally {
         $archive.Dispose()
     }
+    Write-CkProgress -Percent 78 -Message '组件解压完成'
 }
-
 function Get-CkBlenderPython {
     $blenderCandidates = New-Object System.Collections.Generic.List[string]
+    $settingsPath = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'settings.json'
+    if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+        try {
+            $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $selected = [string]$settings.BlenderPath
+            if (Test-Path -LiteralPath $selected -PathType Leaf) {
+                $blenderCandidates.Add($selected)
+            } elseif (Test-Path -LiteralPath $selected -PathType Container) {
+                $directExe = Join-Path $selected 'blender.exe'
+                if (Test-Path -LiteralPath $directExe -PathType Leaf) {
+                    $blenderCandidates.Add($directExe)
+                } else {
+                    foreach ($directory in @(Get-ChildItem -LiteralPath $selected -Directory -ErrorAction SilentlyContinue)) {
+                        $nestedExe = Join-Path $directory.FullName 'blender.exe'
+                        if (Test-Path -LiteralPath $nestedExe -PathType Leaf) {
+                            $blenderCandidates.Add($nestedExe)
+                            break
+                        }
+                    }
+                }
+            }
+        } catch { }
+    }
     foreach ($name in @('BLENDER_EXE', 'BLENDER_PATH')) {
         $value = [Environment]::GetEnvironmentVariable($name)
         if ($value) { $blenderCandidates.Add($value) }
@@ -322,6 +383,7 @@ function Initialize-CkVehicleRendererDependencies {
         throw '模型 Release 未包含有效的 Sollumz。'
     }
 
+    Write-CkProgress -Percent 80 -Message '正在配置 Blender 运行依赖'
     $runtime = Get-CkBlenderPython
     $pythonVersion = (& $runtime.Python -c "import sys; print('%d.%d' % sys.version_info[:2])" | Select-Object -First 1).Trim()
     $pymateriaHashes = @{
@@ -348,6 +410,7 @@ function Initialize-CkVehicleRendererDependencies {
     [IO.File]::WriteAllText($requirementsPath, $requirements, (New-Object Text.UTF8Encoding($false)))
     & $runtime.Python -m pip install --disable-pip-version-check --no-input --target $sitePackages --no-deps --require-hashes -r $requirementsPath | Out-Host
     if ($LASTEXITCODE -ne 0) { throw "Sollumz Python 依赖安装失败，退出码: $LASTEXITCODE" }
+    Write-CkProgress -Percent 89 -Message 'Blender 运行依赖配置完成'
 }
 
 function Install-CkComponent {
@@ -361,8 +424,10 @@ function Install-CkComponent {
     $extractPath = Join-Path $stage 'extract'
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     try {
-        Save-CkDownload -Url ([string]$Release.AssetUrl) -Destination $archivePath
+        Save-CkDownload -Url ([string]$Release.AssetUrl) -Destination $archivePath -StartPercent 28 -EndPercent 58 -Label '正在下载组件'
+        Write-CkProgress -Percent 61 -Message '正在校验组件完整性'
         $archiveHash = Assert-CkReleaseArchiveHash -Release $Release -ArchivePath $archivePath -StageRoot $stage
+        Write-CkProgress -Percent 63 -Message '组件校验通过'
         Expand-CkSafeZip -ArchivePath $archivePath -Destination $extractPath
 
         $sourceDirectories = @(Get-ChildItem -LiteralPath $extractPath -Directory)
@@ -384,6 +449,7 @@ function Install-CkComponent {
             }
         }
 
+        Write-CkProgress -Percent 92 -Message '正在切换到新版本'
         $backupRoot = Join-Path $Paths.Workspace '.ck-component-backups'
         New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
         $backup = Assert-CkChildPath -Path (Join-Path $backupRoot ("$ToolId-" + (Get-Date -Format 'yyyyMMdd-HHmmss-fff'))) -Parent $backupRoot
@@ -420,6 +486,7 @@ function Install-CkComponent {
 }
 
 try {
+    Write-CkProgress -Percent 3 -Message '正在读取组件状态'
     $tool = Get-CkToolConfig
     $paths = Get-CkComponentPaths -Tool $tool
     $local = Get-CkLocalStatus -Tool $tool -Paths $paths
@@ -444,7 +511,9 @@ try {
 
     $remoteRelease = $null
     if ($Action -in @('check', 'install')) {
+        Write-CkProgress -Percent 8 -Message '正在连接 GitHub Release'
         $remoteRelease = Get-CkRemoteRelease -Tool $tool
+        Write-CkProgress -Percent $(if ($Action -eq 'check') { 88 } else { 25 }) -Message "已找到 $($remoteRelease.Tag)"
         $result.latestVersion = [string]$remoteRelease.Tag
         $result.releaseAsset = [string]$remoteRelease.AssetName
         $result.releaseUrl = [string]$remoteRelease.HtmlUrl
@@ -463,6 +532,7 @@ try {
     } elseif ($Action -eq 'check' -and $result.updateAvailable) {
         $result.status = 'update-available'
     }
+    Write-CkProgress -Percent 100 -Message $(if ($Action -eq 'install') { '组件安装完成' } else { '更新检查完成' })
     $result | ConvertTo-Json -Depth 6 -Compress
     exit 0
 } catch {

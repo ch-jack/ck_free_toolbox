@@ -59,7 +59,7 @@ git push origin v1.0.2
 - 支持载具、武器、饰品、道具、普通 Drawable、Drawable Dictionary 和地图。
 - 支持实时搜索、全选、取消、打开输出目录和批量渲染。
 - 调用 vehicle_renderer/render_all_vehicles.py --asset-types all。
-- 使用已安装 Blender 自带 Python；日志和退出码实时回到 UI，总进度使用中文阶段提示。
+- 使用已安装 Blender 自带 Python；玩家只需选择 Blender 目录，CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。
 
 ### NUI 自动去墙
 
@@ -76,6 +76,7 @@ git push origin v1.0.2
 - 当前工具页右上角显示对应项目的 GitHub 开源地址，使用系统默认浏览器打开。
 - 组件缺失时显示“安装组件”，只下载 tools.json 登记的最新稳定 GitHub Release ZIP，不再下载分支源码。
 - 点击“检查更新”通过公开 releases/latest 跳转比较本地 releaseTag 与最新稳定 Release 标签，不占用 GitHub API 配额。
+- 检查、下载、校验、解压、依赖配置和版本切换均通过顶部进度条显示；下载阶段显示实际字节进度。
 - 下载先进入隔离 staging，限制大小并防止 ZIP 路径穿越；模型包校验随 Release 发布的 SHA-256，所有组件记录实际下载哈希。
 - 更新前保留 .ck-component-backups 备份，安装失败会回滚，避免破坏当前可用版本。
 - 模型 Release 已内置 Sollumz v2.8.3；工具箱只使用 Blender Python 配置带哈希校验的运行依赖。
@@ -91,7 +92,7 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 未安装时，依赖卡显示“官网下载”，点击后打开 Blender 官方下载页。
+- Blender 提供“官网”和“选择”按钮；.NET 4.8 使用系统安装并只提供官网；YtdTools、RpfTools 与 Sollumz 随模型组件安装，不需要用户选择。
 
 ## 已验证
 

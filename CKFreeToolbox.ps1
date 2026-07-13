@@ -212,6 +212,9 @@ $shellXaml = @"
                     Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="13" FontWeight="SemiBold"
                     ToolTip="打开当前项目的 GitHub 仓库"/>
           </StackPanel>
+          <ProgressBar x:Name="ComponentProgressBar" AutomationProperties.AutomationId="Tool.ComponentProgressBar"
+                       Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Bottom"
+                       Background="#1B222A" Foreground="#31D69A" Visibility="Collapsed"/>
         </Grid>
       </Border>
       <Grid x:Name="PageHost" Grid.Row="1" Background="#090A0A"/>
@@ -254,6 +257,7 @@ $pageSubtitle = $window.FindName('PageSubtitle')
 $componentStatusText = $window.FindName('ComponentStatusText')
 $componentActionButton = $window.FindName('ComponentActionButton')
 $openSourceButton = $window.FindName('OpenSourceButton')
+$componentProgressBar = $window.FindName('ComponentProgressBar')
 
 $tools = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $pages = @{}
@@ -339,19 +343,23 @@ function Update-CkComponentHeader {
     if (-not $tool -or -not $tool.PSObject.Properties['component']) {
         $componentStatusText.Visibility = 'Collapsed'
         $componentActionButton.Visibility = 'Collapsed'
+        $componentProgressBar.Visibility = 'Collapsed'
         return
     }
 
     $componentStatusText.Visibility = 'Visible'
     $componentActionButton.Visibility = 'Visible'
     if ($componentState.Process -and $componentState.Process.ToolId -eq $componentState.CurrentToolId) {
-        $componentStatusText.Text = if ($componentState.Process.Action -eq 'check') { '正在检查 Release' } else { '正在安装组件' }
+        $componentStatusText.Text = [string]$componentState.Process.Message
         $componentStatusText.Foreground = '#72B7F2'
         $componentActionButton.Content = if ($componentState.Process.Action -eq 'check') { '检查中...' } else { '安装中...' }
         $componentActionButton.IsEnabled = $false
+        $componentProgressBar.Visibility = 'Visible'
+        $componentProgressBar.Value = [int]$componentState.Process.Percent
         return
     }
 
+    $componentProgressBar.Visibility = 'Collapsed'
     $local = & $getLocalComponentStateAction $tool
     $remote = if ($componentState.Remote.ContainsKey($componentState.CurrentToolId)) { $componentState.Remote[$componentState.CurrentToolId] } else { $null }
     $componentActionButton.IsEnabled = $true
@@ -412,6 +420,17 @@ function Start-CkComponentOperation {
 
     $onOutput = {
         param($line)
+        if ($line -match '^CK_PROGRESS\s+(.+)$') {
+            try {
+                $progress = $Matches[1] | ConvertFrom-Json
+                if ($callbackState.Process -and $callbackState.Process.ToolId -eq $callbackToolId) {
+                    $callbackState.Process.Percent = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
+                    $callbackState.Process.Message = [string]$progress.message
+                    if ($callbackState.CurrentToolId -eq $callbackToolId) { & $callbackRefresh }
+                }
+            } catch { }
+            return
+        }
         [void]$callbackOutput.AppendLine($line)
     }.GetNewClosure()
     $onError = {
@@ -465,7 +484,13 @@ function Start-CkComponentOperation {
         '-WorkspaceRoot', $context.Paths.WorkspaceRoot
     )
     $runtime = Start-CkLoggedProcess -FileName $powershellExe -Arguments $arguments -WorkingDirectory $ScriptRoot -Dispatcher $context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onError
-    $componentState.Process = [pscustomobject]@{ ToolId = $ToolId; Action = $Action; Runtime = $runtime }
+    $componentState.Process = [pscustomobject]@{
+        ToolId = $ToolId
+        Action = $Action
+        Runtime = $runtime
+        Percent = 2
+        Message = $(if ($Action -eq 'check') { '正在准备检查更新' } else { '正在准备安装组件' })
+    }
     & $refreshComponentHeaderAction
 }
 function Show-ToolPage {

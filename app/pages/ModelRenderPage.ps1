@@ -26,39 +26,53 @@
           </StackPanel>
           <TextBlock x:Name="DependencyStatus" Text="检测中" HorizontalAlignment="Right" Foreground="#31D69A" FontSize="18" FontWeight="Bold"/>
         </Grid>
-        <UniformGrid Columns="2" Rows="3">
-<Button x:Name="BlenderDependencyButton" AutomationProperties.AutomationId="ModelRender.BlenderDependencyButton" Background="#16181B" BorderBrush="#242833" BorderThickness="1" Padding="14" Margin="0,0,8,8" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-              <Ellipse x:Name="BlenderDot" Width="12" Height="12" Fill="#31D69A" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="1"><TextBlock Text="Blender" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="BlenderText" Text="检测中..." Foreground="#777B83" FontSize="14"/></StackPanel>
-              <TextBlock x:Name="BlenderActionText" Grid.Column="2" VerticalAlignment="Center" Foreground="#58A6FF" FontSize="13" FontWeight="SemiBold"/>
-            </Grid>
-          </Button>
-          <Border Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="14" Margin="8,0,0,8">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Ellipse x:Name="CodeWalkerDot" Width="12" Height="12" Fill="#31D69A" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="1"><TextBlock Text="CodeWalker" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="CodeWalkerText" Text="检测中..." Foreground="#777B83" FontSize="14"/></StackPanel>
-            </Grid>
-          </Border>
-          <Border Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,8,8,8">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Ellipse x:Name="DotNetDot" Width="12" Height="12" Fill="#31D69A" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="1"><TextBlock Text=".NET 4.8" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="DotNetText" Text="检测中..." Foreground="#777B83" FontSize="14"/></StackPanel>
+        <Grid>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+
+          <Border Grid.Row="0" Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,0,6,6">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="BlenderDot" Width="10" Height="10" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text="Blender" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="BlenderText" Text="检测中..." Foreground="#777B83" FontSize="12" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <Button x:Name="BlenderDownloadButton" AutomationProperties.AutomationId="ModelRender.BlenderDownloadButton" Content="官网" Width="48" Height="28" Margin="6,0,4,0" Foreground="#58A6FF"/>
+                <Button x:Name="BlenderBrowseButton" AutomationProperties.AutomationId="ModelRender.BlenderBrowseButton" Content="选择" Width="48" Height="28"/>
+              </StackPanel>
             </Grid>
           </Border>
-          <Border Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="14" Margin="8,8,0,8">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Ellipse x:Name="SollumzDot" Width="12" Height="12" Fill="#31D69A" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="1"><TextBlock Text="Sollumz 插件" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="SollumzText" Text="检测中..." Foreground="#777B83" FontSize="14"/></StackPanel>
+
+          <Border Grid.Row="0" Grid.Column="1" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="12" Margin="6,0,0,6">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="CodeWalkerDot" Width="10" Height="10" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text="CodeWalker" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="CodeWalkerText" Text="检测中..." Foreground="#777B83" FontSize="12" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <TextBlock Grid.Column="2" Text="组件自带" Foreground="#31D69A" FontSize="12" VerticalAlignment="Center"/>
             </Grid>
           </Border>
-          <Border Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="14" Margin="0,8,8,0">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-              <Ellipse x:Name="RendererDot" Width="12" Height="12" Fill="#31D69A" VerticalAlignment="Center"/>
-              <StackPanel Grid.Column="1"><TextBlock Text="渲染脚本" FontSize="20" FontWeight="SemiBold"/><TextBlock x:Name="RendererText" Text="检测中..." Foreground="#777B83" FontSize="14"/></StackPanel>
+
+          <Border Grid.Row="1" Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,6,6,6">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="DotNetDot" Width="10" Height="10" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text=".NET 4.8" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="DotNetText" Text="检测中..." Foreground="#777B83" FontSize="12" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <Button x:Name="DotNetDownloadButton" AutomationProperties.AutomationId="ModelRender.DotNetDownloadButton" Grid.Column="2" Content="官网" Width="52" Height="28" Margin="6,0,0,0" Foreground="#58A6FF"/>
             </Grid>
           </Border>
-        </UniformGrid>
+
+          <Border Grid.Row="1" Grid.Column="1" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="12" Margin="6,6,0,6">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="SollumzDot" Width="10" Height="10" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text="Sollumz 插件" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="SollumzText" Text="检测中..." Foreground="#777B83" FontSize="12" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <TextBlock Grid.Column="2" Text="组件自带" Foreground="#31D69A" FontSize="12" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+
+          <Border Grid.Row="2" Grid.ColumnSpan="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="12" Margin="0,6,0,0">
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="20"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="RendererDot" Width="10" Height="10" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text="渲染组件" FontSize="16" FontWeight="SemiBold"/><TextBlock x:Name="RendererText" Text="检测中..." Foreground="#777B83" FontSize="12"/></StackPanel>
+              <TextBlock Grid.Column="2" Text="在顶部安装或更新" Foreground="#777B83" FontSize="12" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+        </Grid>
         <UniformGrid Columns="4" Margin="0,16,0,0">
           <Border Background="#15181C" CornerRadius="8" Padding="12" Margin="0,0,6,0"><StackPanel><TextBlock Text="GPU" Foreground="#58A6FF" FontWeight="Bold"/><TextBlock Text="自动检测" FontSize="17"/><TextBlock Text="推荐自动设备" Foreground="#777B83"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="8" Padding="12" Margin="6,0"><StackPanel><TextBlock Text="CPU" Foreground="#B56BFF" FontWeight="Bold"/><TextBlock x:Name="CpuText" Text="检测中" FontSize="17"/><TextBlock Text="多核批量处理" Foreground="#777B83"/></StackPanel></Border>
@@ -131,7 +145,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'DependencyStatus','BlenderDependencyButton','BlenderDot','BlenderText','BlenderActionText','CodeWalkerDot','CodeWalkerText','DotNetDot','DotNetText',
+        'DependencyStatus','BlenderDot','BlenderText','BlenderDownloadButton','BlenderBrowseButton','CodeWalkerDot','CodeWalkerText','DotNetDot','DotNetText','DotNetDownloadButton',
         'SollumzDot','SollumzText','RendererDot','RendererText','CpuText','MemoryText','WorkerText',
         'InputNameText','InputPathText','ChooseInputButton','ScanButton','RunButton','OpenOutputButton',
         'RenderStatusTitle','RenderStepText','RenderPercent','RenderProgress','StepPanel','RenderLine',
@@ -158,16 +172,18 @@
     function Update-Environment {
         $env = Get-CkToolboxEnvironment -Context $Context
 
-        $ui.BlenderText.Text = $env.Blender.Label; Set-CkStatusDot $ui.BlenderDot $env.Blender.Ok
-        $ui.BlenderActionText.Text = if ($env.Blender.Ok) { '已就绪' } else { '官网下载' }
-        $ui.BlenderActionText.Foreground = if ($env.Blender.Ok) { '#31D69A' } else { '#58A6FF' }
-        $ui.BlenderDependencyButton.Cursor = if ($env.Blender.Ok) { [System.Windows.Input.Cursors]::Arrow } else { [System.Windows.Input.Cursors]::Hand }
-        $ui.BlenderDependencyButton.ToolTip = if ($env.Blender.Ok) { '已检测到 Blender' } else { '点击打开 Blender 官方下载页' }
-        $ui.CodeWalkerText.Text = $env.CodeWalker.Label; Set-CkStatusDot $ui.CodeWalkerDot $env.CodeWalker.Ok
-        $ui.DotNetText.Text = $env.DotNet.Label; Set-CkStatusDot $ui.DotNetDot $env.DotNet.Ok
-        $ui.SollumzText.Text = $env.Sollumz.Label; Set-CkStatusDot $ui.SollumzDot $env.Sollumz.Ok
-        $ui.RendererText.Text = $env.Renderer.Label; Set-CkStatusDot $ui.RendererDot $env.Renderer.Ok
-        $ui.DependencyStatus.Text = if ($env.AllOk) { '通过 ✓' } else { '需检查' }
+        $ui.BlenderText.Text = $env.Blender.Label
+        Set-CkStatusDot $ui.BlenderDot $env.Blender.Ok
+        $ui.CodeWalkerText.Text = $env.CodeWalker.Label
+        Set-CkStatusDot $ui.CodeWalkerDot $env.CodeWalker.Ok
+        $ui.DotNetText.Text = $env.DotNet.Label
+        Set-CkStatusDot $ui.DotNetDot $env.DotNet.Ok
+        $ui.SollumzText.Text = $env.Sollumz.Label
+        Set-CkStatusDot $ui.SollumzDot $env.Sollumz.Ok
+        $ui.RendererText.Text = $env.Renderer.Label
+        Set-CkStatusDot $ui.RendererDot $env.Renderer.Ok
+        $ui.DependencyStatus.Text = if ($env.AllOk) { '全部就绪' } else { '请处理缺失项' }
+        $ui.DependencyStatus.Foreground = if ($env.AllOk) { '#31D69A' } else { '#F4B860' }
         $ui.CpuText.Text = $env.CpuName
         $ui.MemoryText.Text = if ($env.MemoryGb) { "$($env.MemoryGb) GB" } else { '-- GB' }
         $ui.WorkerText.Text = "并行 $($env.RecommendedWorkers) 个任务"
@@ -359,7 +375,10 @@
 
         $env = Get-CkToolboxEnvironment -Context $Context
 
-        if (-not $env.Blender.Ok) { throw '未检测到 Blender。请点击上方 Blender 环境依赖前往官网下载。' }
+        if (-not $env.Blender.Ok) { throw '未检测到 Blender，请安装后选择 Blender 目录。' }
+        if (-not $env.DotNet.Ok) { throw '未检测到系统 .NET Framework 4.8，请点击官网按钮安装。' }
+        if (-not $env.CodeWalker.Ok) { throw '模型组件缺少内置转换工具，请点击顶部安装组件按钮重新安装。' }
+        if (-not $env.Sollumz.Ok) { throw '模型组件缺少内置 Sollumz，请点击顶部安装组件按钮重新安装。' }
         $pythonExe = Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $env.Blender.Path
         $args = @(
             '-u',
@@ -371,7 +390,10 @@
             '--asset-types', 'all',
             '--workers', $env.RecommendedWorkers,
             '--force',
-            '--cutout'
+            '--cutout',
+            '--sollumz', $env.Sollumz.Path,
+            '--ytd-tool', $env.CodeWalker.YtdTool,
+            '--rpf-tool', $env.CodeWalker.RpfTool
         )
         foreach ($row in $selected) {
             if ($row.Kind -ne 'archive') { $args += @('--model', $row.Model) }
@@ -433,14 +455,39 @@
         }
     }.GetNewClosure()
 
-    $openBlenderDownloadAction = {
-        $currentEnvironment = Get-CkToolboxEnvironment -Context $Context
-        if (-not $currentEnvironment.Blender.Ok) {
-            Start-Process -FilePath 'https://www.blender.org/download/'
+    function Select-CkBlenderDirectory {
+        $settings = Get-CkDependencySettings
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = '选择包含 blender.exe 的 Blender 安装目录'
+        $dialog.ShowNewFolderButton = $false
+        if ($settings.BlenderPath -and (Test-Path -LiteralPath ([string]$settings.BlenderPath) -PathType Container)) {
+            $dialog.SelectedPath = [string]$settings.BlenderPath
         }
-    }.GetNewClosure()
+        try {
+            if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+            $selected = [IO.Path]::GetFullPath($dialog.SelectedPath).TrimEnd('\')
+            if ($selected -eq [IO.Path]::GetPathRoot($selected).TrimEnd('\')) {
+                throw '不能选择磁盘根目录，请选择 Blender 安装目录。'
+            }
+            Set-CkDependencyPath -Dependency Blender -Path $selected | Out-Null
+            & $updateEnvironmentAction
+            $environment = Get-CkToolboxEnvironment -Context $Context
+            if (-not $environment.Blender.Ok) {
+                throw '所选目录未检测到 blender.exe，请选择 Blender 安装后的实际目录。'
+            }
+        } finally {
+            $dialog.Dispose()
+        }
+    }
 
-    Register-CkButtonAction -Button $ui.BlenderDependencyButton -Action $openBlenderDownloadAction -OnError $showPageError
+    $selectBlenderDirectoryAction = (Get-Command Select-CkBlenderDirectory).ScriptBlock.GetNewClosure()
+    $openBlenderDownloadAction = { Start-Process -FilePath 'https://www.blender.org/download/' }.GetNewClosure()
+    $openDotNetDownloadAction = { Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet-framework/net48' }.GetNewClosure()
+    $browseBlenderAction = { & $selectBlenderDirectoryAction }.GetNewClosure()
+
+    Register-CkButtonAction -Button $ui.BlenderDownloadButton -Action $openBlenderDownloadAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.BlenderBrowseButton -Action $browseBlenderAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DotNetDownloadButton -Action $openDotNetDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseInputButton -Action $chooseInputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ScanButton -Action $scanButtonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.SelectAllButton -Action $selectAllAction -OnError $showPageError
@@ -459,6 +506,6 @@
         Title = '模型自动截图'
         Icon = '▧'
         Root = $root
-        Activate = { }
+        Activate = $updateEnvironmentAction
     }
 }
