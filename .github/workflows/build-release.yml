@@ -23,6 +23,29 @@ jobs:
     steps:
       - name: Checkout toolbox
         uses: actions/checkout@v5
+      - name: Prepare automatic version
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $releaseVersion = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME.TrimStart('v') } else { "1.0.$env:GITHUB_RUN_NUMBER" }
+          if ($releaseVersion -notmatch '^[0-9]+\.[0-9]+\.[0-9]+$') { throw "Invalid release version: $releaseVersion" }
+          $releaseTag = "v$releaseVersion"
+          "CK_RELEASE_VERSION=$releaseVersion" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "CK_RELEASE_TAG=$releaseTag" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          $quote = [char]34
+          $launcherPath = '.\launcher\CKFreeToolboxLauncher.cs'
+          $launcher = Get-Content -LiteralPath $launcherPath -Raw -Encoding UTF8
+          $launcher = $launcher -replace 'AssemblyVersion\("[0-9.]+"\)', ('AssemblyVersion(' + $quote + $releaseVersion + '.0' + $quote + ')')
+          $launcher = $launcher -replace 'AssemblyFileVersion\("[0-9.]+"\)', ('AssemblyFileVersion(' + $quote + $releaseVersion + '.0' + $quote + ')')
+          [IO.File]::WriteAllText((Resolve-Path $launcherPath), $launcher, (New-Object Text.UTF8Encoding($false)))
+          $mainPath = '.\CKFreeToolbox.ps1'
+          $main = Get-Content -LiteralPath $mainPath -Raw -Encoding UTF8
+          $main = $main -replace 'Text="v[0-9]+\.[0-9]+\.[0-9]+"', ('Text=' + $quote + 'v' + $releaseVersion + $quote)
+          [IO.File]::WriteAllText((Resolve-Path $mainPath), $main, (New-Object Text.UTF8Encoding($true)))
+          $workerPath = '.\app\workers\ComponentWorker.ps1'
+          $worker = Get-Content -LiteralPath $workerPath -Raw -Encoding UTF8
+          $worker = $worker -replace 'CKFreeToolbox/[0-9]+\.[0-9]+\.[0-9]+', "CKFreeToolbox/$releaseVersion"
+          [IO.File]::WriteAllText((Resolve-Path $workerPath), $worker, (New-Object Text.UTF8Encoding($true)))
 
       - name: Validate PowerShell syntax
         shell: powershell
@@ -121,49 +144,48 @@ jobs:
           compression-level: 0
           retention-days: 14
 
-      - name: Check release tag version
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Check release version
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $tagVersion = $env:GITHUB_REF_NAME.TrimStart('v')
           $manifestPath = Get-ChildItem -LiteralPath .\dist -Directory |
             ForEach-Object { Join-Path $_.FullName 'package-manifest.json' } |
             Select-Object -First 1
           $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
-          if ([string]$manifest.version -ne $tagVersion) {
-            throw "Tag version $tagVersion does not match package version $($manifest.version)."
+          if ([string]$manifest.version -ne $env:CK_RELEASE_VERSION) {
+            throw "Release version $env:CK_RELEASE_VERSION does not match package version $($manifest.version)."
           }
 
       - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
+        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           $archive = Get-ChildItem -LiteralPath .\dist -Filter *.zip -File | Select-Object -First 1
-          $assetName = "CK-Free-Toolbox-$($env:GITHUB_REF_NAME).zip"
+          $assetName = "CK-Free-Toolbox-$($env:CK_RELEASE_TAG).zip"
           $releaseArchive = Join-Path $archive.DirectoryName $assetName
           Copy-Item -LiteralPath $archive.FullName -Destination $releaseArchive -Force
 
           $ErrorActionPreference = 'SilentlyContinue'
-          gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY *> $null
+          gh release view $env:CK_RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
           $releaseExists = ($LASTEXITCODE -eq 0)
           $ErrorActionPreference = 'Stop'
           if ($releaseExists) {
-            $existingAssets = @(gh release view $env:GITHUB_REF_NAME --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name')
+            $existingAssets = @(gh release view $env:CK_RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name')
             foreach ($existingAsset in $existingAssets) {
               if (-not [string]::IsNullOrWhiteSpace($existingAsset)) {
-                gh release delete-asset $env:GITHUB_REF_NAME $existingAsset --yes --repo $env:GITHUB_REPOSITORY
+                gh release delete-asset $env:CK_RELEASE_TAG $existingAsset --yes --repo $env:GITHUB_REPOSITORY
                 if ($LASTEXITCODE -ne 0) {
                   throw "Failed to remove existing release asset: $existingAsset"
                 }
               }
             }
-            gh release upload $env:GITHUB_REF_NAME $releaseArchive --clobber --repo $env:GITHUB_REPOSITORY
+            gh release upload $env:CK_RELEASE_TAG $releaseArchive --clobber --repo $env:GITHUB_REPOSITORY
           } else {
-            gh release create $env:GITHUB_REF_NAME $releaseArchive --generate-notes --verify-tag --repo $env:GITHUB_REPOSITORY
+            gh release create $env:CK_RELEASE_TAG $releaseArchive --target $env:GITHUB_SHA --title $env:CK_RELEASE_TAG --generate-notes --repo $env:GITHUB_REPOSITORY
           }
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release command exited with code $LASTEXITCODE"

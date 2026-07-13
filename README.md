@@ -39,9 +39,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 `.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取两个功能组件：
 
-- 推送到 `main`、创建面向 `main` 的 Pull Request 或手动运行时，自动检查 PowerShell 语法、构建 EXE、验证轻量包并上传 Actions Artifact。
-- 推送 `v*` 标签时，在构建通过后自动创建同名 GitHub Release 并上传 ZIP。
-- Release 标签必须和启动器中的版本一致。例如当前版本使用 `v1.0.2`。
+- 推送到 `main` 时，自动生成 `v1.0.<run>` 版本，构建 EXE/ZIP、上传 Artifact 并创建正式 GitHub Release。
+- Pull Request 只执行构建验证，不发布 Release。
+- 手动推送 `v*` 标签时仍按指定标签发布；自动版本会同步写入 EXE、界面和包清单。
 - 自动构建和发布都不会下载或打包 Blender。
 
 发布命令：

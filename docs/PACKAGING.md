@@ -75,7 +75,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 5. 验证发布包不含功能组件目录和 Blender。
 6. 上传 Actions Artifact。
 
-推送 `main`、创建 Pull Request 或手动运行会自动构建。推送与程序版本一致的 `v*` 标签会自动创建 GitHub Release 并上传 ZIP。当前版本标签为 `v1.0.2`。
+推送 `main` 会按 Actions 运行序号生成 `v1.0.<run>`，自动构建并创建正式 GitHub Release。Pull Request 只验证构建；手动推送 `v*` 标签仍可发布指定版本。
 
 ## NUI 自动去墙安全流程
 
@@ -98,4 +98,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 - 发送完整 ZIP，不要只发送 EXE。
 - 面向大量用户前，为 EXE 和 ZIP 配置代码签名。
-- 新版本先更新启动器和界面版本号，再创建对应 `v*` 标签。
+- main 自动发布时，工作流会同步 EXE、界面和包清单版本；指定版本仍可手动推送 `v*` 标签。
