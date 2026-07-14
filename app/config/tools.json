@@ -42,5 +42,31 @@
             ]
         },
         "default": false
+    },
+    {
+        "id": "rpf-to-fivem",
+        "title": "RPF 转 FiveM",
+        "icon": "⇄",
+        "page": "RpfToFivemPage.ps1",
+        "factory": "New-CkRpfToFivemPage",
+        "sourceUrl": "https://github.com/ch-jack/rpf2fivem",
+        "component": {
+            "repo": "ch-jack/rpf2fivem",
+            "installDir": "rpf_to_fivem",
+            "bootstrap": "",
+            "releaseAssetPattern": "rpf2fivem-*.zip",
+            "releaseChecksumAssetPattern": "rpf2fivem-*.zip.sha256",
+            "requiredFiles": [
+                "rpf_to_fivem.py",
+                "tools/CkRpfExtractor.exe",
+                "tools/CkRpfExtractor.exe.config",
+                "tools/CodeWalker.Core.dll",
+                "tools/SharpDX.dll",
+                "tools/SharpDX.Mathematics.dll",
+                "tools/7z.exe",
+                "tools/7z.dll"
+            ]
+        },
+        "default": false
     }
 ]

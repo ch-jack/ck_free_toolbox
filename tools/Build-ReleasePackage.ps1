@@ -162,11 +162,18 @@ $userGuide = @(
     '3. 确认报告后执行“正式写入”，工具会在目标目录外创建备份。',
     '4. 需要撤销时，使用报告中的 Run ID 执行恢复。',
     '',
+    'RPF 转 FiveM：',
+    '1. 打开 RPF 转 FiveM 页面，选择输入目录、单个 RPF 或压缩包。',
+    '2. 选择输出目录，按需调整覆盖、临时目录与安全限制。',
+    '3. 点击开始转换，每个 RPF 会生成一个独立 FiveM resource。',
+    '4. 转换后可直接打开输出目录，并查看资源明细和 JSON 报告。',
+    '',
     'GitHub 组件管理：',
-    '1. 每个工具页面右上角可打开对应 GitHub 开源仓库。',
-    '2. 组件缺失时点击“安装组件”，工具箱只下载已登记仓库的最新稳定 Release ZIP 并校验。',
-    '3. 点击“检查更新”比较 Release 版本标签，发现更新后点击“更新组件”。',
-    '4. 更新前自动备份旧组件；下载、解压或校验失败时不会覆盖当前组件。',
+    '1. 工具箱启动后会在后台依次检查所有组件更新，不阻塞页面。',
+    '2. 每个工具页面右上角可打开对应 GitHub 开源仓库。',
+    '3. 组件缺失时点击“安装组件”，工具箱只下载已登记仓库的最新稳定 Release ZIP 并校验。',
+    '4. 检查结果会显示最新版本或更新提示，发现更新后点击“更新组件”。',
+    '5. 更新前自动备份旧组件；下载、解压或校验失败时不会覆盖当前组件。',
     '',
     '工具箱自动更新：',
     '1. 工具箱启动后会异步检查自身最新稳定 Release。',
@@ -176,7 +183,7 @@ $userGuide = @(
     '发布包不包含 Blender。请安装 Blender 4.2 或更高版本，工具箱会自动使用 Blender 自带 Python。',
     'NUI 自动去墙可使用系统 Python 3.7+；未安装系统 Python 时会使用 Blender 自带 Python。',
     '轻量发布包不预装功能组件；模型 Release 已内置 Sollumz；首次安装时会配置 Blender Python 渲染依赖。',
-    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix 目录也需要保留。',
+    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -190,6 +197,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1'),
     (Join-Path $packagePath 'app\pages\ModelRenderPage.ps1'),
     (Join-Path $packagePath 'app\pages\NuiWallfixPage.ps1'),
+    (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
     (Join-Path $packagePath 'static\cklogo.ico')
 )
 foreach ($path in $requiredPackageFiles) {
@@ -219,6 +227,7 @@ $manifest = [ordered]@{
         codewalkerTools = $false
         sevenZip = $false
         nuiWallfix = $false
+        rpfToFivem = $false
         componentManager = $true
         selfUpdater = $true
     }

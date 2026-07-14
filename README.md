@@ -2,7 +2,7 @@
 
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、模型扫描、环境检测、任务进程、日志、组件安装更新及两个功能页的客户端实现。模型渲染引擎与 NUI 重写引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer) 和 [nui-wallfix](https://github.com/ch-jack/nui-wallfix) 维护，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、模型扫描、环境检测、任务进程、日志、组件安装更新及三个功能页的客户端实现。模型渲染、NUI 重写和 RPF 转 FiveM 引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix) 和 [rpf2fivem](https://github.com/ch-jack/rpf2fivem) 维护，工具箱运行后按需下载。
 
 ## 启动
 
@@ -19,7 +19,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 开发者双击 `一键打包发布包.cmd`，脚本会自动：
 
 - 重新构建 `CK免费工具箱.exe`。
-- 不预先下载或打包 `vehicle_renderer` 和 `nui-wallfix`。
+- 不预先下载或打包 `vehicle_renderer`、`nui-wallfix` 和 `rpf_to_fivem`。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
 - 不复制 Blender；模型组件使用用户已安装 Blender 自带的 Python。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
@@ -37,7 +37,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 ## GitHub 自动构建与发布
 
-`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取两个功能组件：
+`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取三个功能组件：
 
 - 推送到 `main` 时，自动生成 `v1.0.<run>` 版本，构建 EXE/ZIP、上传 Artifact 并创建正式 GitHub Release。
 - Pull Request 只执行构建验证，不发布 Release。
@@ -71,9 +71,19 @@ git push origin v1.0.2
 - 支持自定义 `providers.json`、未验证镜像、内网地址和冲突时强制恢复等高级选项。
 - 直接调用随包发布的 `nui-wallfix.py`，不需要后端服务；优先使用系统 Python，未安装时使用 Blender 自带 Python。
 
+### RPF 转 FiveM
+
+- 支持输入目录、单个 `.rpf`，以及 ZIP、RAR、7Z、TAR 和嵌套压缩包。
+- 每个 RPF 自动生成一个独立 FiveM resource，并写入 `fxmanifest.lua` 和可识别的 `data_file`。
+- 支持载具、武器、饰品、地图、碰撞、导航、动画、粒子、声音及其他 GTA V/FiveM stream 文件。
+- 提供覆盖、保留临时目录、超时、嵌套深度、压缩包数量、文件数和解压大小限制。
+- 长任务可停止；完成后显示成功、失败、输出文件、警告和逐资源明细，并可打开 JSON 报告。
+- 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
+
 ### GitHub Release 组件管理
 
 - 当前工具页右上角显示对应项目的 GitHub 开源地址，使用系统默认浏览器打开。
+- 工具箱启动后会在后台依次检查所有登记组件的最新稳定 Release；检查不阻塞页面，结果会保留在对应工具页。
 - 组件缺失时显示“安装组件”，只下载 tools.json 登记的最新稳定 GitHub Release ZIP，不再下载分支源码。
 - 点击“检查更新”通过公开 releases/latest 跳转比较本地 releaseTag 与最新稳定 Release 标签，不占用 GitHub API 配额。
 - 检查、下载、校验、解压、依赖配置和版本切换均通过顶部进度条显示；下载阶段显示实际字节进度。
@@ -88,7 +98,7 @@ git push origin v1.0.2
 - 发现新版本时顶部显示“立即更新”，下载阶段显示实际进度。
 - 更新 ZIP 会校验 Release SHA-256、包版本、核心文件和清单哈希。
 - 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
-- 已安装的 vehicle_renderer、nui-wallfix、TestVeh、模型和渲染输出不会被删除。
+- 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、TestVeh、模型和输出不会被删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -105,9 +115,9 @@ git push origin v1.0.2
 
 ## 已验证
 
-2026-07-11 已完成以下验证：
+2026-07-14 已完成以下验证：
 
-- PowerShell 语法检查：10 个 .ps1/.psm1 文件通过。
+- PowerShell 语法检查：13 个 .ps1/.psm1 文件通过。
 - 按钮烟测：扫描、搜索、全选、取消和模型渲染通过。
 - 扫描 D:\fivem\TestVeh：识别 47 个可处理模型。
 - 饰品实渲染：jr_labubu2 成功生成 D:\fivem\TestVeh\_vehicle_renders\jr_labubu2.png。
@@ -116,7 +126,9 @@ git push origin v1.0.2
 - 中文总进度：真实渲染期间未出现英文阶段文本，英文原始输出仅保留在日志。
 - 原完整 ZIP 已验证不含 blender.exe 和 runtime\blender；当前自动构建进一步改为不预装功能组件的轻量包。
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
-- Release 组件安装：CK-model_renderer v1.0.0 与 nui-wallfix v0.1.0 真实下载、安装和同版本检查通过。
+- RPF 转 FiveM：组件注册、参数校验、JSON 报告解析和真实 RPF 转换通过。
+- Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0 与 rpf2fivem v1.0.1 真实下载、校验和安装通过。
+- 启动组件检查：模型截图、NUI 去墙和 RPF 转 FiveM 按队列自动完成检查，页面分别显示最新 Release 或更新提示。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 工具箱自更新：联网版本检查、成功替换、组件/用户目录保留和模拟失败回滚通过。
 
@@ -132,13 +144,13 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图和 NUI 自动去墙。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙和 RPF 转 FiveM。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
 ## 开发与发布目录
 
-工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer` 或 `nui-wallfix`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
+工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix` 或 `rpf_to_fivem`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 

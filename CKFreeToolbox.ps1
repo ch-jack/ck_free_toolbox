@@ -40,7 +40,11 @@ $context = [pscustomobject]@{
         WallfixDir = Join-Path $WorkspaceRoot 'nui-wallfix'
         WallfixScript = Join-Path $WorkspaceRoot 'nui-wallfix\nui-wallfix.py'
         WallfixProviders = Join-Path $WorkspaceRoot 'nui-wallfix\providers.json'
+        RpfToFivemDir = Join-Path $WorkspaceRoot 'rpf_to_fivem'
+        RpfToFivemScript = Join-Path $WorkspaceRoot 'rpf_to_fivem\rpf_to_fivem.py'
         DefaultWallfixInput = ''
+        DefaultRpfInput = ''
+        DefaultRpfOutput = Join-Path $WorkspaceRoot 'RpfToFivemOutput'
         DefaultInput = Join-Path $WorkspaceRoot 'TestVeh'
         DefaultRenderOut = Join-Path $WorkspaceRoot 'TestVeh\_vehicle_renders'
     }
@@ -292,7 +296,11 @@ $componentState = [pscustomobject]@{
     Process = $null
     Remote = @{}
     Checked = @{}
+    StartupQueue = New-Object 'System.Collections.Generic.Queue[string]'
+    StartupActive = $false
 }
+$componentOperationActions = @{ Start = $null; Continue = $null }
+$continueStartupComponentChecksAction = $null
 $selfUpdateState = [pscustomobject]@{
     Enabled = ((Test-Path -LiteralPath $PortableManifest -PathType Leaf) -and
         (Test-Path -LiteralPath $selfUpdateWorker -PathType Leaf) -and
@@ -393,6 +401,15 @@ function Update-CkComponentHeader {
         $componentProgressBar.Value = [int]$componentState.Process.Percent
         return
     }
+    if ($componentState.Process) {
+        $activeTool = $toolConfigs[$componentState.Process.ToolId]
+        $componentStatusText.Text = if ($activeTool) { "后台检查：$($activeTool.title)" } else { '正在后台检查组件' }
+        $componentStatusText.Foreground = '#72B7F2'
+        $componentActionButton.Content = '等待检查'
+        $componentActionButton.IsEnabled = $false
+        $componentProgressBar.Visibility = 'Collapsed'
+        return
+    }
 
     $componentProgressBar.Visibility = 'Collapsed'
     $local = & $getLocalComponentStateAction $tool
@@ -406,6 +423,14 @@ function Update-CkComponentHeader {
         $componentActionButton.Foreground = '#54E0A9'
         return
     }
+    if ($remote -and [string]$remote.status -eq 'error') {
+        $componentStatusText.Text = '检查更新失败'
+        $componentStatusText.Foreground = '#EF7C86'
+        $componentActionButton.Content = '重试检查'
+        $componentActionButton.Tag = 'check'
+        $componentActionButton.Foreground = '#EF7C86'
+        return
+    }
     if ($remote -and $remote.updateAvailable) {
         $latestVersion = [string]$remote.latestVersion
         $componentStatusText.Text = if ($latestVersion) { "发现新版本 $latestVersion" } else { '发现新版本' }
@@ -416,7 +441,9 @@ function Update-CkComponentHeader {
         return
     }
 
-    $componentStatusText.Text = if ($local.LocalVersion) { "已安装 $($local.LocalVersion)" } else { '组件已安装' }
+    $checked = $componentState.Checked.ContainsKey($componentState.CurrentToolId)
+    $currentVersion = if ($remote -and $remote.latestVersion) { [string]$remote.latestVersion } else { [string]$local.LocalVersion }
+    $componentStatusText.Text = if ($checked -and $currentVersion) { "已是最新 $currentVersion" } elseif ($local.LocalVersion) { "已安装 $($local.LocalVersion)" } else { '组件已安装' }
     $componentStatusText.Foreground = '#31D69A'
     $componentActionButton.Content = '检查更新'
     $componentActionButton.Tag = 'check'
@@ -424,7 +451,7 @@ function Update-CkComponentHeader {
 }
 
 function Start-CkComponentOperation {
-    param([ValidateSet('check','install')][string]$Action, [string]$ToolId)
+    param([ValidateSet('check','install')][string]$Action, [string]$ToolId, [bool]$Silent = $false)
 
     if ($componentState.Process) { return }
     if ($selfUpdateState.Process -and $selfUpdateState.Process.Action -eq 'prepare') {
@@ -455,6 +482,8 @@ function Start-CkComponentOperation {
     $callbackAction = $Action
     $callbackRefresh = $refreshComponentHeaderAction
     $callbackPages = $pages
+    $callbackSilent = $Silent
+    $callbackContinue = $componentOperationActions.Continue
 
     $onOutput = {
         param($line)
@@ -480,38 +509,44 @@ function Start-CkComponentOperation {
     }.GetNewClosure()
     $onExit = {
         param($exitCode)
-        $callbackState.Process = $null
-        $raw = $callbackOutput.ToString().Trim()
-        $payload = $null
-        $lines = @($raw -split '\r?\n')
-        for ($i = $lines.Count - 1; $i -ge 0 -and -not $payload; $i--) {
-            try { $payload = $lines[$i] | ConvertFrom-Json } catch { }
-        }
-        if (-not $payload) {
-            $payload = [pscustomobject]@{ status = 'error'; error = if ($raw) { $raw } else { "组件工作器退出码: $exitCode" } }
-        }
-        $callbackState.Remote[$callbackToolId] = $payload
-        if ($callbackState.CurrentToolId -eq $callbackToolId) { & $callbackRefresh }
-        if ($payload.status -eq 'error' -or $exitCode -ne 0) {
-            [System.Windows.MessageBox]::Show(
-                $(if ($payload.error) { [string]$payload.error } else { "组件操作失败，退出码: $exitCode" }),
-                'CK免费工具箱 - 组件管理',
-                [System.Windows.MessageBoxButton]::OK,
-                [System.Windows.MessageBoxImage]::Error
-            ) | Out-Null
-            return
-        }
-        if ($callbackAction -eq 'install') {
-            if ($callbackPages[$callbackToolId].Activate) { & $callbackPages[$callbackToolId].Activate }
-            [System.Windows.MessageBox]::Show(
-                "$($callbackPages[$callbackToolId].Title) 组件已安装到最新版本。",
-                'CK免费工具箱 - 组件管理',
-                [System.Windows.MessageBoxButton]::OK,
-                [System.Windows.MessageBoxImage]::Information
-            ) | Out-Null
+        try {
+            $callbackState.Process = $null
+            $raw = $callbackOutput.ToString().Trim()
+            $payload = $null
+            $lines = @($raw -split '\r?\n')
+            for ($i = $lines.Count - 1; $i -ge 0 -and -not $payload; $i--) {
+                try { $payload = $lines[$i] | ConvertFrom-Json } catch { }
+            }
+            if (-not $payload) {
+                $payload = [pscustomobject]@{ status = 'error'; error = if ($raw) { $raw } else { "组件工作器退出码: $exitCode" } }
+            }
+            $callbackState.Checked[$callbackToolId] = $true
+            $callbackState.Remote[$callbackToolId] = $payload
+            if ($callbackState.CurrentToolId -eq $callbackToolId) { & $callbackRefresh }
+            if ($payload.status -eq 'error' -or $exitCode -ne 0) {
+                if (-not $callbackSilent) {
+                    [System.Windows.MessageBox]::Show(
+                        $(if ($payload.error) { [string]$payload.error } else { "组件操作失败，退出码: $exitCode" }),
+                        'CK免费工具箱 - 组件管理',
+                        [System.Windows.MessageBoxButton]::OK,
+                        [System.Windows.MessageBoxImage]::Error
+                    ) | Out-Null
+                }
+                return
+            }
+            if ($callbackAction -eq 'install') {
+                if ($callbackPages[$callbackToolId].Activate) { & $callbackPages[$callbackToolId].Activate }
+                [System.Windows.MessageBox]::Show(
+                    "$($callbackPages[$callbackToolId].Title) 组件已安装到最新版本。",
+                    'CK免费工具箱 - 组件管理',
+                    [System.Windows.MessageBoxButton]::OK,
+                    [System.Windows.MessageBoxImage]::Information
+                ) | Out-Null
+            }
+        } finally {
+            if ($callbackContinue) { & $callbackContinue }
         }
     }.GetNewClosure()
-
     $powershellExe = Join-Path $PSHOME 'powershell.exe'
     $arguments = @(
         '-NoProfile', '-ExecutionPolicy', 'Bypass',
@@ -531,6 +566,45 @@ function Start-CkComponentOperation {
     }
     & $refreshComponentHeaderAction
 }
+
+function Continue-CkStartupComponentChecks {
+    if (-not $componentState.StartupActive -or $componentState.Process) { return }
+
+    while ($componentState.StartupQueue.Count -gt 0) {
+        $toolId = $componentState.StartupQueue.Dequeue()
+        $tool = $toolConfigs[$toolId]
+        if (-not $tool -or -not $tool.PSObject.Properties['component']) { continue }
+        try {
+            & $componentOperationActions.Start 'check' $toolId $true
+            if ($componentState.Process) { return }
+        } catch {
+            $componentState.Checked[$toolId] = $true
+            $componentState.Remote[$toolId] = [pscustomobject]@{
+                status = 'error'
+                error = $_.Exception.Message
+            }
+        }
+    }
+
+    $componentState.StartupActive = $false
+    & $refreshComponentHeaderAction
+}
+
+function Start-CkStartupComponentChecks {
+    if ($componentState.StartupActive -or $componentState.Process) { return }
+
+    $componentState.StartupQueue.Clear()
+    foreach ($tool in $tools) {
+        if ($tool.PSObject.Properties['component']) {
+            $componentState.StartupQueue.Enqueue([string]$tool.id)
+        }
+    }
+    if ($componentState.StartupQueue.Count -eq 0) { return }
+
+    $componentState.StartupActive = $true
+    & $continueStartupComponentChecksAction
+}
+
 function Update-CkSelfUpdateUi {
     if (-not $selfUpdateState.Enabled) {
         $selfUpdateStatusText.Visibility = 'Collapsed'
@@ -756,7 +830,11 @@ function Show-ToolPage {
 
 $getLocalComponentStateAction = (Get-Command Get-CkLocalComponentState).ScriptBlock.GetNewClosure()
 $refreshComponentHeaderAction = (Get-Command Update-CkComponentHeader).ScriptBlock.GetNewClosure()
-$startComponentOperationAction = (Get-Command Start-CkComponentOperation).ScriptBlock.GetNewClosure()
+$componentOperationActions.Continue = (Get-Command Continue-CkStartupComponentChecks).ScriptBlock.GetNewClosure()
+$continueStartupComponentChecksAction = $componentOperationActions.Continue
+$componentOperationActions.Start = (Get-Command Start-CkComponentOperation).ScriptBlock.GetNewClosure()
+$startComponentOperationAction = $componentOperationActions.Start
+$startStartupComponentChecksAction = (Get-Command Start-CkStartupComponentChecks).ScriptBlock.GetNewClosure()
 $updateSelfUpdateUiAction = (Get-Command Update-CkSelfUpdateUi).ScriptBlock.GetNewClosure()
 $startSelfUpdateOperationAction = (Get-Command Start-CkSelfUpdateOperation).ScriptBlock.GetNewClosure()
 $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
@@ -819,4 +897,5 @@ if (-not $defaultTool) { $defaultTool = @($tools)[0] }
 if ($selfUpdateState.Enabled) {
     & $startSelfUpdateOperationAction 'check' $true
 }
+& $startStartupComponentChecksAction
 [void]$window.ShowDialog()

@@ -425,7 +425,7 @@ function Install-CkComponent {
     New-Item -ItemType Directory -Path $stage -Force | Out-Null
     try {
         Save-CkDownload -Url ([string]$Release.AssetUrl) -Destination $archivePath -StartPercent 28 -EndPercent 58 -Label '正在下载组件'
-        Write-CkProgress -Percent 61 -Message '正在校验组件完整性'
+        Write-CkProgress -Percent 59 -Message '正在校验组件完整性'
         $archiveHash = Assert-CkReleaseArchiveHash -Release $Release -ArchivePath $archivePath -StageRoot $stage
         Write-CkProgress -Percent 63 -Message '组件校验通过'
         Expand-CkSafeZip -ArchivePath $archivePath -Destination $extractPath
