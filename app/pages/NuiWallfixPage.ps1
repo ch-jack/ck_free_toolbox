@@ -14,7 +14,7 @@
               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
   <ScrollViewer.Resources>
     <Style TargetType="ComboBox">
-      <Setter Property="Foreground" Value="#F4F7FB"/>
+      <Setter Property="Foreground" Value="#111827"/>
       <Setter Property="Background" Value="#20242B"/>
       <Setter Property="BorderBrush" Value="#596273"/>
       <Setter Property="BorderThickness" Value="1"/>
@@ -80,15 +80,9 @@
         <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,8,10">
           <TextBlock Text="处理方案" Foreground="#B8C0CC" FontSize="13" Margin="0,0,0,6"/>
           <ComboBox x:Name="ModeBox" AutomationProperties.AutomationId="NuiWallfix.ModeBox" Height="38">
-            <ComboBoxItem Tag="auto" AutomationProperties.Name="自动方案（推荐）">
-              <TextBlock Text="自动方案（推荐）" Foreground="#F4F7FB"/>
-            </ComboBoxItem>
-            <ComboBoxItem Tag="local" AutomationProperties.Name="完全本地化">
-              <TextBlock Text="完全本地化" Foreground="#F4F7FB"/>
-            </ComboBoxItem>
-            <ComboBoxItem Tag="cn-cdn" AutomationProperties.Name="仅国内 CDN">
-              <TextBlock Text="仅国内 CDN" Foreground="#F4F7FB"/>
-            </ComboBoxItem>
+            <ComboBoxItem Tag="auto" Content="自动方案（推荐）" AutomationProperties.Name="自动方案（推荐）"/>
+            <ComboBoxItem Tag="local" Content="完全本地化" AutomationProperties.Name="完全本地化"/>
+            <ComboBoxItem Tag="cn-cdn" Content="仅国内 CDN" AutomationProperties.Name="仅国内 CDN"/>
           </ComboBox>
         </StackPanel>
         <StackPanel Grid.Row="0" Grid.Column="1" Margin="8,0,8,10">
