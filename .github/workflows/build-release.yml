@@ -46,6 +46,10 @@ jobs:
           $worker = Get-Content -LiteralPath $workerPath -Raw -Encoding UTF8
           $worker = $worker -replace 'CKFreeToolbox/[0-9]+\.[0-9]+\.[0-9]+', "CKFreeToolbox/$releaseVersion"
           [IO.File]::WriteAllText((Resolve-Path $workerPath), $worker, (New-Object Text.UTF8Encoding($true)))
+          $selfWorkerPath = '.\app\workers\SelfUpdateWorker.ps1'
+          $selfWorker = Get-Content -LiteralPath $selfWorkerPath -Raw -Encoding UTF8
+          $selfWorker = $selfWorker -replace 'CKFreeToolbox/[0-9]+\.[0-9]+\.[0-9]+', "CKFreeToolbox/$releaseVersion"
+          [IO.File]::WriteAllText((Resolve-Path $selfWorkerPath), $selfWorker, (New-Object Text.UTF8Encoding($true)))
 
       - name: Validate PowerShell syntax
         shell: powershell
@@ -100,6 +104,8 @@ jobs:
             'CKFreeToolbox.ps1',
             'app\config\tools.json',
             'app\workers\ComponentWorker.ps1',
+            'app\workers\SelfUpdateWorker.ps1',
+            'app\workers\ApplyToolboxUpdate.ps1',
             'app\pages\ModelRenderPage.ps1',
             'app\pages\NuiWallfixPage.ps1',
             'package-manifest.json'
@@ -168,6 +174,13 @@ jobs:
           $assetName = "CK-Free-Toolbox-$($env:CK_RELEASE_TAG).zip"
           $releaseArchive = Join-Path $archive.DirectoryName $assetName
           Copy-Item -LiteralPath $archive.FullName -Destination $releaseArchive -Force
+          $checksumPath = "$releaseArchive.sha256"
+          $archiveHash = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+          [IO.File]::WriteAllText(
+            $checksumPath,
+            "$archiveHash  $assetName" + [Environment]::NewLine,
+            (New-Object Text.ASCIIEncoding)
+          )
 
           $ErrorActionPreference = 'SilentlyContinue'
           gh release view $env:CK_RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
@@ -183,9 +196,9 @@ jobs:
                 }
               }
             }
-            gh release upload $env:CK_RELEASE_TAG $releaseArchive --clobber --repo $env:GITHUB_REPOSITORY
+            gh release upload $env:CK_RELEASE_TAG $releaseArchive $checksumPath --clobber --repo $env:GITHUB_REPOSITORY
           } else {
-            gh release create $env:CK_RELEASE_TAG $releaseArchive --target $env:GITHUB_SHA --title $env:CK_RELEASE_TAG --generate-notes --repo $env:GITHUB_REPOSITORY
+            gh release create $env:CK_RELEASE_TAG $releaseArchive $checksumPath --target $env:GITHUB_SHA --title $env:CK_RELEASE_TAG --generate-notes --repo $env:GITHUB_REPOSITORY
           }
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release command exited with code $LASTEXITCODE"

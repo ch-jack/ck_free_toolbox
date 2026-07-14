@@ -33,6 +33,18 @@ dist/
 
 模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI 组件只使用 Python 标准库。旧版 commit 清单会在下一次更新时迁移。
 
+## 工具箱自更新
+
+发布版启动后会异步检查 [ch-jack/ck_free_toolbox](https://github.com/ch-jack/ck_free_toolbox) 最新稳定 Release：
+
+1. 比较 package-manifest.json 中的本地版本和最新 vX.Y.Z 标签。
+2. 用户点击“立即更新”后下载 CK-Free-Toolbox-vX.Y.Z.zip，并显示实际下载进度。
+3. 优先校验同名 .sha256 附件，再校验包内版本、核心文件和 package-manifest.json 哈希。
+4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
+5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。
+6. vehicle_renderer、nui-wallfix、TestVeh 和其他用户文件不参与替换。
+7. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
+
 ## Blender 不进入发布包
 
 发布包不复制 Blender，也不包含独立 Python。
@@ -75,6 +87,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 验证核心源码、组件工作器和两个页面存在。
 5. 验证发布包不含功能组件目录和 Blender。
 6. 上传 Actions Artifact。
+7. 正式 Release 同时发布 ZIP 和同名 .sha256，供客户端自更新校验。
 
 推送 `main` 会按 Actions 运行序号生成 `v1.0.<run>`，自动构建并创建正式 GitHub Release。Pull Request 只验证构建；手动推送 `v*` 标签仍可发布指定版本。
 
@@ -94,9 +107,10 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - Blender 可打开官网并选择安装目录；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 关闭主窗口后没有残留工具箱、Python 或 Blender 进程。
+- 自更新成功后版本清单更新且组件/用户目录保留；模拟替换失败时旧核心文件恢复。
 
 ## 正式分发
 
 - 发送完整 ZIP，不要只发送 EXE。
 - 面向大量用户前，为 EXE 和 ZIP 配置代码签名。
-- main 自动发布时，工作流会同步 EXE、界面和包清单版本；指定版本仍可手动推送 `v*` 标签。
+- main 自动发布时，工作流会同步 EXE、界面和包清单版本，并发布 ZIP 与 SHA-256；指定版本仍可手动推送 `v*` 标签。

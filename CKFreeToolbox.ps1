@@ -14,6 +14,15 @@ $ModuleRoot = Join-Path $AppRoot 'modules'
 $PageRoot = Join-Path $AppRoot 'pages'
 $ConfigPath = Join-Path $AppRoot 'config\tools.json'
 $IconPath = Join-Path $ScriptRoot 'static\cklogo.ico'
+$ToolboxVersion = '1.0.2'
+if (Test-Path -LiteralPath $PortableManifest -PathType Leaf) {
+    try {
+        $packageInfo = Get-Content -LiteralPath $PortableManifest -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ([string]$packageInfo.version -match '^[0-9]+\.[0-9]+\.[0-9]+$') {
+            $ToolboxVersion = [string]$packageInfo.version
+        }
+    } catch { }
+}
 
 Import-Module (Join-Path $ModuleRoot 'UiKit.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'AssetScanner.psm1') -Force
@@ -161,10 +170,14 @@ $shellXaml = @"
             </Grid>
           </Border>
           <TextBlock Text="CK免费工具箱" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock Text="v1.0.2" Foreground="#42464D" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
+          <TextBlock x:Name="ToolboxVersionText" Text="v1.0.2" Foreground="#6E7580" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-          <TextBlock Text="客户端直跑 · 无后端服务" Foreground="#6E7580" FontSize="13" Margin="0,3,16,0"/>
+                    <TextBlock x:Name="SelfUpdateStatusText" AutomationProperties.AutomationId="Toolbox.SelfUpdateStatus"
+                     Text="正在检查版本" Foreground="#6E7580" FontSize="12" Margin="0,3,10,0" VerticalAlignment="Center"/>
+          <Button x:Name="SelfUpdateButton" AutomationProperties.AutomationId="Toolbox.SelfUpdateButton"
+                  Content="检查更新" Width="92" Height="30" Margin="0,0,12,0"
+                  Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="12"/>
           <Border Background="#101A16" BorderBrush="#1E4D3C" BorderThickness="1" CornerRadius="6" Padding="10,6">
             <StackPanel Orientation="Horizontal">
               <Ellipse Width="8" Height="8" Fill="#31D69A" Margin="0,0,7,0" VerticalAlignment="Center"/>
@@ -172,6 +185,9 @@ $shellXaml = @"
             </StackPanel>
           </Border>
         </StackPanel>
+          <ProgressBar x:Name="SelfUpdateProgressBar" AutomationProperties.AutomationId="Toolbox.SelfUpdateProgressBar"
+                       Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Bottom"
+                       Background="#1B222A" Foreground="#58A6FF" Visibility="Collapsed"/>
       </Grid>
     </Border>
 
@@ -258,17 +274,36 @@ $componentStatusText = $window.FindName('ComponentStatusText')
 $componentActionButton = $window.FindName('ComponentActionButton')
 $openSourceButton = $window.FindName('OpenSourceButton')
 $componentProgressBar = $window.FindName('ComponentProgressBar')
+$toolboxVersionText = $window.FindName('ToolboxVersionText')
+$selfUpdateStatusText = $window.FindName('SelfUpdateStatusText')
+$selfUpdateButton = $window.FindName('SelfUpdateButton')
+$selfUpdateProgressBar = $window.FindName('SelfUpdateProgressBar')
+$toolboxVersionText.Text = "v$ToolboxVersion"
 
 $tools = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $pages = @{}
 $buttons = @{}
 $toolConfigs = @{}
 $componentWorker = Join-Path $AppRoot 'workers\ComponentWorker.ps1'
+$selfUpdateWorker = Join-Path $AppRoot 'workers\SelfUpdateWorker.ps1'
+$applyUpdateWorker = Join-Path $AppRoot 'workers\ApplyToolboxUpdate.ps1'
 $componentState = [pscustomobject]@{
     CurrentToolId = ''
     Process = $null
     Remote = @{}
     Checked = @{}
+}
+$selfUpdateState = [pscustomobject]@{
+    Enabled = ((Test-Path -LiteralPath $PortableManifest -PathType Leaf) -and
+        (Test-Path -LiteralPath $selfUpdateWorker -PathType Leaf) -and
+        (Test-Path -LiteralPath $applyUpdateWorker -PathType Leaf))
+    CurrentVersion = $ToolboxVersion
+    LatestVersion = ''
+    ReleaseUrl = ''
+    Available = $false
+    Status = 'unknown'
+    Message = '正在检查版本'
+    Process = $null
 }
 
 function New-NavButton {
@@ -392,6 +427,9 @@ function Start-CkComponentOperation {
     param([ValidateSet('check','install')][string]$Action, [string]$ToolId)
 
     if ($componentState.Process) { return }
+    if ($selfUpdateState.Process -and $selfUpdateState.Process.Action -eq 'prepare') {
+        throw '工具箱正在更新，暂时不能操作组件。'
+    }
     $tool = $toolConfigs[$ToolId]
     if (-not $tool) { throw "工具配置不存在: $ToolId" }
     if (-not (Test-Path -LiteralPath $componentWorker -PathType Leaf)) {
@@ -493,6 +531,205 @@ function Start-CkComponentOperation {
     }
     & $refreshComponentHeaderAction
 }
+function Update-CkSelfUpdateUi {
+    if (-not $selfUpdateState.Enabled) {
+        $selfUpdateStatusText.Visibility = 'Collapsed'
+        $selfUpdateButton.Visibility = 'Collapsed'
+        $selfUpdateProgressBar.Visibility = 'Collapsed'
+        return
+    }
+
+    $selfUpdateStatusText.Visibility = 'Visible'
+    $selfUpdateButton.Visibility = 'Visible'
+    if ($selfUpdateState.Process) {
+        $selfUpdateStatusText.Text = [string]$selfUpdateState.Process.Message
+        $selfUpdateStatusText.Foreground = '#72B7F2'
+        $selfUpdateButton.Content = if ($selfUpdateState.Process.Action -eq 'prepare') { '更新中...' } else { '检查中...' }
+        $selfUpdateButton.IsEnabled = $false
+        $selfUpdateProgressBar.Visibility = 'Visible'
+        $selfUpdateProgressBar.Value = [int]$selfUpdateState.Process.Percent
+        return
+    }
+
+    $selfUpdateProgressBar.Visibility = 'Collapsed'
+    $selfUpdateButton.IsEnabled = $true
+    switch ($selfUpdateState.Status) {
+        'available' {
+            $selfUpdateStatusText.Text = "发现 $($selfUpdateState.LatestVersion)"
+            $selfUpdateStatusText.Foreground = '#F4B860'
+            $selfUpdateButton.Content = '立即更新'
+            $selfUpdateButton.Foreground = '#F4B860'
+        }
+        'current' {
+            $selfUpdateStatusText.Text = "已是最新 v$($selfUpdateState.CurrentVersion)"
+            $selfUpdateStatusText.Foreground = '#31D69A'
+            $selfUpdateButton.Content = '检查更新'
+            $selfUpdateButton.Foreground = '#72B7F2'
+        }
+        'error' {
+            $selfUpdateStatusText.Text = '版本检查失败'
+            $selfUpdateStatusText.Foreground = '#EF7C86'
+            $selfUpdateButton.Content = '重试'
+            $selfUpdateButton.Foreground = '#EF7C86'
+        }
+        default {
+            $selfUpdateStatusText.Text = '尚未检查版本'
+            $selfUpdateStatusText.Foreground = '#6E7580'
+            $selfUpdateButton.Content = '检查更新'
+            $selfUpdateButton.Foreground = '#72B7F2'
+        }
+    }
+}
+
+function Start-CkSelfUpdateOperation {
+    param(
+        [ValidateSet('check','prepare')][string]$Action,
+        [bool]$Silent = $false
+    )
+
+    if (-not $selfUpdateState.Enabled -or $selfUpdateState.Process) { return }
+    if ($Action -eq 'prepare') {
+        if ($componentState.Process) {
+            throw '请等待当前组件操作完成后再更新工具箱。'
+        }
+        if (-not $selfUpdateState.Available) {
+            $Action = 'check'
+        } else {
+            $message = '将下载并安装工具箱 ' + $selfUpdateState.LatestVersion + '。' +
+                [Environment]::NewLine + [Environment]::NewLine +
+                '更新时会自动关闭并重启工具箱，已安装组件和用户文件不会删除。是否继续？'
+            $answer = [System.Windows.MessageBox]::Show(
+                $message,
+                '确认更新工具箱',
+                [System.Windows.MessageBoxButton]::YesNo,
+                [System.Windows.MessageBoxImage]::Information
+            )
+            if ($answer -ne [System.Windows.MessageBoxResult]::Yes) { return }
+        }
+    }
+
+    $output = New-Object Text.StringBuilder
+    $callbackOutput = $output
+    $callbackState = $selfUpdateState
+    $callbackAction = $Action
+    $callbackSilent = $Silent
+    $callbackRefresh = $updateSelfUpdateUiAction
+    $callbackWindow = $window
+    $callbackInstallRoot = $ScriptRoot
+    $callbackCurrentPid = $PID
+
+    $onOutput = {
+        param($line)
+        if ($line -match '^CK_SELF_PROGRESS\s+(.+)$') {
+            try {
+                $progress = $Matches[1] | ConvertFrom-Json
+                if ($callbackState.Process) {
+                    $callbackState.Process.Percent = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
+                    $callbackState.Process.Message = [string]$progress.message
+                    & $callbackRefresh
+                }
+            } catch { }
+            return
+        }
+        [void]$callbackOutput.AppendLine($line)
+    }.GetNewClosure()
+
+    $onError = {
+        param($message)
+        $callbackState.Message = $message
+    }.GetNewClosure()
+
+    $onExit = {
+        param($exitCode)
+
+        $callbackState.Process = $null
+        $raw = $callbackOutput.ToString().Trim()
+        $payload = $null
+        $lines = @($raw -split '\r?\n')
+        for ($i = $lines.Count - 1; $i -ge 0 -and -not $payload; $i--) {
+            try { $payload = $lines[$i] | ConvertFrom-Json } catch { }
+        }
+        if (-not $payload) {
+            $payload = [pscustomobject]@{
+                status = 'error'
+                error = $(if ($raw) { $raw } else { "自更新工作器退出码: $exitCode" })
+            }
+        }
+
+        if ($payload.status -eq 'error' -or $exitCode -ne 0) {
+            $callbackState.Status = 'error'
+            $callbackState.Message = [string]$payload.error
+            & $callbackRefresh
+            if (-not $callbackSilent) {
+                [System.Windows.MessageBox]::Show(
+                    [string]$payload.error,
+                    'CK免费工具箱 - 自动更新',
+                    [System.Windows.MessageBoxButton]::OK,
+                    [System.Windows.MessageBoxImage]::Error
+                ) | Out-Null
+            }
+            return
+        }
+
+        $callbackState.LatestVersion = [string]$payload.latestVersion
+        $callbackState.ReleaseUrl = [string]$payload.releaseUrl
+        $callbackState.Available = [bool]$payload.updateAvailable
+        if ($callbackAction -eq 'check') {
+            $callbackState.Status = if ($callbackState.Available) { 'available' } else { 'current' }
+            & $callbackRefresh
+            return
+        }
+
+        if ($payload.status -ne 'prepared' -or
+            -not (Test-Path -LiteralPath ([string]$payload.updaterPath) -PathType Leaf) -or
+            -not (Test-Path -LiteralPath ([string]$payload.stagePath) -PathType Container)) {
+            $callbackState.Status = 'error'
+            $callbackState.Message = '更新文件准备不完整。'
+            & $callbackRefresh
+            [System.Windows.MessageBox]::Show(
+                $callbackState.Message,
+                'CK免费工具箱 - 自动更新',
+                [System.Windows.MessageBoxButton]::OK,
+                [System.Windows.MessageBoxImage]::Error
+            ) | Out-Null
+            return
+        }
+
+        $targetVersion = ([string]$payload.latestVersion).TrimStart('v')
+        $powershellExe = Join-Path $PSHOME 'powershell.exe'
+        $updaterArguments = @(
+            '-NoProfile', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
+            '-File', [string]$payload.updaterPath,
+            '-ParentPid', [string]$callbackCurrentPid,
+            '-SourceRoot', [string]$payload.stagePath,
+            '-TargetRoot', $callbackInstallRoot,
+            '-ExpectedVersion', $targetVersion
+        )
+        Start-Process -FilePath $powershellExe -ArgumentList (Join-CkArgumentList -Arguments $updaterArguments) -WindowStyle Hidden
+        $callbackState.Status = 'applying'
+        $callbackState.Message = '正在退出并应用更新'
+        & $callbackRefresh
+        $callbackWindow.Close()
+    }.GetNewClosure()
+
+    $powershellExe = Join-Path $PSHOME 'powershell.exe'
+    $arguments = @(
+        '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', $selfUpdateWorker,
+        '-Action', $Action,
+        '-CurrentVersion', $selfUpdateState.CurrentVersion,
+        '-InstallRoot', $ScriptRoot
+    )
+    $runtime = Start-CkLoggedProcess -FileName $powershellExe -Arguments $arguments -WorkingDirectory $ScriptRoot -Dispatcher $context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onError
+    $selfUpdateState.Process = [pscustomobject]@{
+        Action = $Action
+        Runtime = $runtime
+        Percent = 2
+        Message = $(if ($Action -eq 'prepare') { '正在准备工具箱更新' } else { '正在检查工具箱更新' })
+    }
+    & $updateSelfUpdateUiAction
+}
+
 function Show-ToolPage {
     param([string]$Id)
 
@@ -520,6 +757,8 @@ function Show-ToolPage {
 $getLocalComponentStateAction = (Get-Command Get-CkLocalComponentState).ScriptBlock.GetNewClosure()
 $refreshComponentHeaderAction = (Get-Command Update-CkComponentHeader).ScriptBlock.GetNewClosure()
 $startComponentOperationAction = (Get-Command Start-CkComponentOperation).ScriptBlock.GetNewClosure()
+$updateSelfUpdateUiAction = (Get-Command Update-CkSelfUpdateUi).ScriptBlock.GetNewClosure()
+$startSelfUpdateOperationAction = (Get-Command Start-CkSelfUpdateOperation).ScriptBlock.GetNewClosure()
 $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
 
 $openSourceAction = {
@@ -538,8 +777,16 @@ $componentAction = {
     if ($action -notin @('check','install')) { $action = 'check' }
     & $startComponentOperationAction $action $componentState.CurrentToolId
 }.GetNewClosure()
+$selfUpdateAction = {
+    if ($selfUpdateState.Available) {
+        & $startSelfUpdateOperationAction 'prepare' $false
+    } else {
+        & $startSelfUpdateOperationAction 'check' $false
+    }
+}.GetNewClosure()
 Register-CkButtonAction -Button $openSourceButton -Action $openSourceAction
 Register-CkButtonAction -Button $componentActionButton -Action $componentAction
+Register-CkButtonAction -Button $selfUpdateButton -Action $selfUpdateAction
 
 foreach ($tool in $tools) {
     $toolConfigs[$tool.id] = $tool
@@ -568,4 +815,8 @@ $defaultTool = @($tools | Where-Object { $_.default })[0]
 if (-not $defaultTool) { $defaultTool = @($tools)[0] }
 & $showToolPageAction -Id $defaultTool.id
 
+& $updateSelfUpdateUiAction
+if ($selfUpdateState.Enabled) {
+    & $startSelfUpdateOperationAction 'check' $true
+}
 [void]$window.ShowDialog()

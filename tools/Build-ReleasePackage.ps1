@@ -168,6 +168,11 @@ $userGuide = @(
     '3. 点击“检查更新”比较 Release 版本标签，发现更新后点击“更新组件”。',
     '4. 更新前自动备份旧组件；下载、解压或校验失败时不会覆盖当前组件。',
     '',
+    '工具箱自动更新：',
+    '1. 工具箱启动后会异步检查自身最新稳定 Release。',
+    '2. 发现新版后点击顶部“立即更新”，工具箱会下载、校验、退出替换并自动重启。',
+    '3. 自更新只替换工具箱核心文件，不删除已安装组件、TestVeh、模型或渲染输出。',
+    '',
     '发布包不包含 Blender。请安装 Blender 4.2 或更高版本，工具箱会自动使用 Blender 自带 Python。',
     'NUI 自动去墙可使用系统 Python 3.7+；未安装系统 Python 时会使用 Blender 自带 Python。',
     '轻量发布包不预装功能组件；模型 Release 已内置 Sollumz；首次安装时会配置 Blender Python 渲染依赖。',
@@ -181,6 +186,8 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'CKFreeToolbox.ps1'),
     (Join-Path $packagePath 'app\config\tools.json'),
     (Join-Path $packagePath 'app\workers\ComponentWorker.ps1'),
+    (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1'),
+    (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1'),
     (Join-Path $packagePath 'app\pages\ModelRenderPage.ps1'),
     (Join-Path $packagePath 'app\pages\NuiWallfixPage.ps1'),
     (Join-Path $packagePath 'static\cklogo.ico')
@@ -213,11 +220,14 @@ $manifest = [ordered]@{
         sevenZip = $false
         nuiWallfix = $false
         componentManager = $true
+        selfUpdater = $true
     }
     sha256 = [ordered]@{
         executable = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CK免费工具箱.exe')).Hash
         mainScript = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CKFreeToolbox.ps1')).Hash
         componentWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ComponentWorker.ps1')).Hash
+        selfUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1')).Hash
+        applyUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1')).Hash
     }
 }
 [IO.File]::WriteAllText((Join-Path $packagePath 'package-manifest.json'), ($manifest | ConvertTo-Json -Depth 6), $Utf8NoBom)

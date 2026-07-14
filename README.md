@@ -82,6 +82,15 @@ git push origin v1.0.2
 - 模型 Release 已内置 Sollumz v2.8.3；工具箱只使用 Blender Python 配置带哈希校验的运行依赖。
 - 旧版 commit 清单不会继续拉取源码，首次检查会提示更新，安装后迁移为 Release 版本清单。
 
+### 工具箱自更新
+
+- 启动后异步检查 [ck_free_toolbox Releases](https://github.com/ch-jack/ck_free_toolbox/releases)，不阻塞页面加载。
+- 发现新版本时顶部显示“立即更新”，下载阶段显示实际进度。
+- 更新 ZIP 会校验 Release SHA-256、包版本、核心文件和清单哈希。
+- 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
+- 已安装的 vehicle_renderer、nui-wallfix、TestVeh、模型和渲染输出不会被删除。
+- 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
+
 ## 交互可靠性
 
 - 所有按钮通过持久闭包绑定，不依赖页面创建完成后会失效的局部函数。
@@ -109,6 +118,7 @@ git push origin v1.0.2
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
 - Release 组件安装：CK-model_renderer v1.0.0 与 nui-wallfix v0.1.0 真实下载、安装和同版本检查通过。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
+- 工具箱自更新：联网版本检查、成功替换、组件/用户目录保留和模拟失败回滚通过。
 
 ## 可扩展架构
 
