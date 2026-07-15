@@ -103,12 +103,38 @@ function Get-CkBlenderInfo {
     $where = Get-Command blender.exe -ErrorAction SilentlyContinue
     if ($where) { $candidates += $where.Source }
 
+    $minimumVersion = [version]'4.2.0'
     foreach ($candidate in @($candidates | Select-Object -Unique)) {
         if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
             $label = ''
             try { $label = (& $candidate --version 2>$null | Select-Object -First 1) } catch { }
-            if (-not $label) { $label = [System.IO.Path]::GetFileName($candidate) }
-            return [pscustomobject]@{ Ok = $true; Label = $label; Path = $candidate }
+            if (-not $label) {
+                return [pscustomobject]@{
+                    Ok = $false
+                    Label = '无法识别 Blender 版本'
+                    Path = $candidate
+                }
+            }
+
+            $detectedVersion = $null
+            if ($label -match '(?i)\bBlender\s+(\d+\.\d+(?:\.\d+)?)') {
+                try { $detectedVersion = [version]$Matches[1] } catch { }
+            }
+            if (-not $detectedVersion) {
+                return [pscustomobject]@{
+                    Ok = $false
+                    Label = "$label（无法识别版本）"
+                    Path = $candidate
+                }
+            }
+
+            $supported = $detectedVersion -ge $minimumVersion
+            return [pscustomobject]@{
+                Ok = $supported
+                Label = $(if ($supported) { $label } else { "$label（需要 4.2 或更高版本，推荐 5.1）" })
+                Path = $candidate
+                Version = $detectedVersion.ToString()
+            }
         }
     }
     return [pscustomobject]@{ Ok = $false; Label = '未检测到'; Path = '' }

@@ -55,8 +55,9 @@ dist/
 - .NET Framework 4.8 使用 Windows 系统安装，只检测注册表并提供官网，不允许手动指定目录。
 - YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
 - Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
-- Blender 仍使用其自带 Python，最低支持版本为 4.2。
+- Blender 仍使用其自带 Python，最低支持版本为 4.2；选择 4.1 或更早版本会明确标记为不支持。
 - Blender 选择器会保存并校验准确的 `blender.exe` 路径，结果保存在 %LOCALAPPDATA%\CKFreeToolbox\settings.json。
+- 模型组件把 RPF/YTD 临时文件放在本次输出目录的 `_temp`，正常结束自动清理，不使用系统 `%TEMP%`。
 ## 本地一键打包
 
 双击：
@@ -116,7 +117,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
-- Blender 可打开官网并选择安装目录中的 `blender.exe`；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
+- Blender 可打开官网并选择安装目录中的 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
+- 模型截图运行时的 `_temp` 位于输出目录，任务完成后已自动删除。
 - 关闭主窗口后没有残留工具箱、Python 或 Blender 进程。
 - 自更新成功后版本清单更新且组件/用户目录保留；模拟替换失败时旧核心文件恢复。
 

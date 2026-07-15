@@ -491,8 +491,11 @@
         $saved = Set-CkDependencyPath -Dependency Blender -Path $selected
         & $updateEnvironmentAction
         $environment = Get-CkToolboxEnvironment -Context $Context
-        if (-not $environment.Blender.Ok -or -not [string]::Equals($environment.Blender.Path, $saved, [StringComparison]::OrdinalIgnoreCase)) {
+        if (-not [string]::Equals($environment.Blender.Path, $saved, [StringComparison]::OrdinalIgnoreCase)) {
             throw '所选 blender.exe 无法识别，请确认 Blender 已完整安装。'
+        }
+        if (-not $environment.Blender.Ok) {
+            throw [string]$environment.Blender.Label
         }
 
         $message = "已识别 $($environment.Blender.Label)`n`n$($environment.Blender.Path)"
