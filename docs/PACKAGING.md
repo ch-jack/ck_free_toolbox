@@ -51,12 +51,12 @@ dist/
 
 发布包不复制 Blender，也不包含独立 Python。
 
-- Blender 是唯一需要选择目录的外部依赖；工具箱提供官网和目录选择。
+- Blender 是唯一需要手动定位的外部依赖；工具箱提供官网和 `blender.exe` 文件选择。
 - .NET Framework 4.8 使用 Windows 系统安装，只检测注册表并提供官网，不允许手动指定目录。
 - YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
 - Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
 - Blender 仍使用其自带 Python，最低支持版本为 4.2。
-- Blender 选择结果保存在 %LOCALAPPDATA%\CKFreeToolbox\settings.json。
+- Blender 选择器会保存并校验准确的 `blender.exe` 路径，结果保存在 %LOCALAPPDATA%\CKFreeToolbox\settings.json。
 ## 本地一键打包
 
 双击：
@@ -116,7 +116,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
-- Blender 可打开官网并选择安装目录；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
+- Blender 可打开官网并选择安装目录中的 `blender.exe`；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 关闭主窗口后没有残留工具箱、Python 或 Blender 进程。
 - 自更新成功后版本清单更新且组件/用户目录保留；模拟替换失败时旧核心文件恢复。
 

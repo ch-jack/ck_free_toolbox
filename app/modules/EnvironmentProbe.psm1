@@ -25,6 +25,11 @@ function Set-CkDependencyPath {
 
     $fullPath = [IO.Path]::GetFullPath($Path)
     if (-not (Test-Path -LiteralPath $fullPath)) { throw "选择的路径不存在: $fullPath" }
+    if ($Dependency -eq 'Blender') {
+        $resolved = Find-CkDependencyFile -Root $fullPath -FileName 'blender.exe'
+        if (-not $resolved) { throw "选择的位置没有找到 blender.exe: $fullPath" }
+        $fullPath = $resolved
+    }
     $settings = Get-CkDependencySettings
     $settings.BlenderPath = $fullPath
     $settingsPath = Get-CkDependencySettingsPath
@@ -73,7 +78,10 @@ function Get-CkBlenderInfo {
     }
     foreach ($envName in @('BLENDER_EXE', 'BLENDER_PATH')) {
         $value = [Environment]::GetEnvironmentVariable($envName)
-        if ($value) { $candidates += $value }
+        if ($value) {
+            $resolved = Find-CkDependencyFile -Root $value -FileName 'blender.exe'
+            if ($resolved) { $candidates += $resolved }
+        }
     }
 
     $programFiles = [Environment]::GetFolderPath('ProgramFiles')

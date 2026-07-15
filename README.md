@@ -73,7 +73,7 @@ git push origin v1.0.2
 - 支持载具、武器、饰品、道具、普通 Drawable、Drawable Dictionary 和地图。
 - 支持实时搜索、全选、取消、打开输出目录和批量渲染。
 - 调用 vehicle_renderer/render_all_vehicles.py --asset-types all。
-- 使用已安装 Blender 自带 Python；玩家只需选择 Blender 目录，CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。
+- 使用已安装 Blender 自带 Python；玩家只需选择安装目录中的 `blender.exe`，CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。
 
 ### NUI 自动去墙
 
@@ -125,7 +125,7 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 提供“官网”和“选择”按钮；.NET 4.8 使用系统安装并只提供官网；YtdTools、RpfTools 与 Sollumz 随模型组件安装，不需要用户选择。
+- Blender 提供“官网”和“选择”按钮，“选择”会直接定位并校验 `blender.exe`；.NET 4.8 使用系统安装并只提供官网；YtdTools、RpfTools 与 Sollumz 随模型组件安装，不需要用户选择。
 
 ## 已验证
 

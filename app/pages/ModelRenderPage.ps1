@@ -173,6 +173,8 @@
         $env = Get-CkToolboxEnvironment -Context $Context
 
         $ui.BlenderText.Text = $env.Blender.Label
+        $ui.BlenderText.ToolTip = if ($env.Blender.Path) { $env.Blender.Path } else { '点击“选择”并指定 blender.exe' }
+        $ui.BlenderBrowseButton.ToolTip = '选择 Blender 安装目录中的 blender.exe'
         Set-CkStatusDot $ui.BlenderDot $env.Blender.Ok
         $ui.CodeWalkerText.Text = $env.CodeWalker.Label
         Set-CkStatusDot $ui.CodeWalkerDot $env.CodeWalker.Ok
@@ -455,35 +457,55 @@
         }
     }.GetNewClosure()
 
-    function Select-CkBlenderDirectory {
+    function Select-CkBlenderExecutable {
         $settings = Get-CkDependencySettings
-        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.Description = '选择包含 blender.exe 的 Blender 安装目录'
-        $dialog.ShowNewFolderButton = $false
-        if ($settings.BlenderPath -and (Test-Path -LiteralPath ([string]$settings.BlenderPath) -PathType Container)) {
-            $dialog.SelectedPath = [string]$settings.BlenderPath
+        $dialog = New-Object Microsoft.Win32.OpenFileDialog
+        $dialog.Title = '选择 Blender 主程序 blender.exe'
+        $dialog.Filter = 'Blender 主程序 (blender.exe)|blender.exe|可执行文件 (*.exe)|*.exe'
+        $dialog.CheckFileExists = $true
+        $dialog.Multiselect = $false
+        $dialog.RestoreDirectory = $true
+
+        $savedPath = [string]$settings.BlenderPath
+        if ($savedPath -and (Test-Path -LiteralPath $savedPath -PathType Leaf)) {
+            $dialog.InitialDirectory = Split-Path -Parent $savedPath
+            $dialog.FileName = $savedPath
+        } elseif ($savedPath -and (Test-Path -LiteralPath $savedPath -PathType Container)) {
+            $dialog.InitialDirectory = $savedPath
+        } else {
+            $detected = Get-CkToolboxEnvironment -Context $Context
+            if ($detected.Blender.Ok) {
+                $dialog.InitialDirectory = Split-Path -Parent $detected.Blender.Path
+                $dialog.FileName = $detected.Blender.Path
+            }
         }
-        try {
-            if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
-            $selected = [IO.Path]::GetFullPath($dialog.SelectedPath).TrimEnd('\')
-            if ($selected -eq [IO.Path]::GetPathRoot($selected).TrimEnd('\')) {
-                throw '不能选择磁盘根目录，请选择 Blender 安装目录。'
-            }
-            Set-CkDependencyPath -Dependency Blender -Path $selected | Out-Null
-            & $updateEnvironmentAction
-            $environment = Get-CkToolboxEnvironment -Context $Context
-            if (-not $environment.Blender.Ok) {
-                throw '所选目录未检测到 blender.exe，请选择 Blender 安装后的实际目录。'
-            }
-        } finally {
-            $dialog.Dispose()
+
+        $owner = [System.Windows.Window]::GetWindow($root)
+        $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
+        if ($accepted -ne $true) { return }
+        $selected = [IO.Path]::GetFullPath($dialog.FileName)
+        if ([IO.Path]::GetFileName($selected) -ine 'blender.exe') {
+            throw '请选择 Blender 安装目录中的 blender.exe。'
+        }
+
+        $saved = Set-CkDependencyPath -Dependency Blender -Path $selected
+        & $updateEnvironmentAction
+        $environment = Get-CkToolboxEnvironment -Context $Context
+        if (-not $environment.Blender.Ok -or -not [string]::Equals($environment.Blender.Path, $saved, [StringComparison]::OrdinalIgnoreCase)) {
+            throw '所选 blender.exe 无法识别，请确认 Blender 已完整安装。'
+        }
+
+        $message = "已识别 $($environment.Blender.Label)`n`n$($environment.Blender.Path)"
+        if ($owner) {
+            [System.Windows.MessageBox]::Show($owner, $message, 'Blender 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        } else {
+            [System.Windows.MessageBox]::Show($message, 'Blender 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
         }
     }
-
-    $selectBlenderDirectoryAction = (Get-Command Select-CkBlenderDirectory).ScriptBlock.GetNewClosure()
+    $selectBlenderExecutableAction = (Get-Command Select-CkBlenderExecutable).ScriptBlock.GetNewClosure()
     $openBlenderDownloadAction = { Start-Process -FilePath 'https://www.blender.org/download/' }.GetNewClosure()
     $openDotNetDownloadAction = { Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet-framework/net48' }.GetNewClosure()
-    $browseBlenderAction = { & $selectBlenderDirectoryAction }.GetNewClosure()
+    $browseBlenderAction = { & $selectBlenderExecutableAction }.GetNewClosure()
 
     Register-CkButtonAction -Button $ui.BlenderDownloadButton -Action $openBlenderDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.BlenderBrowseButton -Action $browseBlenderAction -OnError $showPageError
