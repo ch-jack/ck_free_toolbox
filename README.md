@@ -35,7 +35,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 - 重新构建 `CK免费工具箱.exe`。
 - 不预先下载或打包 `vehicle_renderer`、`nui-wallfix` 和 `rpf_to_fivem`。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
-- 不复制 Blender；模型组件使用用户已安装 Blender 自带的 Python。
+- 不复制 Blender 或 Python；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
 - 写入使用说明、版本、运行时组件策略和 SHA-256 清单。
 
@@ -84,7 +84,8 @@ git push origin v1.0.2
 - 正式写入支持自动、完全本地化和国内 CDN 三种方案，并可限制超时与单文件大小。
 - 每次正式写入都在目标目录外创建备份，结果提供 Run ID，可从工具箱直接恢复。
 - 支持自定义 `providers.json`、未验证镜像、内网地址和冲突时强制恢复等高级选项。
-- 直接调用随包发布的 `nui-wallfix.py`，不需要后端服务；优先使用系统 Python，未安装时使用 Blender 自带 Python。
+- 直接调用随包发布的 `nui-wallfix.py`，不需要后端服务；Python 必须实际运行并满足 3.7+，不会把 WindowsApps 商店占位程序误判为已安装。
+- Python 缺失时显示官网下载按钮，安装后可选择安装目录中的 `python.exe`。
 
 ### RPF 转 FiveM
 
@@ -94,6 +95,14 @@ git push origin v1.0.2
 - 提供覆盖、保留临时目录、超时、嵌套深度、压缩包数量、文件数和解压大小限制。
 - 长任务可停止；完成后显示成功、失败、输出文件、警告和逐资源明细，并可打开 JSON 报告。
 - 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
+- Python 缺失时提供官网和选择按钮，选择结果与 Blender 路径共用根目录 `config.json`。
+
+### 统一依赖配置
+
+- 首次启动在工具箱根目录生成 `config.json`，统一保存 `dependencies.blenderPath` 和 `dependencies.pythonPath`。
+- 自动迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json` 中的 Blender/Python 路径；迁移后运行时只读写根目录配置。
+- 工具箱自更新不会替换或删除 `config.json`，发布 ZIP 也不包含默认配置，避免覆盖用户选择。
+- Python 候选必须通过真实版本命令并满足 3.7+；支持用户选择、系统 Python、`py.exe` 和有效的 Blender Python。
 
 ### GitHub Release 组件管理
 
@@ -126,13 +135,16 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 提供“官网”和“选择”按钮，“选择”会直接定位并校验 `blender.exe` 及 4.2 最低版本；.NET 4.8 使用系统安装并只提供官网；YtdTools、RpfTools 与 Sollumz 随模型组件安装，不需要用户选择。
+- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF 页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
 
 ## 已验证
 
-2026-07-14 已完成以下验证：
+2026-07-15 已完成以下验证：
 
-- PowerShell 语法检查：13 个 .ps1/.psm1 文件通过。
+- PowerShell 语法检查：主脚本及 13 个 .ps1/.psm1 文件通过。
+- Python 探测：真实 Python 3.7.0/3.13.9 通过，0 字节 WindowsApps 商店占位程序被拒绝。
+- 统一配置：旧设置迁移、Blender/Python 双路径保存及根目录 `config.json` 结构通过。
+- 缺失环境 UI：NUI/RPF 页面均显示 Python 官网和选择按钮。
 - 按钮烟测：扫描、搜索、全选、取消和模型渲染通过。
 - 扫描 D:\fivem\TestVeh：识别 47 个可处理模型。
 - 饰品实渲染：jr_labubu2 成功生成 D:\fivem\TestVeh\_vehicle_renders\jr_labubu2.png。
@@ -153,8 +165,10 @@ git push origin v1.0.2
 ck_free_toolbox/
   CK免费工具箱.exe
   CKFreeToolbox.ps1
-  app/config/tools.json
+  config.json                    # 首次运行生成，统一用户配置
+  app/config/tools.json          # 静态工具注册表
   app/modules/
+    ToolboxConfig.psm1
   app/pages/
   static/
 ~~~

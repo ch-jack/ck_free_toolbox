@@ -12,7 +12,9 @@ $WorkspaceRoot = if ($IsPortable) { $ScriptRoot } else { Split-Path -Parent $Scr
 $AppRoot = Join-Path $ScriptRoot 'app'
 $ModuleRoot = Join-Path $AppRoot 'modules'
 $PageRoot = Join-Path $AppRoot 'pages'
-$ConfigPath = Join-Path $AppRoot 'config\tools.json'
+$ToolRegistryPath = Join-Path $AppRoot 'config\tools.json'
+$UserConfigPath = Join-Path $ScriptRoot 'config.json'
+$LegacyConfigPath = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'settings.json'
 $IconPath = Join-Path $ScriptRoot 'static\cklogo.ico'
 $ToolboxVersion = '1.0.2'
 if (Test-Path -LiteralPath $PortableManifest -PathType Leaf) {
@@ -26,13 +28,16 @@ if (Test-Path -LiteralPath $PortableManifest -PathType Leaf) {
 
 Import-Module (Join-Path $ModuleRoot 'UiKit.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'AssetScanner.psm1') -Force
+Import-Module (Join-Path $ModuleRoot 'ToolboxConfig.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'EnvironmentProbe.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'ProcessRunner.psm1') -Force
+[void](Initialize-CkToolboxConfig -Path $UserConfigPath -LegacyPath $LegacyConfigPath)
 
 $context = [pscustomobject]@{
     Paths = [pscustomobject]@{
         ScriptRoot = $ScriptRoot
         AppRoot = $AppRoot
+        UserConfig = $UserConfigPath
         WorkspaceRoot = $WorkspaceRoot
         RuntimeRoot = Join-Path $WorkspaceRoot 'runtime'
         RendererDir = Join-Path $WorkspaceRoot 'vehicle_renderer'
@@ -284,7 +289,7 @@ $selfUpdateButton = $window.FindName('SelfUpdateButton')
 $selfUpdateProgressBar = $window.FindName('SelfUpdateProgressBar')
 $toolboxVersionText.Text = "v$ToolboxVersion"
 
-$tools = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+$tools = Get-Content -LiteralPath $ToolRegistryPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $pages = @{}
 $buttons = @{}
 $toolConfigs = @{}
@@ -553,7 +558,8 @@ function Start-CkComponentOperation {
         '-File', $componentWorker,
         '-Action', $Action,
         '-ToolId', $ToolId,
-        '-ConfigPath', $ConfigPath,
+        '-ConfigPath', $ToolRegistryPath,
+        '-UserConfigPath', $UserConfigPath,
         '-WorkspaceRoot', $context.Paths.WorkspaceRoot
     )
     $runtime = Start-CkLoggedProcess -FileName $powershellExe -Arguments $arguments -WorkingDirectory $ScriptRoot -Dispatcher $context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onError

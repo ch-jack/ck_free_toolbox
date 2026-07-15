@@ -44,19 +44,22 @@ dist/
 3. 优先校验同名 .sha256 附件，再校验包内版本、核心文件和 package-manifest.json 哈希。
 4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。
-6. vehicle_renderer、nui-wallfix、rpf_to_fivem、TestVeh 和其他用户文件不参与替换。
+6. `config.json`、vehicle_renderer、nui-wallfix、rpf_to_fivem、TestVeh 和其他用户文件不参与替换。
 7. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
-## Blender 不进入发布包
+## Blender 和 Python 不进入发布包
 
 发布包不复制 Blender，也不包含独立 Python。
 
-- Blender 是唯一需要手动定位的外部依赖；工具箱提供官网和 `blender.exe` 文件选择。
+- Blender 提供官网和 `blender.exe` 文件选择；Python 缺失时提供官网和 `python.exe` 文件选择。
+- Python 候选必须真实执行版本命令并满足 3.7+，0 字节 WindowsApps 商店别名不会被接受。
 - .NET Framework 4.8 使用 Windows 系统安装，只检测注册表并提供官网，不允许手动指定目录。
 - YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
 - Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
 - Blender 仍使用其自带 Python，最低支持版本为 4.2；选择 4.1 或更早版本会明确标记为不支持。
-- Blender 选择器会保存并校验准确的 `blender.exe` 路径，结果保存在 %LOCALAPPDATA%\CKFreeToolbox\settings.json。
+- Blender/Python 选择结果统一保存在工具箱根目录 `config.json` 的 `dependencies` 节点。
+- 首次启动会迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json`；之后不再从旧文件运行时读写。
+- 发布 ZIP 不包含根目录 `config.json`，自更新核心文件列表也不包含它，因此不会覆盖用户选择。
 - 模型组件把 RPF/YTD 临时文件放在本次输出目录的 `_temp`，正常结束自动清理，不使用系统 `%TEMP%`。
 ## 本地一键打包
 
@@ -104,7 +107,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 ## RPF 转 FiveM 运行流程
 
 1. 组件缺失时，从 `ch-jack/rpf2fivem` 最新稳定 Release 下载 ZIP 和 SHA-256。
-2. 页面校验 Python、.NET Framework 4.8、RPF 提取器和 7-Zip。
+2. 页面实际执行并校验 Python 3.7+，同时校验 .NET Framework 4.8、RPF 提取器和 7-Zip；Python 缺失时显示官网和选择按钮。
 3. 用户选择目录、RPF 或压缩包以及独立输出目录，并设置资源限制。
 4. 客户端直接执行 `rpf_to_fivem.py ... --json`，不启动服务器或后台服务。
 5. 页面解析 `_rpf_to_fivem_report.json`，显示资源结果、警告和输出路径。
@@ -112,12 +115,15 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 ## 发布前验证
 
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
-- ZIP 中不存在 `vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`runtime/blender/` 和 `blender.exe`。
+- ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
 - 首次启动时三个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
-- Blender 可打开官网并选择安装目录中的 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过；.NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
+- Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
+- Python 缺失时 NUI/RPF 页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
+- Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。
+- .NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 模型截图运行时的 `_temp` 位于输出目录，任务完成后已自动删除。
 - 关闭主窗口后没有残留工具箱、Python 或 Blender 进程。
 - 自更新成功后版本清单更新且组件/用户目录保留；模拟替换失败时旧核心文件恢复。

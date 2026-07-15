@@ -230,6 +230,7 @@ function Assert-CkPackage {
     $required = @(
         'CK免费工具箱.exe',
         'CKFreeToolbox.ps1',
+        'app\modules\ToolboxConfig.psm1',
         'app\config\tools.json',
         'app\workers\ComponentWorker.ps1',
         'app\workers\SelfUpdateWorker.ps1',
@@ -245,6 +246,7 @@ function Assert-CkPackage {
     $hashChecks = [ordered]@{
         executable = 'CK免费工具箱.exe'
         mainScript = 'CKFreeToolbox.ps1'
+        toolboxConfig = 'app\modules\ToolboxConfig.psm1'
         componentWorker = 'app\workers\ComponentWorker.ps1'
         selfUpdateWorker = 'app\workers\SelfUpdateWorker.ps1'
         applyUpdateWorker = 'app\workers\ApplyToolboxUpdate.ps1'

@@ -152,9 +152,11 @@ $userGuide = @(
     '2. 双击 CK免费工具箱.exe。',
     '3. 页面显示“组件缺失”时，点击“安装组件”，工具箱会下载当前页面对应的最新稳定 GitHub Release 并校验。',
     '4. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
-    '5. 选择模型所在目录，点击“扫描模型”。',
-    '6. 勾选需要处理的模型，点击“开始渲染”。',
-    '7. 点击“打开输出”查看 PNG。',
+    '5. NUI/RPF 页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
+    '6. Blender 与 Python 路径统一保存在工具箱根目录 config.json，自更新不会删除。',
+    '7. 选择模型所在目录，点击“扫描模型”。',
+    '8. 勾选需要处理的模型，点击“开始渲染”。',
+    '9. 点击“打开输出”查看 PNG。',
     '',
     'NUI 自动去墙：',
     '1. 打开“NUI 自动去墙”，选择单个 FiveM resource 或 resources 目录。',
@@ -178,10 +180,10 @@ $userGuide = @(
     '工具箱自动更新：',
     '1. 工具箱启动后会异步检查自身最新稳定 Release。',
     '2. 发现新版后点击顶部“立即更新”，工具箱会下载、校验、退出替换并自动重启。',
-    '3. 自更新只替换工具箱核心文件，不删除已安装组件、TestVeh、模型或渲染输出。',
+    '3. 自更新只替换工具箱核心文件，不删除 config.json、已安装组件、TestVeh、模型或渲染输出。',
     '',
-    '发布包不包含 Blender。请安装 Blender 4.2 或更高版本，工具箱会自动使用 Blender 自带 Python。',
-    'NUI 自动去墙可使用系统 Python 3.7+；未安装系统 Python 时会使用 Blender 自带 Python。',
+    '发布包不包含 Blender 或 Python。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+。',
+    'Python 缺失时 NUI/RPF 页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '轻量发布包不预装功能组件；模型 Release 已内置 Sollumz；首次安装时会配置 Blender Python 渲染依赖。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
@@ -191,6 +193,7 @@ $userGuide = @(
 $requiredPackageFiles = @(
     (Join-Path $packagePath 'CK免费工具箱.exe'),
     (Join-Path $packagePath 'CKFreeToolbox.ps1'),
+    (Join-Path $packagePath 'app\modules\ToolboxConfig.psm1'),
     (Join-Path $packagePath 'app\config\tools.json'),
     (Join-Path $packagePath 'app\workers\ComponentWorker.ps1'),
     (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1'),
@@ -208,6 +211,12 @@ foreach ($path in $requiredPackageFiles) {
 if (Test-Path -LiteralPath (Join-Path $packagePath 'runtime\blender')) {
     throw '发布包不应包含 Blender 运行时。'
 }
+if (Test-Path -LiteralPath (Join-Path $packagePath 'config.json') -PathType Leaf) {
+    throw '发布包不应包含用户 config.json。'
+}
+if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'python.exe').Count -gt 0) {
+    throw '发布包不应包含 Python 运行时。'
+}
 
 $manifest = [ordered]@{
     product = 'CK免费工具箱'
@@ -217,7 +226,7 @@ $manifest = [ordered]@{
     entry = 'CK免费工具箱.exe'
     requirements = [ordered]@{
         blender = '4.2 or later, installed separately'
-        python = 'System Python 3.7+ or Blender bundled Python'
+        python = 'Validated Python 3.7+ selected by the user, system Python, py.exe, or Blender Python'
         dotNetFramework = '4.8'
     }
     bundled = [ordered]@{
@@ -234,6 +243,7 @@ $manifest = [ordered]@{
     sha256 = [ordered]@{
         executable = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CK免费工具箱.exe')).Hash
         mainScript = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CKFreeToolbox.ps1')).Hash
+        toolboxConfig = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\modules\ToolboxConfig.psm1')).Hash
         componentWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ComponentWorker.ps1')).Hash
         selfUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1')).Hash
         applyUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1')).Hash

@@ -102,6 +102,7 @@ jobs:
           $required = @(
             [string]$manifest.entry,
             'CKFreeToolbox.ps1',
+            'app\modules\ToolboxConfig.psm1',
             'app\config\tools.json',
             'app\workers\ComponentWorker.ps1',
             'app\workers\SelfUpdateWorker.ps1',
@@ -135,9 +136,12 @@ jobs:
             }
           }
           $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
-            Where-Object { $_.Name -ieq 'blender.exe' }
+            Where-Object { $_.Name -in @('blender.exe', 'python.exe') }
           if ($forbidden -or (Test-Path -LiteralPath (Join-Path $package 'runtime\blender'))) {
-            throw 'Blender must not be bundled in the release.'
+            throw 'Blender and Python must not be bundled in the release.'
+          }
+          if (Test-Path -LiteralPath (Join-Path $package 'config.json') -PathType Leaf) {
+            throw 'User config.json must not be bundled in the release.'
           }
           Write-Host "Release ZIP: $($archives[0].Name)"
           Write-Host "SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $archives[0].FullName).Hash)"

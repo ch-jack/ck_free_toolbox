@@ -381,7 +381,8 @@
         if (-not $env.DotNet.Ok) { throw '未检测到系统 .NET Framework 4.8，请点击官网按钮安装。' }
         if (-not $env.CodeWalker.Ok) { throw '模型组件缺少内置转换工具，请点击顶部安装组件按钮重新安装。' }
         if (-not $env.Sollumz.Ok) { throw '模型组件缺少内置 Sollumz，请点击顶部安装组件按钮重新安装。' }
-        $pythonExe = Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $env.Blender.Path
+        $settings = Get-CkDependencySettings
+        $pythonExe = Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $env.Blender.Path -ConfiguredPath ([string]$settings.PythonPath) -PreferBlender
         $args = @(
             '-u',
             $Context.Paths.RenderScript,

@@ -1,46 +1,15 @@
-﻿function Get-CkDependencySettingsPath {
-    $root = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox'
-    return Join-Path $root 'settings.json'
-}
-
-function Get-CkDependencySettings {
-    $settings = [ordered]@{ BlenderPath = '' }
-    $path = Get-CkDependencySettingsPath
-    if (Test-Path -LiteralPath $path -PathType Leaf) {
-        try {
-            $saved = Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($saved.PSObject.Properties['BlenderPath']) {
-                $settings.BlenderPath = [string]$saved.BlenderPath
-            }
-        } catch { }
-    }
-    return [pscustomobject]$settings
-}
-
-function Set-CkDependencyPath {
+﻿function Set-CkDependencyPath {
     param(
-        [Parameter(Mandatory)][ValidateSet('Blender')][string]$Dependency,
+        [Parameter(Mandatory)][ValidateSet('Blender', 'Python')][string]$Dependency,
         [Parameter(Mandatory)][string]$Path
     )
 
     $fullPath = [IO.Path]::GetFullPath($Path)
     if (-not (Test-Path -LiteralPath $fullPath)) { throw "选择的路径不存在: $fullPath" }
-    if ($Dependency -eq 'Blender') {
-        $resolved = Find-CkDependencyFile -Root $fullPath -FileName 'blender.exe'
-        if (-not $resolved) { throw "选择的位置没有找到 blender.exe: $fullPath" }
-        $fullPath = $resolved
-    }
-    $settings = Get-CkDependencySettings
-    $settings.BlenderPath = $fullPath
-    $settingsPath = Get-CkDependencySettingsPath
-    $settingsRoot = Split-Path -Parent $settingsPath
-    New-Item -ItemType Directory -Path $settingsRoot -Force | Out-Null
-    [IO.File]::WriteAllText(
-        $settingsPath,
-        ($settings | ConvertTo-Json -Depth 3),
-        (New-Object Text.UTF8Encoding($false))
-    )
-    return $fullPath
+    $fileName = if ($Dependency -eq 'Blender') { 'blender.exe' } else { 'python.exe' }
+    $resolved = Find-CkDependencyFile -Root $fullPath -FileName $fileName
+    if (-not $resolved) { throw ("选择的位置没有找到 {0}: {1}" -f $fileName, $fullPath) }
+    return Set-CkToolboxDependencyPath -Dependency $Dependency -Path $resolved
 }
 
 function Find-CkDependencyFile {
@@ -221,4 +190,4 @@ function Get-CkToolboxEnvironment {
     }
 }
 
-Export-ModuleMember -Function Get-CkToolboxEnvironment, Get-CkDependencySettings, Set-CkDependencyPath
+Export-ModuleMember -Function Get-CkToolboxEnvironment, Set-CkDependencyPath

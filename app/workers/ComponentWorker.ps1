@@ -3,6 +3,7 @@ param(
     [Parameter(Mandatory)][ValidateSet('status', 'check', 'install')][string]$Action,
     [Parameter(Mandatory)][string]$ToolId,
     [Parameter(Mandatory)][string]$ConfigPath,
+    [Parameter(Mandatory)][string]$UserConfigPath,
     [Parameter(Mandatory)][string]$WorkspaceRoot
 )
 
@@ -326,11 +327,16 @@ function Expand-CkSafeZip {
 }
 function Get-CkBlenderPython {
     $blenderCandidates = New-Object System.Collections.Generic.List[string]
-    $settingsPath = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'settings.json'
-    if (Test-Path -LiteralPath $settingsPath -PathType Leaf) {
+    if (Test-Path -LiteralPath $UserConfigPath -PathType Leaf) {
         try {
-            $settings = Get-Content -LiteralPath $settingsPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $selected = [string]$settings.BlenderPath
+            $settings = Get-Content -LiteralPath $UserConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
+            $selected = if ($settings.PSObject.Properties['dependencies'] -and $settings.dependencies.PSObject.Properties['blenderPath']) {
+                [string]$settings.dependencies.blenderPath
+            } elseif ($settings.PSObject.Properties['BlenderPath']) {
+                [string]$settings.BlenderPath
+            } else {
+                ''
+            }
             if (Test-Path -LiteralPath $selected -PathType Leaf) {
                 $blenderCandidates.Add($selected)
             } elseif (Test-Path -LiteralPath $selected -PathType Container) {

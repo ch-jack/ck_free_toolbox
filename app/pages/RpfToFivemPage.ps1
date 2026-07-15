@@ -33,7 +33,15 @@
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Ellipse x:Name="PythonDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/><StackPanel Grid.Column="1"><TextBlock Text="Python" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="PythonText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel></Grid>
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="PythonDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1"><TextBlock Text="Python" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="PythonText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="PythonDownloadButton" AutomationProperties.AutomationId="RpfToFivem.PythonDownloadButton" Content="官网" Width="42" Height="27" Margin="0,0,5,0" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 Python 官方 Windows 下载页面"/>
+                <Button x:Name="PythonBrowseButton" AutomationProperties.AutomationId="RpfToFivem.PythonBrowseButton" Content="选择" Width="42" Height="27" ToolTip="选择 Python 安装目录中的 python.exe"/>
+              </StackPanel>
+            </Grid>
           </Border>
           <Border Grid.Column="1" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions><Ellipse x:Name="DotNetDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/><StackPanel Grid.Column="1"><TextBlock Text=".NET 4.8" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="DotNetText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><Button x:Name="DotNetButton" AutomationProperties.AutomationId="RpfToFivem.DotNetButton" Grid.Column="2" Content="官网" Height="27" Foreground="#58A6FF"/></Grid>
@@ -115,7 +123,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','PythonDot','PythonText','DotNetDot','DotNetText','DotNetButton','ComponentDot','ComponentText',
+        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','DotNetDot','DotNetText','DotNetButton','ComponentDot','ComponentText',
         'InputBox','ChooseFileButton','ChooseFolderButton','OutputBox','ChooseOutputButton','OpenOutputButton',
         'TimeoutBox','DepthBox','ArchivesBox','ArchiveFilesBox','UnpackedGbBox','OverwriteBox','KeepWorkBox','StartButton','StopButton',
         'ResultStatus','OpenReportButton','RpfCount','SuccessCount','FailedCount','OutputFileCount','WarningCount','ProgressBar','StatusLine',
@@ -125,10 +133,17 @@
     $ui.OutputBox.Text = [string]$Context.Paths.DefaultRpfOutput
     $ui.ResourceList.ItemsSource = $rows
 
-    function Get-RpfPython {
+    function Get-RpfPythonInfo {
         $environment = Get-CkToolboxEnvironment -Context $Context
         $blender = if ($environment.Blender.Ok) { $environment.Blender.Path } else { '' }
-        return Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blender
+        $settings = Get-CkDependencySettings
+        return Get-CkPythonInfo -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blender -ConfiguredPath ([string]$settings.PythonPath)
+    }
+
+    function Get-RpfPython {
+        $info = & $getPythonInfoAction
+        if (-not $info.Ok) { throw [string]$info.Reason }
+        return [string]$info.Path
     }
 
     function Update-RpfEnvironment {
@@ -136,14 +151,16 @@
         $extractorOk = Test-Path -LiteralPath (Join-Path $Context.Paths.RpfToFivemDir 'tools\CkRpfExtractor.exe') -PathType Leaf
         $archiveOk = Test-Path -LiteralPath (Join-Path $Context.Paths.RpfToFivemDir 'tools\7z.exe') -PathType Leaf
         $environment = Get-CkToolboxEnvironment -Context $Context
-        $python = ''
-        try { $python = & $getPythonAction } catch { }
-        $pythonOk = $python -and (Test-Path -LiteralPath $python -PathType Leaf)
+        $pythonInfo = & $getPythonInfoAction
+        $pythonOk = [bool]$pythonInfo.Ok
         $componentOk = $scriptOk -and $extractorOk -and $archiveOk
         Set-CkStatusDot $ui.PythonDot $pythonOk
         Set-CkStatusDot $ui.DotNetDot $environment.DotNet.Ok
         Set-CkStatusDot $ui.ComponentDot $componentOk
-        $ui.PythonText.Text = if ($pythonOk) { $python } else { '未找到系统或 Blender Python' }
+        $ui.PythonText.Text = [string]$pythonInfo.Label
+        $ui.PythonText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
+        $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
+        $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
         $ui.DotNetText.Text = $environment.DotNet.Label
         $ui.ComponentText.Text = if ($componentOk) { '提取器与 7-Zip 已就绪' } else { '请在顶部安装组件' }
         $allOk = $pythonOk -and $environment.DotNet.Ok -and $componentOk
@@ -153,7 +170,7 @@
 
     function Set-RpfRunning {
         param([bool]$Running)
-        foreach ($control in @($ui.InputBox,$ui.ChooseFileButton,$ui.ChooseFolderButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.TimeoutBox,$ui.DepthBox,$ui.ArchivesBox,$ui.ArchiveFilesBox,$ui.UnpackedGbBox,$ui.OverwriteBox,$ui.KeepWorkBox,$ui.StartButton)) {
+        foreach ($control in @($ui.InputBox,$ui.ChooseFileButton,$ui.ChooseFolderButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.TimeoutBox,$ui.DepthBox,$ui.ArchivesBox,$ui.ArchiveFilesBox,$ui.UnpackedGbBox,$ui.OverwriteBox,$ui.KeepWorkBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         $ui.StopButton.IsEnabled = $Running
@@ -258,6 +275,7 @@
         }
     }
 
+    $getPythonInfoAction = (Get-Command Get-RpfPythonInfo).ScriptBlock.GetNewClosure()
     $getPythonAction = (Get-Command Get-RpfPython).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-RpfEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-RpfRunning).ScriptBlock.GetNewClosure()
@@ -272,6 +290,49 @@
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - RPF 转 FiveM') | Out-Null
+    }.GetNewClosure()
+
+    $openPythonDownloadAction = {
+        Start-Process -FilePath 'https://www.python.org/downloads/windows/'
+    }.GetNewClosure()
+
+    $selectPythonAction = {
+        $settings = Get-CkDependencySettings
+        $dialog = New-Object Microsoft.Win32.OpenFileDialog
+        $dialog.Title = '选择 Python 主程序 python.exe'
+        $dialog.Filter = 'Python 主程序 (python.exe)|python.exe|可执行文件 (*.exe)|*.exe'
+        $dialog.CheckFileExists = $true
+        $dialog.Multiselect = $false
+        $dialog.RestoreDirectory = $true
+        if ($settings.PythonPath -and (Test-Path -LiteralPath ([string]$settings.PythonPath) -PathType Leaf)) {
+            $dialog.InitialDirectory = Split-Path -Parent ([string]$settings.PythonPath)
+            $dialog.FileName = [string]$settings.PythonPath
+        } else {
+            $detected = & $getPythonInfoAction
+            if ($detected.Ok) {
+                $dialog.InitialDirectory = Split-Path -Parent ([string]$detected.Path)
+                $dialog.FileName = [string]$detected.Path
+            }
+        }
+
+        $owner = [System.Windows.Window]::GetWindow($root)
+        $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
+        if ($accepted -ne $true) { return }
+        $selected = [IO.Path]::GetFullPath($dialog.FileName)
+        if ([IO.Path]::GetFileName($selected) -ine 'python.exe') {
+            throw '请选择 Python 安装目录中的 python.exe。'
+        }
+        $info = Test-CkPythonExecutable -Path $selected
+        if (-not $info.Ok) { throw [string]$info.Reason }
+        [void](Set-CkDependencyPath -Dependency Python -Path $selected)
+        & $updateEnvironmentAction
+        $newLine = [Environment]::NewLine
+        $message = "已识别 $($info.Label)$newLine$newLine$selected$newLine$newLine配置已保存到：$newLine$($Context.Paths.UserConfig)"
+        if ($owner) {
+            [System.Windows.MessageBox]::Show($owner, $message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        } else {
+            [System.Windows.MessageBox]::Show($message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        }
     }.GetNewClosure()
 
     $chooseFileAction = {
@@ -434,6 +495,8 @@
         } catch { $state.CancelRequested = $false; throw "停止任务失败: $($_.Exception.Message)" }
     }.GetNewClosure()
 
+    Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseFileButton -Action $chooseFileAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseFolderButton -Action $chooseFolderAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError

@@ -1,31 +1,143 @@
-﻿function Get-CkPythonExe {
+﻿function Test-CkPythonExecutable {
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [version]$MinimumVersion = [version]'3.7.0'
+    )
+
+    $fullPath = ''
+    try { $fullPath = [IO.Path]::GetFullPath($Path) } catch {
+        return [pscustomobject]@{ Ok = $false; Path = [string]$Path; Version = ''; Label = '路径无效'; Reason = $_.Exception.Message }
+    }
+    if (-not (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+        return [pscustomobject]@{ Ok = $false; Path = $fullPath; Version = ''; Label = '文件不存在'; Reason = "Python 不存在: $fullPath" }
+    }
+
+    $file = Get-Item -LiteralPath $fullPath -ErrorAction SilentlyContinue
+    if (-not $file -or $file.Length -le 0 -or $fullPath -match '(?i)\\WindowsApps\\python(?:3)?\.exe$') {
+        return [pscustomobject]@{
+            Ok = $false
+            Path = $fullPath
+            Version = ''
+            Label = 'Windows 商店占位程序'
+            Reason = '检测到 WindowsApps 的 Python 商店别名，不是真实 Python。'
+        }
+    }
+
+    $process = $null
+    try {
+        $psi = New-Object Diagnostics.ProcessStartInfo
+        $psi.FileName = $fullPath
+        $psi.Arguments = '-c "import sys; print(''%d.%d.%d'' % sys.version_info[:3])"'
+        $psi.WorkingDirectory = Split-Path -Parent $fullPath
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+        try {
+            $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
+            $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
+        } catch { }
+
+        $process = New-Object Diagnostics.Process
+        $process.StartInfo = $psi
+        if (-not $process.Start()) { throw '进程未启动。' }
+        if (-not $process.WaitForExit(8000)) {
+            try { $process.Kill() } catch { }
+            return [pscustomobject]@{ Ok = $false; Path = $fullPath; Version = ''; Label = '检测超时'; Reason = 'Python 版本检测超过 8 秒。' }
+        }
+        $stdout = $process.StandardOutput.ReadToEnd().Trim()
+        $stderr = $process.StandardError.ReadToEnd().Trim()
+        if ($process.ExitCode -ne 0) {
+            $detail = if ($stderr) { $stderr } else { "退出码 $($process.ExitCode)" }
+            return [pscustomobject]@{ Ok = $false; Path = $fullPath; Version = ''; Label = '无法运行'; Reason = "Python 无法运行: $detail" }
+        }
+        if ($stdout -notmatch '^(?<version>\d+\.\d+\.\d+)$') {
+            return [pscustomobject]@{ Ok = $false; Path = $fullPath; Version = ''; Label = '版本无法识别'; Reason = "Python 返回了无效版本: $stdout" }
+        }
+
+        $version = [version]$Matches.version
+        $ok = $version -ge $MinimumVersion
+        return [pscustomobject]@{
+            Ok = $ok
+            Path = $fullPath
+            Version = $version.ToString()
+            Label = $(if ($ok) { "Python $version" } else { "Python $version（需要 $MinimumVersion 或更高版本）" })
+            Reason = $(if ($ok) { '' } else { "Python 版本过低: $version，最低需要 $MinimumVersion。" })
+        }
+    } catch {
+        return [pscustomobject]@{ Ok = $false; Path = $fullPath; Version = ''; Label = '无法启动'; Reason = $_.Exception.Message }
+    } finally {
+        if ($process) { $process.Dispose() }
+    }
+}
+
+function Get-CkPythonInfo {
     param(
         [string]$RuntimeRoot,
-        [string]$BlenderExe
+        [string]$BlenderExe,
+        [string]$ConfiguredPath,
+        [switch]$PreferBlender
     )
 
     $candidates = New-Object System.Collections.Generic.List[string]
-    if ($RuntimeRoot) {
-        $candidates.Add((Join-Path $RuntimeRoot 'python\python.exe'))
-    }
-
+    $blenderCandidates = New-Object System.Collections.Generic.List[string]
     if ($BlenderExe -and (Test-Path -LiteralPath $BlenderExe -PathType Leaf)) {
         $blenderRoot = Split-Path -Parent $BlenderExe
         foreach ($versionDir in @(Get-ChildItem -LiteralPath $blenderRoot -Directory -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
-            $candidates.Add((Join-Path $versionDir.FullName 'python\bin\python.exe'))
+            $blenderCandidates.Add((Join-Path $versionDir.FullName 'python\bin\python.exe'))
+        }
+    }
+    if ($PreferBlender) {
+        foreach ($candidate in $blenderCandidates) { $candidates.Add($candidate) }
+    }
+    if ($ConfiguredPath) { $candidates.Add($ConfiguredPath) }
+    if ($RuntimeRoot) { $candidates.Add((Join-Path $RuntimeRoot 'python\python.exe')) }
+
+    foreach ($commandName in @('python.exe', 'py.exe')) {
+        foreach ($command in @(Get-Command $commandName -All -ErrorAction SilentlyContinue)) {
+            if ($command.Source) { $candidates.Add([string]$command.Source) }
         }
     }
 
-    $cmd = Get-Command python.exe -ErrorAction SilentlyContinue
-    if ($cmd) { $candidates.Add($cmd.Source) }
-
-    foreach ($candidate in $candidates) {
-        if ($candidate -and (Test-Path -LiteralPath $candidate -PathType Leaf)) {
-            return $candidate
+    $localPythonRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs\Python'
+    if (Test-Path -LiteralPath $localPythonRoot -PathType Container) {
+        foreach ($directory in @(Get-ChildItem -LiteralPath $localPythonRoot -Directory -Filter 'Python*' -ErrorAction SilentlyContinue | Sort-Object Name -Descending)) {
+            $candidates.Add((Join-Path $directory.FullName 'python.exe'))
         }
     }
 
-    throw '未找到 Python 运行时。请安装官方 Blender，工具箱会自动使用 Blender 自带 Python。'
+    if (-not $PreferBlender) {
+        foreach ($candidate in $blenderCandidates) { $candidates.Add($candidate) }
+    }
+
+    $firstFailure = $null
+    foreach ($candidate in @($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+        $result = Test-CkPythonExecutable -Path $candidate
+        if ($result.Ok) { return $result }
+        if (-not $firstFailure) { $firstFailure = $result }
+    }
+
+    $detail = if ($firstFailure -and $firstFailure.Reason) { " $($firstFailure.Reason)" } else { '' }
+    return [pscustomobject]@{
+        Ok = $false
+        Path = ''
+        Version = ''
+        Label = '未检测到 Python 3.7+'
+        Reason = "未检测到可用的 Python 3.7+。请从 Python 官网安装后选择 python.exe。$detail"
+    }
+}
+
+function Get-CkPythonExe {
+    param(
+        [string]$RuntimeRoot,
+        [string]$BlenderExe,
+        [string]$ConfiguredPath,
+        [switch]$PreferBlender
+    )
+
+    $info = Get-CkPythonInfo -RuntimeRoot $RuntimeRoot -BlenderExe $BlenderExe -ConfiguredPath $ConfiguredPath -PreferBlender:$PreferBlender
+    if (-not $info.Ok) { throw [string]$info.Reason }
+    return [string]$info.Path
 }
 if (-not ([System.Management.Automation.PSTypeName]'CKFreeToolbox.Runtime.ProcessOutputBuffer').Type) {
     Add-Type -TypeDefinition @'
@@ -119,7 +231,7 @@ function Start-CkLoggedProcess {
     )
 
     if (-not (Test-Path -LiteralPath $WorkingDirectory -PathType Container)) {
-        throw "???????: $WorkingDirectory"
+        throw "工作目录不存在: $WorkingDirectory"
     }
 
     $psi = New-Object System.Diagnostics.ProcessStartInfo
@@ -144,7 +256,7 @@ function Start-CkLoggedProcess {
 
     try {
         if (-not $proc.Start()) {
-            throw "??????: $FileName"
+            throw "无法启动进程: $FileName"
         }
         $proc.BeginOutputReadLine()
         $proc.BeginErrorReadLine()
@@ -201,4 +313,4 @@ function Start-CkLoggedProcess {
     }
 }
 
-Export-ModuleMember -Function Get-CkPythonExe, Join-CkArgumentList, Start-CkLoggedProcess
+Export-ModuleMember -Function Test-CkPythonExecutable, Get-CkPythonInfo, Get-CkPythonExe, Join-CkArgumentList, Start-CkLoggedProcess

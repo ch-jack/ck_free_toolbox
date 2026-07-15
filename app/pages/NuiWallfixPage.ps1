@@ -49,7 +49,9 @@
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Ellipse x:Name="EnvironmentDot" Width="10" Height="10" Fill="#31D69A" Margin="0,0,8,0"/>
-          <TextBlock x:Name="EnvironmentText" AutomationProperties.AutomationId="NuiWallfix.EnvironmentText" Text="检测中" Foreground="#31D69A" FontWeight="SemiBold"/>
+          <TextBlock x:Name="EnvironmentText" AutomationProperties.AutomationId="NuiWallfix.EnvironmentText" Text="检测中" Foreground="#31D69A" FontWeight="SemiBold" Margin="0,0,10,0"/>
+          <Button x:Name="PythonDownloadButton" AutomationProperties.AutomationId="NuiWallfix.PythonDownloadButton" Content="官网" Width="52" Height="28" Margin="0,0,6,0" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 Python 官方 Windows 下载页面"/>
+          <Button x:Name="PythonBrowseButton" AutomationProperties.AutomationId="NuiWallfix.PythonBrowseButton" Content="选择" Width="52" Height="28" ToolTip="选择 Python 安装目录中的 python.exe"/>
         </StackPanel>
       </Grid>
     </Border>
@@ -170,7 +172,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentDot','EnvironmentText','TargetBox','ChooseTargetButton','OpenTargetButton',
+        'EnvironmentDot','EnvironmentText','PythonDownloadButton','PythonBrowseButton','TargetBox','ChooseTargetButton','OpenTargetButton',
         'ModeBox','TimeoutBox','MaxMbBox','ProvidersBox','StateDirBox','ChooseStateDirButton',
         'AllowUnverifiedBox','AllowPrivateBox','ForceRestoreBox','ScanButton','PreviewButton','ApplyButton','CancelButton',
         'RunIdBox','RestoreButton','OpenBackupsButton','ResultStatus','ResourceCount','ReferenceCount',
@@ -181,32 +183,37 @@
     $ui.ProvidersBox.Text = $Context.Paths.WallfixProviders
     $ui.ModeBox.SelectedIndex = 0
 
-    function Get-WallfixPython {
+    function Get-WallfixPythonInfo {
         $environment = Get-CkToolboxEnvironment -Context $Context
         $blenderPath = if ($environment.Blender.Ok) { $environment.Blender.Path } else { '' }
-        return Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blenderPath
+        $settings = Get-CkDependencySettings
+        return Get-CkPythonInfo -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blenderPath -ConfiguredPath ([string]$settings.PythonPath)
+    }
+
+    function Get-WallfixPython {
+        $info = & $getPythonInfoAction
+        if (-not $info.Ok) { throw [string]$info.Reason }
+        return [string]$info.Path
     }
 
     function Update-WallfixEnvironment {
         $scriptOk = Test-Path -LiteralPath $Context.Paths.WallfixScript -PathType Leaf
         $providersOk = Test-Path -LiteralPath $Context.Paths.WallfixProviders -PathType Leaf
-        $pythonOk = $false
-        try {
-            $environment = Get-CkToolboxEnvironment -Context $Context
-            $blenderPath = if ($environment.Blender.Ok) { $environment.Blender.Path } else { '' }
-            $pythonPath = Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blenderPath
-            $pythonOk = Test-Path -LiteralPath $pythonPath -PathType Leaf
-        } catch { }
+        $pythonInfo = & $getPythonInfoAction
+        $pythonOk = [bool]$pythonInfo.Ok
 
         $ok = $scriptOk -and $providersOk -and $pythonOk
         Set-CkStatusDot $ui.EnvironmentDot $ok
         $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
-        $ui.EnvironmentText.Text = if ($ok) { '运行环境就绪' } elseif (-not $scriptOk) { '缺少 nui-wallfix' } elseif (-not $pythonOk) { '缺少 Python' } else { '缺少 CDN 规则' }
+        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少 nui-wallfix' } elseif (-not $pythonOk) { '缺少 Python 3.7+' } else { '缺少 CDN 规则' }
+        $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
+        $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
+        $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
     }
 
     function Set-WallfixRunning {
         param([bool]$Running, [string]$Label = '')
-        foreach ($button in @($ui.ScanButton, $ui.PreviewButton, $ui.ApplyButton, $ui.RestoreButton)) {
+        foreach ($button in @($ui.ScanButton, $ui.PreviewButton, $ui.ApplyButton, $ui.RestoreButton, $ui.PythonDownloadButton, $ui.PythonBrowseButton)) {
             $button.IsEnabled = -not $Running
         }
         $ui.CancelButton.IsEnabled = $Running
@@ -308,6 +315,7 @@
         }
     }
 
+    $getPythonInfoAction = (Get-Command Get-WallfixPythonInfo).ScriptBlock.GetNewClosure()
     $getPythonAction = (Get-Command Get-WallfixPython).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-WallfixEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-WallfixRunning).ScriptBlock.GetNewClosure()
@@ -321,6 +329,49 @@
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - NUI 自动去墙') | Out-Null
+    }.GetNewClosure()
+
+    $openPythonDownloadAction = {
+        Start-Process -FilePath 'https://www.python.org/downloads/windows/'
+    }.GetNewClosure()
+
+    $selectPythonAction = {
+        $settings = Get-CkDependencySettings
+        $dialog = New-Object Microsoft.Win32.OpenFileDialog
+        $dialog.Title = '选择 Python 主程序 python.exe'
+        $dialog.Filter = 'Python 主程序 (python.exe)|python.exe|可执行文件 (*.exe)|*.exe'
+        $dialog.CheckFileExists = $true
+        $dialog.Multiselect = $false
+        $dialog.RestoreDirectory = $true
+        if ($settings.PythonPath -and (Test-Path -LiteralPath ([string]$settings.PythonPath) -PathType Leaf)) {
+            $dialog.InitialDirectory = Split-Path -Parent ([string]$settings.PythonPath)
+            $dialog.FileName = [string]$settings.PythonPath
+        } else {
+            $detected = & $getPythonInfoAction
+            if ($detected.Ok) {
+                $dialog.InitialDirectory = Split-Path -Parent ([string]$detected.Path)
+                $dialog.FileName = [string]$detected.Path
+            }
+        }
+
+        $owner = [System.Windows.Window]::GetWindow($root)
+        $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
+        if ($accepted -ne $true) { return }
+        $selected = [IO.Path]::GetFullPath($dialog.FileName)
+        if ([IO.Path]::GetFileName($selected) -ine 'python.exe') {
+            throw '请选择 Python 安装目录中的 python.exe。'
+        }
+        $info = Test-CkPythonExecutable -Path $selected
+        if (-not $info.Ok) { throw [string]$info.Reason }
+        [void](Set-CkDependencyPath -Dependency Python -Path $selected)
+        & $updateEnvironmentAction
+        $newLine = [Environment]::NewLine
+        $message = "已识别 $($info.Label)$newLine$newLine$selected$newLine$newLine配置已保存到：$newLine$($Context.Paths.UserConfig)"
+        if ($owner) {
+            [System.Windows.MessageBox]::Show($owner, $message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        } else {
+            [System.Windows.MessageBox]::Show($message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        }
     }.GetNewClosure()
 
     $chooseTargetAction = {
@@ -544,6 +595,8 @@
         }
     }.GetNewClosure()
 
+    Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseTargetButton -Action $chooseTargetAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenTargetButton -Action $openTargetAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseStateDirButton -Action $chooseStateDirAction -OnError $showPageError
