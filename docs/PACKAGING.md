@@ -24,7 +24,7 @@ dist/
 - 模型自动截图对应 [ch-jack/CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)。
 - NUI 自动去墙对应 [ch-jack/nui-wallfix](https://github.com/ch-jack/nui-wallfix)。
 - RPF 转 FiveM 对应 [ch-jack/rpf2fivem](https://github.com/ch-jack/rpf2fivem)。
-- 恶意代码清理对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
+- 扫描移除后门对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
@@ -34,7 +34,7 @@ dist/
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
-模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF 与恶意代码清理组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
+模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF 与扫描移除后门组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
 
 ## 工具箱自更新
 
@@ -113,13 +113,13 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 客户端直接执行 `rpf_to_fivem.py ... --json`，不启动服务器或后台服务。
 5. 页面解析 `_rpf_to_fivem_report.json`，显示资源结果、警告和输出路径。
 
-## 恶意代码清理安全流程
+## 扫描移除后门安全流程
 
 1. 组件缺失时，从 `ch-jack/ck_anti_john` 最新稳定 Release 下载 ZIP 和 SHA-256。
-2. “安全扫描”只读、不联网、不提取目标 ZIP，也不执行被扫描代码。
-3. “修复预览”只返回动作；“确认修复”二次确认后才写入。
+2. “扫描后门”只读、不联网、不提取目标 ZIP，也不执行被扫描代码。
+3. “移除预览”只返回动作；“确认移除”二次确认后才写入。
 4. 目录目标先在外部创建 Run ID 备份；ZIP 默认保留原包并生成 `*.cleaned.zip`。
-5. 修复后自动复扫；仍有高危项时拒绝交付结果或回滚目录。
+5. 修复后自动复扫；仍有可自动修复高危项时拒绝交付结果或回滚目录，人工项单独提示。
 
 ## 发布前验证
 
@@ -129,9 +129,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
-- 恶意代码清理组件安装后可扫描目录/ZIP、预览修复、确认写入并按 Run ID 恢复。
+- 扫描移除后门组件安装后可扫描目录/ZIP、预览移除、确认写入并按 Run ID 恢复。
 - Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
-- Python 缺失时 NUI/RPF/恶意代码清理页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
+- Python 缺失时 NUI/RPF/扫描移除后门页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
 - Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。
 - .NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 模型截图运行时的 `_temp` 位于输出目录，任务完成后已自动删除。

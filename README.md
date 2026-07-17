@@ -2,7 +2,7 @@
 
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及四个功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM 和恶意代码清理引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix)、[rpf2fivem](https://github.com/ch-jack/rpf2fivem) 和 [ck_anti_john](https://github.com/ch-jack/ck_anti_john) 维护，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及四个功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM 和扫描移除后门引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix)、[rpf2fivem](https://github.com/ch-jack/rpf2fivem) 和 [ck_anti_john](https://github.com/ch-jack/ck_anti_john) 维护，工具箱运行后按需下载。
 
 ## 界面预览
 
@@ -97,11 +97,12 @@ git push origin v1.0.2
 - 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
 - Python 缺失时提供官网和选择按钮，选择结果与 Blender 路径共用根目录 `config.json`。
 
-### 恶意代码清理
+### 扫描移除后门
 
 - 支持选择单个 FiveM resource、整个 `resources` 目录或 ZIP。
-- “安全扫描”只读、不联网、不提取 ZIP，也不会执行目标中的 Lua、JavaScript 或 HTML。
-- “修复预览”只生成动作；“确认修复”会先备份目录目标并在写入后自动复检。
+- “扫描后门”只读、不联网、不提取 ZIP，也不会执行目标中的 Lua、JavaScript 或 HTML。
+- 覆盖 GP212887 精确链、Lua 远程执行、XOR/Base64/LZString/Node VM JavaScript 投递器、manifest 注入、Blum/Warden/Cipher IOC 和 txAdmin 篡改。
+- “移除预览”只生成动作；“确认移除”会先备份目录目标并在写入后自动复检。
 - ZIP 默认保留原包并生成 `*.cleaned.zip`；目录修复返回 Run ID，可在页面直接恢复。
 - 组件从 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john) 的稳定 Release 安装并校验 SHA-256。
 
@@ -143,7 +144,7 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF/恶意代码清理页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
+- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF/扫描移除后门页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
 
 ## 已验证
 
@@ -152,7 +153,7 @@ git push origin v1.0.2
 - PowerShell 语法检查：主脚本及 14 个 .ps1/.psm1 文件通过。
 - Python 探测：真实 Python 3.7.0/3.13.9 通过，0 字节 WindowsApps 商店占位程序被拒绝。
 - 统一配置：旧设置迁移、Blender/Python 双路径保存及根目录 `config.json` 结构通过。
-- 缺失环境 UI：NUI/RPF/恶意代码清理页面均提供 Python 官网和选择按钮。
+- 缺失环境 UI：NUI/RPF/扫描移除后门页面均提供 Python 官网和选择按钮。
 - 按钮烟测：扫描、搜索、全选、取消和模型渲染通过。
 - 扫描 D:\fivem\TestVeh：识别 47 个可处理模型。
 - 饰品实渲染：jr_labubu2 成功生成 D:\fivem\TestVeh\_vehicle_renders\jr_labubu2.png。
@@ -162,10 +163,10 @@ git push origin v1.0.2
 - 原完整 ZIP 已验证不含 blender.exe 和 runtime\blender；当前自动构建进一步改为不预装功能组件的轻量包。
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
 - RPF 转 FiveM：组件注册、参数校验、JSON 报告解析和真实 RPF 转换通过。
-- Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.1.0 真实下载、SHA-256 校验和安装通过。
-- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM 和恶意代码清理按队列自动完成检查，页面分别显示最新 Release 或更新提示。
-- 恶意代码清理页面：XAML 实例化、9 个核心控件、Python 3.7 环境识别及“安全扫描”按钮端到端调用通过，页面显示 14 项发现和 13 项高危。
-- 恶意代码清理组件：安装后的 v0.1.0 对指定 GP212887 ZIP 静态扫描返回 `compromised`，共 14 项发现；未执行 ZIP 内代码。
+- Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.2.0 真实下载、SHA-256 校验和安装通过。
+- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM 和扫描移除后门按队列自动完成检查，页面分别显示最新 Release 或更新提示。
+- 扫描移除后门页面：XAML 实例化、核心控件、Python 3.7 环境识别及“扫描后门”按钮端到端调用通过，页面显示 15 项发现和 14 项 critical。
+- 扫描移除后门组件：v0.2.0 对指定 GP212887 ZIP 静态扫描返回 `compromised`，共 15 项发现；5 个修复动作后复扫 `clean`、0 项，未执行 ZIP 内代码。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 工具箱自更新：联网版本检查、成功替换、组件/用户目录保留和模拟失败回滚通过。
 
@@ -183,7 +184,7 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM 和恶意代码清理。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM 和扫描移除后门。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 

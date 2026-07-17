@@ -71,7 +71,7 @@
     },
     {
         "id": "anti-john",
-        "title": "恶意代码清理",
+        "title": "扫描移除后门",
         "icon": "⊘",
         "page": "AntiJohnPage.ps1",
         "factory": "New-CkAntiJohnPage",

@@ -27,9 +27,9 @@
         <StackPanel>
           <StackPanel Orientation="Horizontal">
             <Border Width="4" Height="22" CornerRadius="3" Background="#EF6B73" Margin="0,0,10,0"/>
-            <TextBlock Text="恶意代码清理" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="扫描移除后门" FontSize="22" FontWeight="Bold"/>
           </StackPanel>
-          <TextBlock Text="FiveM resource / ZIP 静态检测、精确修复与安全恢复" Foreground="#777B83" FontSize="13" Margin="14,6,0,0"/>
+          <TextBlock Text="FiveM resource / ZIP 后门静态扫描、自动移除与安全恢复" Foreground="#777B83" FontSize="13" Margin="14,6,0,0"/>
         </StackPanel>
         <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
           <Ellipse x:Name="EnvironmentDot" Width="10" Height="10" Fill="#31D69A" Margin="0,0,8,0"/>
@@ -75,9 +75,9 @@
 
     <Grid Margin="0,0,0,14">
       <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="0.72*"/></Grid.ColumnDefinitions>
-      <Button x:Name="ScanButton" AutomationProperties.AutomationId="AntiJohn.ScanButton" Grid.Column="0" Content="安全扫描" Height="46" Margin="0,0,6,0"/>
-      <Button x:Name="PreviewButton" AutomationProperties.AutomationId="AntiJohn.PreviewButton" Grid.Column="1" Content="修复预览" Height="46" Margin="6,0" Background="#173055" Foreground="#58A6FF"/>
-      <Button x:Name="ApplyButton" AutomationProperties.AutomationId="AntiJohn.ApplyButton" Grid.Column="2" Content="确认修复" Height="46" Margin="6,0" Background="#5A2026" Foreground="#FF9CA3" FontWeight="Bold"/>
+      <Button x:Name="ScanButton" AutomationProperties.AutomationId="AntiJohn.ScanButton" Grid.Column="0" Content="扫描后门" Height="46" Margin="0,0,6,0"/>
+      <Button x:Name="PreviewButton" AutomationProperties.AutomationId="AntiJohn.PreviewButton" Grid.Column="1" Content="移除预览" Height="46" Margin="6,0" Background="#173055" Foreground="#58A6FF"/>
+      <Button x:Name="ApplyButton" AutomationProperties.AutomationId="AntiJohn.ApplyButton" Grid.Column="2" Content="确认移除" Height="46" Margin="6,0" Background="#5A2026" Foreground="#FF9CA3" FontWeight="Bold"/>
       <Button x:Name="CancelButton" AutomationProperties.AutomationId="AntiJohn.CancelButton" Grid.Column="3" Content="停止任务" Height="46" Margin="6,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
     </Grid>
 
@@ -107,7 +107,7 @@
           <Border Background="#15181C" CornerRadius="6" Padding="10" Margin="5,0,0,0"><StackPanel><TextBlock Text="可修复 / 动作" Foreground="#777B83"/><TextBlock x:Name="RepairableCount" Text="0" FontSize="20" FontWeight="Bold" Foreground="#58A6FF"/></StackPanel></Border>
         </UniformGrid>
         <ProgressBar x:Name="ProgressBar" Height="8" Minimum="0" Maximum="100" Value="0"/>
-        <TextBlock x:Name="StatusLine" AutomationProperties.AutomationId="AntiJohn.StatusLine" Text="选择目标后先执行安全扫描。" Foreground="#8B9099" FontSize="14" Margin="0,10,0,0"/>
+        <TextBlock x:Name="StatusLine" AutomationProperties.AutomationId="AntiJohn.StatusLine" Text="选择目标后先执行后门扫描。" Foreground="#8B9099" FontSize="14" Margin="0,10,0,0"/>
       </StackPanel>
     </Border>
 
@@ -149,7 +149,7 @@
         $ok = $scriptOk -and $pythonOk
         Set-CkStatusDot $ui.EnvironmentDot $ok
         $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
-        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少反约翰组件' } else { '缺少 Python 3.7+' }
+        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少后门扫描组件' } else { '缺少 Python 3.7+' }
         $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
         $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
@@ -271,7 +271,7 @@
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($operation -eq 'restore') { '恢复完成' } else { '处理完成' }
             $ui.ResultStatus.Foreground = '#31D69A'
-            $ui.StatusLine.Text = if ($verdict -eq 'clean') { '未发现感染链，或修复后复检为 clean。' } else { '任务已完成。' }
+            $ui.StatusLine.Text = if ($verdict -eq 'clean') { '未发现后门，或移除后复检为 clean。' } else { '任务已完成；请查看剩余人工项。' }
         } elseif ($ExitCode -eq 10) {
             $ui.ResultStatus.Text = if ($state.LastOperation -eq 'scan') { '发现风险' } else { '预览完成，等待确认' }
             $ui.ResultStatus.Foreground = '#F4B860'
@@ -279,7 +279,7 @@
         } elseif ($ExitCode -eq 50) {
             $ui.ResultStatus.Text = '恢复冲突'
             $ui.ResultStatus.Foreground = '#EF6B73'
-            $ui.StatusLine.Text = '修复后的文件又发生变化，默认拒绝覆盖。'
+            $ui.StatusLine.Text = '移除后的文件又发生变化，默认拒绝覆盖。'
         } else {
             $ui.ResultStatus.Text = '处理失败'
             $ui.ResultStatus.Foreground = '#EF6B73'
@@ -301,7 +301,7 @@
         $ui.ResultStatus.Foreground = '#EF6B73'
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
-        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 恶意代码清理') | Out-Null
+        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 扫描移除后门') | Out-Null
     }.GetNewClosure()
 
     $openPythonDownloadAction = {
@@ -374,7 +374,7 @@
 
     $chooseStateDirAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
-        $dialog.Description = '选择反约翰组件备份目录'
+        $dialog.Description = '选择后门扫描组件备份目录'
         $dialog.SelectedPath = $ui.StateDirBox.Text
         $dialog.ShowNewFolderButton = $true
         try {
@@ -397,9 +397,9 @@
     function Start-AntiJohnOperation {
         param([ValidateSet('scan','preview','apply','restore')][string]$Operation)
 
-        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有恶意代码检查任务正在运行。' }
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有后门扫描任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.AntiJohnScript -PathType Leaf)) {
-            throw "反约翰组件入口不存在: $($Context.Paths.AntiJohnScript)"
+            throw "后门扫描组件入口不存在: $($Context.Paths.AntiJohnScript)"
         }
 
         $target = $ui.TargetBox.Text.Trim()
@@ -428,13 +428,13 @@
         $label = ''
         if ($Operation -eq 'scan') {
             $args += @('scan', $target, '--max-bytes', [string]($maxMb * 1MB), '--json')
-            $label = '正在安全扫描'
+            $label = '正在扫描后门'
         } elseif ($Operation -in @('preview','apply')) {
             if ($Operation -eq 'apply') {
                 $detail = if ($isDirectory) { '匹配文件会在目标外备份后精确修改。' } else { '原 ZIP 不变，将生成新的 .cleaned.zip。' }
                 $answer = [System.Windows.MessageBox]::Show(
-                    "即将修复：`n$target`n`n$detail`n修复后会自动静态复检。是否继续？",
-                    '确认执行恶意代码清理',
+                    "即将移除可自动处理的后门：`n$target`n`n$detail`n写入后会自动静态复检。是否继续？",
+                    '确认执行后门移除',
                     [System.Windows.MessageBoxButton]::YesNo,
                     [System.Windows.MessageBoxImage]::Warning
                 )
@@ -445,7 +445,7 @@
             if ($stateDir) { $args += @('--state-dir', $stateDir) }
             if ($Operation -eq 'apply') { $args += '--write' }
             $args += '--json'
-            $label = if ($Operation -eq 'apply') { '正在执行安全修复' } else { '正在生成修复预览' }
+            $label = if ($Operation -eq 'apply') { '正在移除后门' } else { '正在生成移除预览' }
         } else {
             $runId = $ui.RunIdBox.Text.Trim()
             if (-not $runId) { throw '请输入需要恢复的 Run ID。' }
@@ -513,7 +513,7 @@
                 $callbackUi.ResultStatus.Text = '结果解析失败'
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
-                $callbackUi.LogBox.Text = if ($raw) { $raw } else { '反约翰组件没有返回结果。' }
+                $callbackUi.LogBox.Text = if ($raw) { $raw } else { '后门扫描组件没有返回结果。' }
             }
         }.GetNewClosure()
 
@@ -557,7 +557,7 @@
 
     return [pscustomobject]@{
         Id = 'anti-john'
-        Title = '恶意代码清理'
+        Title = '扫描移除后门'
         Icon = '⊘'
         Root = $root
         Activate = $updateEnvironmentAction
