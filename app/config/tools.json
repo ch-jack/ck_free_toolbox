@@ -93,7 +93,7 @@
     },
     {
         "id": "xiaoha-cleaner",
-        "title": "小哈性能清理",
+        "title": "一键清理小哈",
         "icon": "⌁",
         "page": "XiaohaCleanerPage.ps1",
         "factory": "New-CkXiaohaCleanerPage",

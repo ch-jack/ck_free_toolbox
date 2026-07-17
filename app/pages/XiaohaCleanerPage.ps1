@@ -27,7 +27,7 @@
         <StackPanel>
           <StackPanel Orientation="Horizontal">
             <Border Width="4" Height="22" CornerRadius="3" Background="#F4B860" Margin="0,0,10,0"/>
-            <TextBlock Text="小哈性能清理" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="一键清理小哈" FontSize="22" FontWeight="Bold"/>
           </StackPanel>
           <TextBlock Text="移除 Xiaoha / HGAdmin 资源、注入、启动项和已确认数据库对象" Foreground="#777B83" FontSize="13" Margin="14,6,0,0"/>
         </StackPanel>
@@ -268,7 +268,7 @@
         $ui.ResultStatus.Foreground = '#EF6B73'
         $ui.StatusLine.Text = $message
         $ui.LogBox.Text = $message
-        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 小哈性能清理') | Out-Null
+        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 一键清理小哈') | Out-Null
     }.GetNewClosure()
 
     $openPythonDownloadAction = { Start-Process -FilePath 'https://www.python.org/downloads/windows/' }.GetNewClosure()
@@ -543,7 +543,7 @@
 
     return [pscustomobject]@{
         Id = 'xiaoha-cleaner'
-        Title = '小哈性能清理'
+        Title = '一键清理小哈'
         Icon = '⌁'
         Root = $root
         Activate = $updateEnvironmentAction
