@@ -68,5 +68,27 @@
             ]
         },
         "default": false
+    },
+    {
+        "id": "anti-john",
+        "title": "恶意代码清理",
+        "icon": "⊘",
+        "page": "AntiJohnPage.ps1",
+        "factory": "New-CkAntiJohnPage",
+        "sourceUrl": "https://github.com/ch-jack/ck_anti_john",
+        "component": {
+            "repo": "ch-jack/ck_anti_john",
+            "installDir": "ck_anti_john",
+            "bootstrap": "",
+            "releaseAssetPattern": "ck-anti-john-*-windows.zip",
+            "releaseChecksumAssetPattern": "ck-anti-john-*-windows.zip.sha256",
+            "requiredFiles": [
+                "ck-anti-john.py",
+                "src/ck_anti_john/cli.py",
+                "src/ck_anti_john/repair.py",
+                "src/ck_anti_john/data/john_uncle_v1.json"
+            ]
+        },
+        "default": false
     }
 ]
