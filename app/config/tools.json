@@ -90,5 +90,27 @@
             ]
         },
         "default": false
+    },
+    {
+        "id": "xiaoha-cleaner",
+        "title": "小哈性能清理",
+        "icon": "⌁",
+        "page": "XiaohaCleanerPage.ps1",
+        "factory": "New-CkXiaohaCleanerPage",
+        "sourceUrl": "https://github.com/ch-jack/xiaoha_cleaner",
+        "component": {
+            "repo": "ch-jack/xiaoha_cleaner",
+            "installDir": "xiaoha_cleaner",
+            "bootstrap": "",
+            "releaseAssetPattern": "xiaoha-cleaner-*-windows.zip",
+            "releaseChecksumAssetPattern": "xiaoha-cleaner-*-windows.zip.sha256",
+            "requiredFiles": [
+                "xiaoha-cleaner.py",
+                "XiaohaCleanerAuto.py",
+                "XiaohaCleanerFinal.py",
+                "xiaoha_cleaner.py"
+            ]
+        },
+        "default": false
     }
 ]

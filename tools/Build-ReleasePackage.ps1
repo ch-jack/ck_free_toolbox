@@ -152,7 +152,7 @@ $userGuide = @(
     '2. 双击 CK免费工具箱.exe。',
     '3. 页面显示“组件缺失”时，点击“安装组件”，工具箱会下载当前页面对应的最新稳定 GitHub Release 并校验。',
     '4. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
-    '5. NUI/RPF/扫描移除后门页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
+    '5. NUI/RPF/扫描移除后门/小哈性能清理页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
     '6. Blender 与 Python 路径统一保存在工具箱根目录 config.json，自更新不会删除。',
     '7. 选择模型所在目录，点击“扫描模型”。',
     '8. 勾选需要处理的模型，点击“开始渲染”。',
@@ -170,6 +170,13 @@ $userGuide = @(
     '3. 点击开始转换，每个 RPF 会生成一个独立 FiveM resource。',
     '4. 转换后可直接打开输出目录，并查看资源明细和 JSON 报告。',
     '',
+    '小哈性能清理：',
+    '1. 选择 FiveM server-data 或 resources 目录，先执行“只读扫描”。',
+    '2. 确认资源、注入和 SQL 清单后再执行清理；文件会移动到目标外的隔离目录。',
+    '3. 数据库清理默认关闭；启用前必须停止服务器、备份数据库并再次确认。',
+    '4. 工具会自动读取 server.cfg 和 exec 配置链中的 MySQL 信息，密码不会输出到报告。',
+    '5. 文件修改可选择 run-report.json 恢复；数据库只能从执行前的备份恢复。',
+    '',
     'GitHub 组件管理：',
     '1. 工具箱启动后会在后台依次检查所有组件更新，不阻塞页面。',
     '2. 每个工具页面右上角可打开对应 GitHub 开源仓库。',
@@ -183,9 +190,9 @@ $userGuide = @(
     '3. 自更新只替换工具箱核心文件，不删除 config.json、已安装组件、TestVeh、模型或渲染输出。',
     '',
     '发布包不包含 Blender 或 Python。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+。',
-    'Python 缺失时 NUI/RPF/扫描移除后门页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
+    'Python 缺失时 NUI/RPF/扫描移除后门/小哈性能清理页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '轻量发布包不预装功能组件；模型 Release 已内置 Sollumz；首次安装时会配置 Blender Python 渲染依赖。',
-    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john 目录也需要保留。',
+    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -202,6 +209,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\NuiWallfixPage.ps1'),
     (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
+    (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'static\cklogo.ico')
 )
 foreach ($path in $requiredPackageFiles) {
@@ -239,6 +247,7 @@ $manifest = [ordered]@{
         nuiWallfix = $false
         rpfToFivem = $false
         antiJohn = $false
+        xiaohaCleaner = $false
         componentManager = $true
         selfUpdater = $true
     }

@@ -15,7 +15,7 @@ dist/
   CK免费工具箱-v1.0.2.zip
 ~~~
 
-发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem` 和 `ck_anti_john`。用户必须解压完整 ZIP，不能只复制 EXE。
+发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
 
 ## 运行时 Release 组件
 
@@ -25,6 +25,7 @@ dist/
 - NUI 自动去墙对应 [ch-jack/nui-wallfix](https://github.com/ch-jack/nui-wallfix)。
 - RPF 转 FiveM 对应 [ch-jack/rpf2fivem](https://github.com/ch-jack/rpf2fivem)。
 - 扫描移除后门对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
+- 小哈性能清理对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
@@ -34,7 +35,7 @@ dist/
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
-模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF 与扫描移除后门组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
+模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF、扫描移除后门与小哈性能清理组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
 
 ## 工具箱自更新
 
@@ -45,7 +46,7 @@ dist/
 3. 优先校验同名 .sha256 附件，再校验包内版本、核心文件和 package-manifest.json 哈希。
 4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。
-6. `config.json`、vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、TestVeh 和其他用户文件不参与替换。
+6. `config.json`、vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner、TestVeh 和其他用户文件不参与替换。
 7. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## Blender 和 Python 不进入发布包
@@ -91,7 +92,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 1. 只检出 `ck_free_toolbox` 仓库。
 2. 检查全部 `.ps1` 和 `.psm1` 的 PowerShell 语法。
 3. 编译轻量 WinExe 并生成便携 ZIP。
-4. 验证核心源码、组件工作器和四个页面存在。
+4. 验证核心源码、组件工作器和五个页面存在。
 5. 验证发布包不含功能组件目录和 Blender。
 6. 上传 Actions Artifact。
 7. 正式 Release 同时发布 ZIP 和同名 .sha256，供客户端自更新校验。
@@ -121,17 +122,27 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 目录目标先在外部创建 Run ID 备份；ZIP 默认保留原包并生成 `*.cleaned.zip`。
 5. 修复后自动复扫；仍有可自动修复高危项时拒绝交付结果或回滚目录，人工项单独提示。
 
+## 小哈性能清理安全流程
+
+1. 组件缺失时，从 `ch-jack/xiaoha_cleaner` 最新稳定 Release 下载 ZIP 和 SHA-256。
+2. “只读扫描”只识别小哈资源、代码注入及 SQL 证据，不修改目标文件或数据库。
+3. 文件清理把命中文件移动到目标目录外的隔离区，并生成可用于恢复的 `run-report.json`。
+4. MySQL 信息从 `server.cfg` 和 `exec` 配置链自动读取，敏感值不会写入界面、日志或报告。
+5. 数据库清理默认关闭；执行前必须停止服务器、完成数据库备份、勾选确认并选择可用 MySQL 客户端。
+6. 数据库改动不能通过文件报告恢复，只能从执行前备份恢复。
+
 ## 发布前验证
 
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
-- ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
-- 首次启动时四个页面显示组件缺失，并提供“安装组件”操作。
+- ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
+- 首次启动时五个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
 - 扫描移除后门组件安装后可扫描目录/ZIP、预览移除、确认写入并按 Run ID 恢复。
+- 小哈性能清理组件安装后可扫描 server-data/resources、隔离命中文件、按报告恢复，并在备份确认后选择性清理关联 SQL。
 - Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
-- Python 缺失时 NUI/RPF/扫描移除后门页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
+- Python 缺失时 NUI/RPF/扫描移除后门/小哈性能清理页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
 - Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。
 - .NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 模型截图运行时的 `_temp` 位于输出目录，任务完成后已自动删除。

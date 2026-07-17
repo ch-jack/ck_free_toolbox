@@ -2,7 +2,7 @@
 
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及四个功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM 和扫描移除后门引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix)、[rpf2fivem](https://github.com/ch-jack/rpf2fivem) 和 [ck_anti_john](https://github.com/ch-jack/ck_anti_john) 维护，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及五个功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、扫描移除后门和小哈性能清理引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix)、[rpf2fivem](https://github.com/ch-jack/rpf2fivem)、[ck_anti_john](https://github.com/ch-jack/ck_anti_john) 和 [xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner) 维护，工具箱运行后按需下载。
 
 ## 界面预览
 
@@ -33,7 +33,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 开发者双击 `一键打包发布包.cmd`，脚本会自动：
 
 - 重新构建 `CK免费工具箱.exe`。
-- 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem` 和 `ck_anti_john`。
+- 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
 - 不复制 Blender 或 Python；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
@@ -51,7 +51,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 ## GitHub 自动构建与发布
 
-`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取四个功能组件：
+`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取五个功能组件：
 
 - 推送到 `main` 时，自动生成 `v1.0.<run>` 版本，构建 EXE/ZIP、上传 Artifact 并创建正式 GitHub Release。
 - Pull Request 只执行构建验证，不发布 Release。
@@ -106,6 +106,15 @@ git push origin v1.0.2
 - ZIP 默认保留原包并生成 `*.cleaned.zip`；目录修复返回 Run ID，可在页面直接恢复。
 - 组件从 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john) 的稳定 Release 安装并校验 SHA-256。
 
+### 小哈性能清理
+
+- 支持选择 FiveM `server-data`、`resources` 或单个资源目录，先执行只读扫描并列出小哈资源、代码注入和关联 SQL。
+- 自动读取 `server.cfg` 以及 `exec` 配置链中的 MySQL 连接信息；密码不会显示在界面、日志或报告中。
+- 资源和代码清理会把文件移动到目标目录外的隔离区，并生成 `run-report.json`，可在工具箱内恢复文件修改。
+- 数据库清理默认关闭；只有显式启用、选择 MySQL 客户端并确认已停止服务器和完成备份后才会执行。
+- 数据库会删除样本内建表、品牌表、资源源码实际解析出的 `CREATE TABLE` 以及确认新增的列；文件报告不能恢复这些操作，必须从执行前备份恢复。
+- 组件从 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner) 的稳定 Release 安装并校验 SHA-256。
+
 ### 统一依赖配置
 
 - 首次启动在工具箱根目录生成 `config.json`，统一保存 `dependencies.blenderPath` 和 `dependencies.pythonPath`。
@@ -131,7 +140,7 @@ git push origin v1.0.2
 - 发现新版本时顶部显示“立即更新”，下载阶段显示实际进度。
 - 更新 ZIP 会校验 Release SHA-256、包版本、核心文件和清单哈希。
 - 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
-- 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、TestVeh、模型和输出不会被删除。
+- 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -144,16 +153,16 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF/扫描移除后门页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
+- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF/扫描移除后门/小哈性能清理页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
 
 ## 已验证
 
 2026-07-17 已完成以下验证：
 
-- PowerShell 语法检查：主脚本及 14 个 .ps1/.psm1 文件通过。
+- PowerShell 语法检查：主脚本及全部 .ps1/.psm1 文件通过。
 - Python 探测：真实 Python 3.7.0/3.13.9 通过，0 字节 WindowsApps 商店占位程序被拒绝。
 - 统一配置：旧设置迁移、Blender/Python 双路径保存及根目录 `config.json` 结构通过。
-- 缺失环境 UI：NUI/RPF/扫描移除后门页面均提供 Python 官网和选择按钮。
+- 缺失环境 UI：NUI/RPF/扫描移除后门/小哈性能清理页面均提供 Python 官网和选择按钮。
 - 按钮烟测：扫描、搜索、全选、取消和模型渲染通过。
 - 扫描 D:\fivem\TestVeh：识别 47 个可处理模型。
 - 饰品实渲染：jr_labubu2 成功生成 D:\fivem\TestVeh\_vehicle_renders\jr_labubu2.png。
@@ -164,9 +173,11 @@ git push origin v1.0.2
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
 - RPF 转 FiveM：组件注册、参数校验、JSON 报告解析和真实 RPF 转换通过。
 - Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.2.0 真实下载、SHA-256 校验和安装通过。
-- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM 和扫描移除后门按队列自动完成检查，页面分别显示最新 Release 或更新提示。
+- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM、扫描移除后门和小哈性能清理按队列自动完成检查，页面分别显示最新 Release 或更新提示。
 - 扫描移除后门页面：XAML 实例化、核心控件、Python 3.7 环境识别及“扫描后门”按钮端到端调用通过，页面显示 15 项发现和 14 项 critical。
 - 扫描移除后门组件：v0.2.0 对指定 GP212887 ZIP 静态扫描返回 `compromised`，共 15 项发现；5 个修复动作后复扫 `clean`、0 项，未执行 ZIP 内代码。
+- 小哈性能清理页面：组件注册、XAML 实例化、Python 环境识别、只读扫描/清理参数和报告恢复入口通过。
+- 小哈性能清理组件：v1.0.0 Release ZIP 与 SHA-256 附件可解析，组件文件清单与工具箱登记一致。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 工具箱自更新：联网版本检查、成功替换、组件/用户目录保留和模拟失败回滚通过。
 
@@ -184,13 +195,13 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM 和扫描移除后门。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、扫描移除后门和小哈性能清理。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
 ## 开发与发布目录
 
-工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem` 或 `ck_anti_john`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
+工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 

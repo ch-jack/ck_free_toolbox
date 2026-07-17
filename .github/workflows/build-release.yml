@@ -111,6 +111,7 @@ jobs:
             'app\pages\NuiWallfixPage.ps1',
             'app\pages\RpfToFivemPage.ps1',
             'app\pages\AntiJohnPage.ps1',
+            'app\pages\XiaohaCleanerPage.ps1',
             'package-manifest.json'
           )
           foreach ($relativePath in $required) {
@@ -131,7 +132,7 @@ jobs:
           if ($workerSource -match 'api\.github\.com|codeload\.github\.com|/commits/') {
             throw 'Source archive download code is forbidden.'
           }
-          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem', 'ck_anti_john')) {
+          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem', 'ck_anti_john', 'xiaoha_cleaner')) {
             if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
               throw "Runtime component must not be bundled: $componentDirectory"
             }
