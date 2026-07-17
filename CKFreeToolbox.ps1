@@ -818,12 +818,22 @@ function Show-ToolPage {
 
     $toolConfig = $toolConfigs[$Id]
     if (-not $toolConfig) { throw "工具配置不存在: $Id" }
-    $componentState.CurrentToolId = $Id
-    foreach ($key in $pages.Keys) {
-        $pages[$key].Root.Visibility = if ($key -eq $Id) { 'Visible' } else { 'Collapsed' }
-        $buttons[$key].Background = if ($key -eq $Id) { '#2B303A' } else { '#111419' }
-        $buttons[$key].BorderBrush = if ($key -eq $Id) { '#465266' } else { '#242A34' }
+
+    $currentPageId = [string]$componentState.CurrentToolId
+    if ($currentPageId -eq $Id -and $pages[$Id].Root.Visibility -eq 'Visible') {
+        return
     }
+
+    if ($currentPageId -and $pages.ContainsKey($currentPageId)) {
+        $pages[$currentPageId].Root.Visibility = 'Collapsed'
+        $buttons[$currentPageId].Background = '#111419'
+        $buttons[$currentPageId].BorderBrush = '#242A34'
+    }
+
+    $componentState.CurrentToolId = $Id
+    $pages[$Id].Root.Visibility = 'Visible'
+    $buttons[$Id].Background = '#2B303A'
+    $buttons[$Id].BorderBrush = '#465266'
 
     $pageTitle.Text = $pages[$Id].Title
     $pageSubtitle.Text = '模块化页面 · 本机组件 · GitHub 更新'
@@ -831,7 +841,8 @@ function Show-ToolPage {
     $openSourceButton.Tag = $sourceUrl
     $openSourceButton.ToolTip = if ($sourceUrl) { $sourceUrl } else { '当前项目未配置开源地址' }
     $openSourceButton.Visibility = if ($sourceUrl) { 'Visible' } else { 'Collapsed' }
-    if ($pages[$Id].Activate) { & $pages[$Id].Activate }
+
+    # 页面创建时已完成依赖检测，切换时不要在 WPF 主线程重复启动 Blender/Python。
     & $refreshComponentHeaderAction
 
 
