@@ -225,8 +225,11 @@
         if ($verdict) { $lines.Add("结论: $verdict") }
         $outputPath = [string](& $getPropertyAction $summary 'output_path' '')
         $backupPath = [string](& $getPropertyAction $summary 'backup_path' '')
+        $reportPath = [string](& $getPropertyAction $summary 'report_path' '')
+        if (-not $reportPath) { $reportPath = [string](& $getPropertyAction $result 'report_path' '') }
         if ($outputPath) { $lines.Add("输出: $outputPath") }
         if ($backupPath) { $lines.Add("备份: $backupPath") }
+        if ($reportPath) { $lines.Add("清理报告: $reportPath") }
         if ($runId) { $lines.Add("Run ID: $runId") }
         $errorText = [string](& $getPropertyAction $Payload 'error' '')
         if ($errorText) { $lines.Add("错误: $errorText") }
