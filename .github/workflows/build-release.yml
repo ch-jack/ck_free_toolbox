@@ -10,9 +10,22 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      source_component:
+        description: Component repository that requested this rebuild
+        required: false
+        type: string
+      source_version:
+        description: Component release tag that requested this rebuild
+        required: false
+        type: string
 
 permissions:
   contents: write
+
+concurrency:
+  group: ck-free-toolbox-release
+  cancel-in-progress: false
 
 jobs:
   build:

@@ -61,3 +61,17 @@ CK 工具箱只发布一个 Windows ZIP：
     .\tools\Build-BundledComponents.ps1 -BasePackagePath $base.FullName
 
 正式发布由 .github/workflows/build-release.yml 自动完成。Release 只发布一个正式 ZIP 和它对应的 .sha256 文件。
+
+## 组件发布自动触发
+
+ck_anti_john 或 xiaoha_cleaner 的正式标签 Release 在测试、打包和附件发布全部成功后，会调用 ck_free_toolbox 的 build-release.yml。工具箱随后重新解析两个组件的最新正式 Release、校验各自 SHA-256，并发布新的唯一正式包。
+
+跨仓库触发需要在两个组件仓库分别配置 Actions Secret：
+
+- 名称：CK_TOOLBOX_TRIGGER_TOKEN
+- 推荐类型：Fine-grained personal access token
+- 仓库范围：只选择 ch-jack/ck_free_toolbox
+- Repository permissions：Actions: Read and write
+- 有效期：按维护周期设置并在到期前轮换
+
+未配置 Secret 时，组件 Release 仍会正常发布，但触发步骤只输出警告，不会启动工具箱构建。令牌不得写入仓库文件、日志、Release 附件或工具箱包内。
