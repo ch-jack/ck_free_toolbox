@@ -173,10 +173,10 @@ git push origin v1.0.2
 - 原完整 ZIP 已验证不含 blender.exe 和 runtime\blender；当前自动构建进一步改为不预装功能组件的轻量包。
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
 - RPF 转 FiveM：组件注册、参数校验、JSON 报告解析和真实 RPF 转换通过。
-- Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.2.2 真实下载、SHA-256 校验和安装通过。
+- Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.2.3 真实下载、SHA-256 校验和安装通过。
 - 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM、扫描移除后门和一键清理小哈按队列自动完成检查，页面分别显示最新 Release 或更新提示。
 - 扫描移除后门页面：XAML 实例化、核心控件、Python 3.7 环境识别及“扫描后门”按钮端到端调用通过；实时消费 `CK_PROGRESS` 并显示多线程完成数、百分比和当前文件，最终 JSON 仍独立解析。
-- 扫描移除后门组件：v0.2.2 的 25 项测试通过；1/4 线程对目录与 ZIP 的发现项和统计一致，750 文件进度单调到 100%，全程未执行 ZIP 内代码。
+- 扫描移除后门组件：v0.2.3 的 27 项测试通过；客户 chat.zip 从 4 项普通 node_modules 弱组合误报降为 clean/0 项，已知 C2、隐藏 .cache 和 GP212887 强信号保持命中，全程未执行 ZIP 内代码。
 - 一键清理小哈页面：组件注册、XAML 实例化、Python 环境识别、只读扫描/清理参数和报告恢复入口通过。
 - 一键清理小哈组件：v1.0.0 Release ZIP 与 SHA-256 附件可解析，组件文件清单与工具箱登记一致。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
