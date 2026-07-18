@@ -150,7 +150,7 @@ $userGuide = @(
     '',
     '1. 解压完整 ZIP，不能只复制 EXE。',
     '2. 双击 CK免费工具箱.exe。',
-    '3. 页面显示“组件缺失”时，点击“安装组件”，工具箱会下载当前页面对应的最新稳定 GitHub Release 并校验。',
+    '3. “扫描移除后门”和“一键清理小哈”已内置；其他页面显示“组件缺失”时，可点击“安装组件”下载并校验最新稳定 GitHub Release。',
     '4. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
     '5. NUI/RPF/扫描移除后门/一键清理小哈页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
     '6. Blender 与 Python 路径统一保存在工具箱根目录 config.json，自更新不会删除。',
@@ -191,7 +191,7 @@ $userGuide = @(
     '',
     '发布包不包含 Blender 或 Python。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+。',
     'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
-    '轻量发布包不预装功能组件；模型 Release 已内置 Sollumz；首次安装时会配置 Blender Python 渲染依赖。',
+    '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI 和 RPF 组件按需安装。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
@@ -230,6 +230,7 @@ if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'python.exe
 $manifest = [ordered]@{
     product = 'CK免费工具箱'
     version = $releaseVersion
+    flavor = 'base-build-stage'
     builtAt = (Get-Date).ToString('o')
     platform = 'Windows x64'
     entry = 'CK免费工具箱.exe'
@@ -251,6 +252,7 @@ $manifest = [ordered]@{
         componentManager = $true
         selfUpdater = $true
     }
+    bundledComponents = [ordered]@{}
     sha256 = [ordered]@{
         executable = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CK免费工具箱.exe')).Hash
         mainScript = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CKFreeToolbox.ps1')).Hash

@@ -84,6 +84,19 @@ jobs:
             throw "Release builder exited with code $LASTEXITCODE"
           }
 
+      - name: Bundle latest default components
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $basePackages = @(Get-ChildItem -LiteralPath .\dist -Directory)
+          if ($basePackages.Count -ne 1) {
+            throw "Expected one base package, found $($basePackages.Count)."
+          }
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-BundledComponents.ps1 -BasePackagePath $basePackages[0].FullName
+          if ($LASTEXITCODE -ne 0) {
+            throw "Component bundler exited with code $LASTEXITCODE"
+          }
+
       - name: Verify release package
         shell: powershell
         run: |
@@ -96,9 +109,13 @@ jobs:
           if ($packages.Count -ne 1) {
             throw "Expected one release directory, found $($packages.Count)."
           }
+
           $package = $packages[0].FullName
           $manifestPath = Join-Path $package 'package-manifest.json'
           $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          if ([string]$manifest.flavor -ne 'standard') {
+            throw "Expected standard package flavor, found: $($manifest.flavor)"
+          }
           $required = @(
             [string]$manifest.entry,
             'CKFreeToolbox.ps1',
@@ -119,7 +136,9 @@ jobs:
               throw "Missing release file: $relativePath"
             }
           }
-          $toolConfig = Get-Content -LiteralPath (Join-Path $package 'app\config\tools.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+
+          $toolConfig = Get-Content -LiteralPath (Join-Path $package 'app\config\tools.json') -Raw -Encoding UTF8 |
+            ConvertFrom-Json
           foreach ($tool in $toolConfig) {
             if (-not $tool.component.releaseAssetPattern) {
               throw "Missing releaseAssetPattern for component: $($tool.id)"
@@ -132,22 +151,54 @@ jobs:
           if ($workerSource -match 'api\.github\.com|codeload\.github\.com|/commits/') {
             throw 'Source archive download code is forbidden.'
           }
-          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem', 'ck_anti_john', 'xiaoha_cleaner')) {
-            if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
-              throw "Runtime component must not be bundled: $componentDirectory"
-            }
-          }
           $forbidden = Get-ChildItem -LiteralPath $package -Recurse -File |
-            Where-Object { $_.Name -in @('blender.exe', 'python.exe') }
+            Where-Object { $_.Name -in @('blender.exe', 'python.exe', '_texture_report.txt') }
           if ($forbidden -or (Test-Path -LiteralPath (Join-Path $package 'runtime\blender'))) {
-            throw 'Blender and Python must not be bundled in the release.'
+            throw 'Forbidden runtime or report file was bundled in the release.'
           }
           if (Test-Path -LiteralPath (Join-Path $package 'config.json') -PathType Leaf) {
             throw 'User config.json must not be bundled in the release.'
           }
+          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem')) {
+            if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
+              throw "Unexpected bundled component: $componentDirectory"
+            }
+          }
+
+          foreach ($toolId in @('anti-john', 'xiaoha-cleaner')) {
+            $tool = @($toolConfig | Where-Object { [string]$_.id -eq $toolId })[0]
+            $componentRoot = Join-Path $package ([string]$tool.component.installDir)
+            if (-not (Test-Path -LiteralPath $componentRoot -PathType Container)) {
+              throw "Bundled component directory missing: $toolId"
+            }
+            foreach ($relativePath in @($tool.component.requiredFiles)) {
+              if (-not (Test-Path -LiteralPath (Join-Path $componentRoot ([string]$relativePath)) -PathType Leaf)) {
+                throw "Bundled component file missing: $toolId/$relativePath"
+              }
+            }
+            $localManifest = Get-Content -LiteralPath (Join-Path $componentRoot '.ck-component.json') -Raw -Encoding UTF8 |
+              ConvertFrom-Json
+            $recordProperty = $manifest.bundledComponents.PSObject.Properties[$toolId]
+            if (-not $recordProperty) {
+              throw "Package manifest missing bundled component record: $toolId"
+            }
+            $record = $recordProperty.Value
+            if (
+              [string]$localManifest.releaseTag -ne [string]$record.releaseTag -or
+              [string]$localManifest.sha256 -ne [string]$record.sha256 -or
+              [string]$localManifest.repo -ne [string]$record.repo -or
+              [string]$localManifest.source -ne 'bundled-github-release' -or
+              [string]$record.sha256 -notmatch '^[0-9a-f]{64}$'
+            ) {
+              throw "Bundled component manifest mismatch: $toolId"
+            }
+          }
+          if (-not $manifest.bundled.antiJohn -or -not $manifest.bundled.xiaohaCleaner) {
+            throw 'Standard package bundled flags are incomplete.'
+          }
+
           Write-Host "Release ZIP: $($archives[0].Name)"
           Write-Host "SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $archives[0].FullName).Hash)"
-
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -162,14 +213,19 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $manifestPath = Get-ChildItem -LiteralPath .\dist -Directory |
-            ForEach-Object { Join-Path $_.FullName 'package-manifest.json' } |
-            Select-Object -First 1
-          $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+          $manifestPaths = @(Get-ChildItem -LiteralPath .\dist -Directory | ForEach-Object {
+            Join-Path $_.FullName 'package-manifest.json'
+          })
+          if ($manifestPaths.Count -ne 1) {
+            throw "Expected one package manifest, found $($manifestPaths.Count)."
+          }
+          $manifest = Get-Content -LiteralPath $manifestPaths[0] -Raw -Encoding UTF8 | ConvertFrom-Json
           if ([string]$manifest.version -ne $env:CK_RELEASE_VERSION) {
             throw "Release version $env:CK_RELEASE_VERSION does not match package version $($manifest.version)."
           }
-
+          if ([string]$manifest.flavor -ne 'standard') {
+            throw "Only the standard bundled package may be released, found: $($manifest.flavor)"
+          }
       - name: Publish GitHub release
         if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
         shell: powershell
@@ -177,10 +233,13 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = Get-ChildItem -LiteralPath .\dist -Filter *.zip -File | Select-Object -First 1
+          $sourceArchives = @(Get-ChildItem -LiteralPath .\dist -Filter *.zip -File)
+          if ($sourceArchives.Count -ne 1) {
+            throw "Expected exactly one release ZIP, found $($sourceArchives.Count)."
+          }
           $assetName = "CK-Free-Toolbox-$($env:CK_RELEASE_TAG).zip"
-          $releaseArchive = Join-Path $archive.DirectoryName $assetName
-          Copy-Item -LiteralPath $archive.FullName -Destination $releaseArchive -Force
+          $releaseArchive = Join-Path (Resolve-Path .\dist) $assetName
+          Copy-Item -LiteralPath $sourceArchives[0].FullName -Destination $releaseArchive -Force
           $checksumPath = "$releaseArchive.sha256"
           $archiveHash = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
           [IO.File]::WriteAllText(
