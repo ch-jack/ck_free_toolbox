@@ -6,6 +6,7 @@
         CancelRequested = $false
         ReportPath = ''
         QuarantinePath = ''
+        StartedAt = $null
     }
 
     $xaml = @"
@@ -97,7 +98,7 @@
         </StackPanel>
         <Button x:Name="ChooseReportButton" Grid.Column="1" Content="选择" Height="38" Margin="8,23,0,0"/>
         <Button x:Name="RestoreButton" AutomationProperties.AutomationId="XiaohaCleaner.RestoreButton" Grid.Column="2" Content="恢复文件" Height="38" Margin="8,23,0,0" Foreground="#EF9A9A"/>
-        <Button x:Name="OpenReportButton" Grid.Column="3" Content="打开报告" Height="38" Margin="8,23,0,0"/>
+        <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="XiaohaCleaner.OpenReportButton" Grid.Column="3" Content="打开本次报告" Height="38" Margin="8,23,0,0" IsEnabled="False"/>
       </Grid>
     </Border>
 
@@ -353,10 +354,11 @@
     }.GetNewClosure()
 
     $openReportAction = {
-        $path = $ui.RestoreReportBox.Text.Trim()
-        if (-not $path) { $path = $state.ReportPath }
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw '报告文件不存在。' }
-        Start-Process -FilePath explorer.exe -ArgumentList @((Split-Path -Parent $path))
+        $path = [string]$state.ReportPath
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw '本次小哈操作报告不存在，请先完成一次操作。'
+        }
+        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
     }.GetNewClosure()
 
     function Start-XiaohaOperation {
@@ -370,6 +372,7 @@
         $args = @('-u', $Context.Paths.XiaohaCleanerScript)
         $expectedReport = ''
         $label = ''
+        $cleanReportRoot = ''
 
         if ($Operation -eq 'restore') {
             $report = $ui.RestoreReportBox.Text.Trim()
@@ -420,7 +423,9 @@
                     [System.Windows.MessageBoxImage]::Warning
                 )
                 if ($answer -ne [System.Windows.MessageBoxResult]::Yes) { return }
-                $args += @('clean', $target, '--yes')
+                $quarantineBase = Join-Path (Split-Path -Parent $target) '_xiaoha_quarantine'
+                $cleanReportRoot = Join-Path $quarantineBase ('ck-toolbox-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+                $args += @('clean', $target, '--yes', '--quarantine-root', $cleanReportRoot)
                 if ($sqlCleanup) {
                     $args += @('--apply-sql', '--yes-drop-tables')
                     $serverCfg = $ui.ServerCfgBox.Text.Trim()
@@ -438,7 +443,17 @@
             }
         }
 
+        $expectedReportExisted = [bool]($expectedReport -and (Test-Path -LiteralPath $expectedReport -PathType Leaf))
+        $expectedReportHash = ''
+        if ($expectedReportExisted) {
+            try { $expectedReportHash = (Get-FileHash -LiteralPath $expectedReport -Algorithm SHA256).Hash } catch { }
+        }
+
         $state.CancelRequested = $false
+        $state.ReportPath = ''
+        $state.QuarantinePath = ''
+        $state.StartedAt = Get-Date
+        $ui.OpenReportButton.IsEnabled = $false
         $ui.LogBox.Text = ''
         $ui.ProgressBar.Value = 0
         & $setRunningAction $true $label
@@ -451,6 +466,9 @@
         $callbackSetRunning = $setRunningAction
         $callbackExpectedReport = $expectedReport
         $callbackOperation = $Operation
+        $callbackCleanReportRoot = $cleanReportRoot
+        $callbackExpectedReportExisted = $expectedReportExisted
+        $callbackExpectedReportHash = $expectedReportHash
 
         $onOutput = {
             param($line)
@@ -464,34 +482,93 @@
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
             & $callbackSetRunning $false
-            if ($wasCancelled) {
-                $callbackUi.ProgressBar.Value = 0
-                $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
-                $callbackUi.StatusLine.Text = '当前任务已停止。'
-                $callbackUi.LogBox.Text = '任务已由用户停止。'
-                return
-            }
+
             $raw = $callbackOutput.ToString().Trim()
             $reportPath = $callbackExpectedReport
+            $reportConfirmed = $false
+
             if ($callbackOperation -eq 'clean') {
                 $match = [regex]::Match($raw, '(?im)^Quarantine/report:\s*(.+?)\s*$')
                 if ($match.Success) {
                     $runDir = $match.Groups[1].Value.Trim()
                     $callbackState.QuarantinePath = $runDir
                     $reportPath = Join-Path $runDir 'run-report.json'
+                    $reportConfirmed = $true
+                } elseif ($callbackCleanReportRoot -and (Test-Path -LiteralPath $callbackCleanReportRoot -PathType Container)) {
+                    $candidate = Get-ChildItem -LiteralPath $callbackCleanReportRoot -Filter 'run-report.json' -File -Recurse -ErrorAction SilentlyContinue |
+                        Sort-Object LastWriteTimeUtc -Descending |
+                        Select-Object -First 1
+                    if ($candidate) {
+                        $reportPath = $candidate.FullName
+                        $callbackState.QuarantinePath = $candidate.Directory.FullName
+                        $reportConfirmed = $true
+                    }
+                }
+            } elseif ($callbackOperation -eq 'scan') {
+                $match = [regex]::Match($raw, '(?im)^JSON report:\s*(.+?)\s*$')
+                if ($match.Success) {
+                    $reportPath = $match.Groups[1].Value.Trim()
+                    $reportConfirmed = $true
+                } elseif ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                    $reportConfirmed = $true
+                }
+            } else {
+                $match = [regex]::Match($raw, '(?im)^Restore report:\s*(.+?)\s*$')
+                if ($match.Success) {
+                    $reportPath = $match.Groups[1].Value.Trim()
+                    $reportConfirmed = $true
+                } elseif ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                    $reportFile = Get-Item -LiteralPath $reportPath
+                    $currentReportHash = ''
+                    try { $currentReportHash = (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash } catch { }
+                    $reportConfirmed = (
+                        -not $callbackExpectedReportExisted -or
+                        ($callbackExpectedReportHash -and $currentReportHash -and $currentReportHash -ne $callbackExpectedReportHash) -or
+                        ($callbackState.StartedAt -and $reportFile.LastWriteTimeUtc -ge $callbackState.StartedAt.ToUniversalTime())
+                    )
                 }
             }
+
             $payload = $null
-            if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            if ($reportConfirmed -and $reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
                 try {
-                    $payload = Get-Content -LiteralPath $reportPath -Raw -Encoding UTF8 | ConvertFrom-Json
-                    $callbackState.ReportPath = $reportPath
-                    if ([IO.Path]::GetFileName($reportPath) -ieq 'run-report.json') {
-                        $callbackUi.RestoreReportBox.Text = $reportPath
+                    $reportFile = Get-Item -LiteralPath $reportPath
+                    $payload = Get-Content -LiteralPath $reportFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                    $resolvedReportPath = $reportFile.FullName
+                    if ($callbackOperation -eq 'restore') {
+                        try {
+                            $reportBase = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'xiaoha-cleaner-reports'
+                            $reportDir = Join-Path $reportBase ('restore-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+                            New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+                            $archivedReport = Join-Path $reportDir 'restore-report.json'
+                            Copy-Item -LiteralPath $reportFile.FullName -Destination $archivedReport -Force
+                            $resolvedReportPath = (Get-Item -LiteralPath $archivedReport).FullName
+                        } catch { }
+                    }
+                    $callbackState.ReportPath = $resolvedReportPath
+                    $callbackUi.OpenReportButton.IsEnabled = $true
+                    if ([IO.Path]::GetFileName($reportFile.FullName) -ieq 'run-report.json') {
+                        $callbackUi.RestoreReportBox.Text = $reportFile.FullName
                     }
                 } catch { }
             }
+
+            if ($wasCancelled) {
+                if ($payload) { & $callbackShowResult $payload $exitCode $raw }
+                $callbackUi.ProgressBar.Value = 0
+                $callbackUi.ResultStatus.Text = '任务已停止'
+                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                if ($callbackState.ReportPath) {
+                    $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件写出的本次报告。'
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[注意] 强制停止可能发生在组件写入最终状态前，请以报告状态和实际文件为准。'
+                } else {
+                    $callbackUi.StatusLine.Text = '任务已停止；组件尚未写出可用报告。'
+                    $callbackUi.LogBox.Text = if ($raw) { $raw } else { '任务已由用户停止，组件尚未生成报告。' }
+                }
+                return
+            }
+
             if ($payload) {
                 & $callbackShowResult $payload $exitCode $raw
             } else {

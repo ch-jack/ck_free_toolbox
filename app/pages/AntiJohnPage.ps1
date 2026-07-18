@@ -6,6 +6,7 @@
         TargetPath = ''
         LastOperation = ''
         CancelRequested = $false
+        ReportPath = ''
     }
 
     $xaml = @"
@@ -113,7 +114,10 @@
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16">
       <StackPanel>
-        <TextBlock Text="报告明细" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+        <Grid Margin="0,0,0,10">
+          <TextBlock Text="报告明细" FontSize="20" FontWeight="Bold"/>
+          <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="AntiJohn.OpenReportButton" Content="打开本次报告" Height="30" HorizontalAlignment="Right" IsEnabled="False"/>
+        </Grid>
         <TextBox x:Name="LogBox" AutomationProperties.AutomationId="AntiJohn.LogBox" MinHeight="230" MaxHeight="460" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
     </Border>
@@ -126,7 +130,7 @@
         'EnvironmentDot','EnvironmentText','PythonDownloadButton','PythonBrowseButton','TargetBox','ChooseFolderButton',
         'ChooseZipButton','OpenTargetButton','MaxMbBox','StateDirBox','ChooseStateDirButton','ForceRestoreBox',
         'ScanButton','PreviewButton','ApplyButton','CancelButton','RunIdBox','RestoreButton','OpenBackupsButton',
-        'ResultStatus','FileCount','ResourceCount','FindingCount','CriticalCount','RepairableCount','ProgressBar','StatusLine','LogBox'
+        'ResultStatus','FileCount','ResourceCount','FindingCount','CriticalCount','RepairableCount','ProgressBar','StatusLine','OpenReportButton','LogBox'
     )
 
     function Get-AntiJohnPythonInfo {
@@ -188,6 +192,20 @@
         return [int]$value
     }
 
+    function Save-AntiJohnPayloadReport {
+        param($Payload, [string]$Operation)
+
+        $reportBase = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'anti-john-reports'
+        $safeOperation = if ($Operation) { $Operation -replace '[^A-Za-z0-9_-]', '-' } else { 'unknown' }
+        $runName = (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $safeOperation + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
+        $reportDir = Join-Path $reportBase $runName
+        New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+        $reportPath = Join-Path $reportDir 'report.json'
+        $json = $Payload | ConvertTo-Json -Depth 100
+        [IO.File]::WriteAllText($reportPath, $json, (New-Object Text.UTF8Encoding($false)))
+        return $reportPath
+    }
+
     function Show-AntiJohnResult {
         param($Payload, [int]$ExitCode)
 
@@ -227,9 +245,26 @@
         $backupPath = [string](& $getPropertyAction $summary 'backup_path' '')
         $reportPath = [string](& $getPropertyAction $summary 'report_path' '')
         if (-not $reportPath) { $reportPath = [string](& $getPropertyAction $result 'report_path' '') }
+        $reportSaveError = ''
+        if (-not $reportPath -or -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            try {
+                $reportPath = & $savePayloadReportAction $Payload $operation
+            } catch {
+                $reportPath = ''
+                $reportSaveError = $_.Exception.Message
+            }
+        }
+        if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            $state.ReportPath = [IO.Path]::GetFullPath($reportPath)
+            $ui.OpenReportButton.IsEnabled = $true
+        } else {
+            $state.ReportPath = ''
+            $ui.OpenReportButton.IsEnabled = $false
+        }
         if ($outputPath) { $lines.Add("输出: $outputPath") }
         if ($backupPath) { $lines.Add("备份: $backupPath") }
-        if ($reportPath) { $lines.Add("清理报告: $reportPath") }
+        if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
+        if ($reportSaveError) { $lines.Add("报告保存失败: $reportSaveError") }
         if ($runId) { $lines.Add("Run ID: $runId") }
         $errorText = [string](& $getPropertyAction $Payload 'error' '')
         if ($errorText) { $lines.Add("错误: $errorText") }
@@ -296,6 +331,7 @@
     $setRunningAction = (Get-Command Set-AntiJohnRunning).ScriptBlock.GetNewClosure()
     $getPropertyAction = (Get-Command Get-AntiJohnProperty).ScriptBlock.GetNewClosure()
     $getIntAction = (Get-Command Get-AntiJohnInt).ScriptBlock.GetNewClosure()
+    $savePayloadReportAction = (Get-Command Save-AntiJohnPayloadReport).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-AntiJohnResult).ScriptBlock.GetNewClosure()
 
     $showPageError = {
@@ -397,6 +433,14 @@
         Start-Process -FilePath explorer.exe -ArgumentList @($selected)
     }.GetNewClosure()
 
+    $openReportAction = {
+        $path = [string]$state.ReportPath
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw '本次后门扫描报告不存在，请先完成一次操作。'
+        }
+        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
+    }.GetNewClosure()
+
     function Start-AntiJohnOperation {
         param([ValidateSet('scan','preview','apply','restore')][string]$Operation)
 
@@ -469,6 +513,8 @@
 
         $state.LastOperation = $Operation
         $state.CancelRequested = $false
+        $state.ReportPath = ''
+        $ui.OpenReportButton.IsEnabled = $false
         $ui.LogBox.Text = ''
         $ui.ProgressBar.Value = 0
         & $setRunningAction $true $label
@@ -553,14 +599,6 @@
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
             & $callbackSetRunning $false
-            if ($wasCancelled) {
-                $callbackUi.ProgressBar.Value = 0
-                $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
-                $callbackUi.StatusLine.Text = '当前任务已停止。'
-                $callbackUi.LogBox.Text = '任务已由用户停止。'
-                return
-            }
             $raw = $callbackOutput.ToString().Trim()
             $payload = $null
             try { if ($raw) { $payload = $raw | ConvertFrom-Json } } catch { }
@@ -578,6 +616,18 @@
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '后门扫描组件没有返回结果。' }
+            }
+            if ($wasCancelled) {
+                $callbackUi.ProgressBar.Value = 0
+                $callbackUi.ResultStatus.Text = '任务已停止'
+                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                if ($callbackState.ReportPath) {
+                    $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件返回的本次报告。'
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
+                } else {
+                    $callbackUi.StatusLine.Text = '任务已停止；组件尚未返回可保存的完整结果。'
+                    $callbackUi.LogBox.Text = if ($raw) { $raw } else { '任务已由用户停止，组件尚未生成完整报告。' }
+                }
             }
         }.GetNewClosure()
 
@@ -611,6 +661,7 @@
     Register-CkButtonAction -Button $ui.OpenTargetButton -Action $openTargetAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseStateDirButton -Action $chooseStateDirAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenBackupsButton -Action $openBackupsAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ScanButton -Action $scanAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PreviewButton -Action $previewAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ApplyButton -Action $applyAction -OnError $showPageError

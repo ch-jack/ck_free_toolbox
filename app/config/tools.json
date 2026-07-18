@@ -38,7 +38,9 @@
             "requiredFiles": [
                 "nui-wallfix.py",
                 "providers.json",
-                "nuiwallfix/runtime_v11.py"
+                "nuiwallfix/runtime_v11.py",
+                "nuiwallfix/runtime_v12.py",
+                "nuiwallfix/reporting.py"
             ]
         },
         "default": false

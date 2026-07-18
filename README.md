@@ -75,6 +75,7 @@ git push origin v1.0.2
 - 调用 vehicle_renderer/render_all_vehicles.py --asset-types all。
 - 使用已安装 Blender 自带 Python；玩家只需选择安装目录中的 `blender.exe`，最低支持 Blender 4.2（推荐 5.1），CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。
 - RPF 解包和 YTD 纹理中间文件统一写入本次输出目录的 `_temp`，不占用系统临时目录，任务结束自动清理。
+- 每次渲染都会生成独立 Markdown/JSON 执行报告；页面只在确认报告属于本轮任务后启用“打开本次报告”。
 
 ### NUI 自动去墙
 
@@ -86,6 +87,7 @@ git push origin v1.0.2
 - 支持自定义 `providers.json`、未验证镜像、内网地址和冲突时强制恢复等高级选项。
 - 直接调用随包发布的 `nui-wallfix.py`，不需要后端服务；Python 必须实际运行并满足 3.7+，不会把 WindowsApps 商店占位程序误判为已安装。
 - Python 缺失时显示官网下载按钮，安装后可选择安装目录中的 `python.exe`。
+- 扫描、预览、正式写入、恢复及可捕获失败分别生成专属执行报告；页面可打开本次报告或报告历史。
 
 ### RPF 转 FiveM
 
@@ -93,7 +95,7 @@ git push origin v1.0.2
 - 每个 RPF 自动生成一个独立 FiveM resource，并写入 `fxmanifest.lua` 和可识别的 `data_file`。
 - 支持载具、武器、饰品、地图、碰撞、导航、动画、粒子、声音及其他 GTA V/FiveM stream 文件。
 - 提供覆盖、保留临时目录、超时、嵌套深度、压缩包数量、文件数和解压大小限制。
-- 长任务可停止；完成后显示成功、失败、输出文件、警告和逐资源明细，并可打开 JSON 报告。
+- 长任务可停止；完成后显示成功、失败、输出文件、警告和逐资源明细，并只允许打开本轮转换生成的 JSON 报告。
 - 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
 - Python 缺失时提供官网和选择按钮，选择结果与 Blender 路径共用根目录 `config.json`。
 
@@ -106,6 +108,7 @@ git push origin v1.0.2
 - “移除预览”只生成动作；“确认移除”会先备份目录目标并在写入后自动复检。
 - ZIP 默认保留原包并生成 `*.cleaned.zip`；目录修复返回 Run ID，可在页面直接恢复。
 - 组件从 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john) 的稳定 Release 安装并校验 SHA-256。
+- 页面提供“打开本次报告”：优先打开组件原生清理报告；扫描、预览和恢复则保存并打开本次原生 JSON 结果。
 
 ### 一键清理小哈
 
@@ -115,6 +118,7 @@ git push origin v1.0.2
 - 数据库清理默认关闭；只有显式启用、选择 MySQL 客户端并确认已停止服务器和完成备份后才会执行。
 - 数据库会删除样本内建表、品牌表、资源源码实际解析出的 `CREATE TABLE` 以及确认新增的列；文件报告不能恢复这些操作，必须从执行前备份恢复。
 - 组件从 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner) 的稳定 Release 安装并校验 SHA-256。
+- “打开本次报告”直接打开本轮扫描、清理或恢复生成的文件，不会误用恢复输入框中的旧报告。
 
 ### 统一依赖配置
 

@@ -6,6 +6,7 @@
         Process = $null
         CancelRequested = $false
         ReportPath = ''
+        StartedAt = $null
     }
 
     $xaml = @"
@@ -92,7 +93,7 @@
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
       <StackPanel>
-        <Grid Margin="0,0,0,12"><TextBlock Text="转换结果" FontSize="18" FontWeight="Bold"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="ResultStatus" AutomationProperties.AutomationId="RpfToFivem.ResultStatus" Text="等待任务" Foreground="#777B83" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/><Button x:Name="OpenReportButton" AutomationProperties.AutomationId="RpfToFivem.OpenReportButton" Content="打开报告" Height="28" IsEnabled="False"/></StackPanel></Grid>
+        <Grid Margin="0,0,0,12"><TextBlock Text="转换结果" FontSize="18" FontWeight="Bold"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="ResultStatus" AutomationProperties.AutomationId="RpfToFivem.ResultStatus" Text="等待任务" Foreground="#777B83" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/><Button x:Name="OpenReportButton" AutomationProperties.AutomationId="RpfToFivem.OpenReportButton" Content="打开本次报告" Height="28" IsEnabled="False"/></StackPanel></Grid>
         <UniformGrid Columns="5" Margin="0,0,0,12">
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="0,0,4,0"><StackPanel><TextBlock Text="发现 RPF" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="RpfCount" Text="0" FontSize="19" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="成功" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="SuccessCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#31D69A"/></StackPanel></Border>
@@ -237,8 +238,21 @@
         $ui.ResourceCounter.Text = "$($resources.Count) 项"
 
         $reportPath = if ($Payload.report) { [string]$Payload.report } else { Join-Path ([string]$Payload.output) '_rpf_to_fivem_report.json' }
+        if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            $nativeReport = (Get-Item -LiteralPath $reportPath).FullName
+            try {
+                $reportRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'rpf-to-fivem-reports'
+                $reportDir = Join-Path $reportRoot ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+                New-Item -ItemType Directory -Force -Path $reportDir | Out-Null
+                $reportPath = Join-Path $reportDir 'rpf-to-fivem-report.json'
+                Copy-Item -LiteralPath $nativeReport -Destination $reportPath -Force
+                $reportPath = (Get-Item -LiteralPath $reportPath).FullName
+            } catch { $reportPath = $nativeReport }
+        } else {
+            $reportPath = ''
+        }
         $state.ReportPath = $reportPath
-        $ui.OpenReportButton.IsEnabled = $reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)
+        $ui.OpenReportButton.IsEnabled = [bool]$reportPath
 
         $lines = New-Object System.Collections.Generic.List[string]
         $lines.Add("工具版本: $($Payload.version)")
@@ -368,8 +382,8 @@
 
     $openReportAction = {
         $path = [string]$state.ReportPath
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "转换报告不存在: $path" }
-        Start-Process -FilePath $path
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "转换报告不存在: $path" }
+        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
     }.GetNewClosure()
 
     $openDotNetAction = {
@@ -421,8 +435,16 @@
         if ($ui.KeepWorkBox.IsChecked) { $args += '--keep-work' }
         $args += '--json'
 
+        $reportCandidate = Join-Path $outputPath '_rpf_to_fivem_report.json'
+        $previousReportExists = Test-Path -LiteralPath $reportCandidate -PathType Leaf
+        $previousReportHash = ''
+        if ($previousReportExists) {
+            try { $previousReportHash = (Get-FileHash -LiteralPath $reportCandidate -Algorithm SHA256).Hash } catch { }
+        }
+
         $state.CancelRequested = $false
         $state.ReportPath = ''
+        $state.StartedAt = Get-Date
         $rows.Clear()
         $ui.ResourceCounter.Text = '0 项'
         foreach ($counter in @($ui.RpfCount,$ui.SuccessCount,$ui.FailedCount,$ui.OutputFileCount,$ui.WarningCount)) { $counter.Text = '0' }
@@ -438,6 +460,8 @@
         $callbackShowResult = $showResultAction
         $callbackSetRunning = $setRunningAction
         $onOutput = { param($line) [void]$callbackOutput.AppendLine($line) }.GetNewClosure()
+        $callbackPreviousReportExists = $previousReportExists
+        $callbackPreviousReportHash = $previousReportHash
         $onProcessError = { param($message) $callbackUi.StatusLine.Text = $message }.GetNewClosure()
         $onExit = {
             param($exitCode)
@@ -445,14 +469,6 @@
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
             & $callbackSetRunning $false
-            if ($cancelled) {
-                $callbackUi.ProgressBar.Value = 0
-                $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
-                $callbackUi.StatusLine.Text = '转换已由用户停止。已完成的 resource 不会自动删除。'
-                Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 任务已停止。'
-                return
-            }
             $raw = $callbackOutput.ToString().Trim()
             $payload = $null
             try { if ($raw) { $payload = $raw | ConvertFrom-Json } } catch { }
@@ -461,13 +477,36 @@
                 for ($index = $lines.Count - 1; $index -ge 0 -and -not $payload; $index--) { try { $payload = $lines[$index] | ConvertFrom-Json } catch { } }
             }
             $reportCandidate = Join-Path $callbackOutputPath '_rpf_to_fivem_report.json'
-            if (-not $payload -and (Test-Path -LiteralPath $reportCandidate -PathType Leaf)) { try { $payload = Get-Content -LiteralPath $reportCandidate -Raw -Encoding UTF8 | ConvertFrom-Json } catch { } }
+            if (-not $payload -and (Test-Path -LiteralPath $reportCandidate -PathType Leaf)) {
+                $reportFile = Get-Item -LiteralPath $reportCandidate
+                $currentReportHash = ''
+                try { $currentReportHash = (Get-FileHash -LiteralPath $reportCandidate -Algorithm SHA256).Hash } catch { }
+                $reportChanged = (
+                    -not $callbackPreviousReportExists -or
+                    ($callbackPreviousReportHash -and $currentReportHash -and $currentReportHash -ne $callbackPreviousReportHash)
+                )
+                if ($reportChanged -or ($callbackState.StartedAt -and $reportFile.LastWriteTimeUtc -ge $callbackState.StartedAt.ToUniversalTime())) {
+                    try { $payload = Get-Content -LiteralPath $reportCandidate -Raw -Encoding UTF8 | ConvertFrom-Json } catch { }
+                }
+            }
             if ($payload) { & $callbackShowResult $payload $exitCode } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '转换失败'
                 $callbackUi.ResultStatus.Foreground = '#EF7C86'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode；转换器没有返回有效 JSON。"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '转换器没有返回输出。' }
+            }
+            if ($cancelled) {
+                $callbackUi.ProgressBar.Value = 0
+                $callbackUi.ResultStatus.Text = '任务已停止'
+                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                if ($callbackState.ReportPath) {
+                    $callbackUi.StatusLine.Text = '转换已停止；已归档停止前生成的本次报告。已完成的 resource 不会自动删除。'
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
+                } else {
+                    $callbackUi.StatusLine.Text = '转换已停止；组件尚未生成完整报告。已完成的 resource 不会自动删除。'
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 任务已停止，组件尚未生成完整报告。'
+                }
             }
         }.GetNewClosure()
 

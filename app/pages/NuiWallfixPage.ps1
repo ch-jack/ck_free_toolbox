@@ -1,11 +1,14 @@
 ﻿function New-CkNuiWallfixPage {
     param([Parameter(Mandatory)]$Context)
 
+    $reportRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'nui-wallfix-reports'
     $state = [pscustomobject]@{
         Process = $null
         TargetPath = $Context.Paths.DefaultWallfixInput
         LastOperation = ''
         CancelRequested = $false
+        ReportRoot = $reportRoot
+        ReportPath = ''
     }
 
     $xaml = @"
@@ -162,7 +165,13 @@
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16">
       <StackPanel>
-        <TextBlock Text="报告明细" FontSize="20" FontWeight="Bold" Margin="0,0,0,10"/>
+        <Grid Margin="0,0,0,10">
+          <TextBlock Text="报告明细" FontSize="20" FontWeight="Bold"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="NuiWallfix.OpenReportButton" Content="打开本次报告" Height="30" Margin="0,0,8,0" IsEnabled="False"/>
+            <Button x:Name="OpenReportHistoryButton" AutomationProperties.AutomationId="NuiWallfix.OpenReportHistoryButton" Content="报告历史" Height="30"/>
+          </StackPanel>
+        </Grid>
         <TextBox x:Name="LogBox" AutomationProperties.AutomationId="NuiWallfix.LogBox" MinHeight="210" MaxHeight="420" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
     </Border>
@@ -176,7 +185,7 @@
         'ModeBox','TimeoutBox','MaxMbBox','ProvidersBox','StateDirBox','ChooseStateDirButton',
         'AllowUnverifiedBox','AllowPrivateBox','ForceRestoreBox','ScanButton','PreviewButton','ApplyButton','CancelButton',
         'RunIdBox','RestoreButton','OpenBackupsButton','ResultStatus','ResourceCount','ReferenceCount',
-        'ResolvedCount','UnresolvedCount','WrittenCount','ProgressBar','StatusLine','LogBox'
+        'ResolvedCount','UnresolvedCount','WrittenCount','ProgressBar','StatusLine','OpenReportButton','OpenReportHistoryButton','LogBox'
     )
 
     $ui.TargetBox.Text = $state.TargetPath
@@ -198,14 +207,17 @@
 
     function Update-WallfixEnvironment {
         $scriptOk = Test-Path -LiteralPath $Context.Paths.WallfixScript -PathType Leaf
+        $runtimeV12 = Join-Path $Context.Paths.WallfixDir 'nuiwallfix\runtime_v12.py'
+        $reportingModule = Join-Path $Context.Paths.WallfixDir 'nuiwallfix\reporting.py'
+        $reportRuntimeOk = (Test-Path -LiteralPath $runtimeV12 -PathType Leaf) -and (Test-Path -LiteralPath $reportingModule -PathType Leaf)
         $providersOk = Test-Path -LiteralPath $Context.Paths.WallfixProviders -PathType Leaf
         $pythonInfo = & $getPythonInfoAction
         $pythonOk = [bool]$pythonInfo.Ok
 
-        $ok = $scriptOk -and $providersOk -and $pythonOk
+        $ok = $scriptOk -and $reportRuntimeOk -and $providersOk -and $pythonOk
         Set-CkStatusDot $ui.EnvironmentDot $ok
         $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
-        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少 nui-wallfix' } elseif (-not $pythonOk) { '缺少 Python 3.7+' } else { '缺少 CDN 规则' }
+        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少 nui-wallfix' } elseif (-not $reportRuntimeOk) { '组件版本过旧，请更新' } elseif (-not $pythonOk) { '缺少 Python 3.7+' } else { '缺少 CDN 规则' }
         $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
         $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
@@ -258,6 +270,26 @@
             $ui.RunIdBox.Text = [string]$Payload.run_id
         }
 
+        $reportInfo = $null
+        if ($Payload -and $Payload.PSObject.Properties['execution_report']) {
+            $reportInfo = $Payload.execution_report
+        }
+        $reportPath = ''
+        if ($reportInfo) {
+            if ($reportInfo.markdown) {
+                $reportPath = [string]$reportInfo.markdown
+            } elseif ($reportInfo.json) {
+                $reportPath = [string]$reportInfo.json
+            }
+        }
+        if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+            $state.ReportPath = [IO.Path]::GetFullPath($reportPath)
+            $ui.OpenReportButton.IsEnabled = $true
+        } else {
+            $state.ReportPath = ''
+            $ui.OpenReportButton.IsEnabled = $false
+        }
+
         $lines = New-Object System.Collections.Generic.List[string]
         $lines.Add("命令: $($Payload.command)")
         $statusText = if ($Payload.status) { [string]$Payload.status } elseif ($Payload.command -eq 'scan') { '扫描完成' } else { '完成' }
@@ -265,6 +297,10 @@
         if ($Payload.mode) { $lines.Add("方案: $($Payload.mode)") }
         if ($Payload.run_id) { $lines.Add("Run ID: $($Payload.run_id)") }
         if ($Payload.state_dir) { $lines.Add("备份目录: $($Payload.state_dir)") }
+        if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
+        if ($Payload.PSObject.Properties['execution_report_error'] -and $Payload.execution_report_error) {
+            $lines.Add("报告错误: $($Payload.execution_report_error)")
+        }
         if ($Payload.error) { $lines.Add("错误: $($Payload.error)") }
         $lines.Add('')
 
@@ -420,6 +456,22 @@
         Start-Process -FilePath explorer.exe -ArgumentList @($selected)
     }.GetNewClosure()
 
+    $openReportAction = {
+        $path = [string]$state.ReportPath
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw '本次 NUI 执行报告不存在，请先完成一次操作。'
+        }
+        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
+    }.GetNewClosure()
+
+    $openReportHistoryAction = {
+        $path = [string]$state.ReportRoot
+        if (-not (Test-Path -LiteralPath $path -PathType Container)) {
+            New-Item -ItemType Directory -Force -Path $path | Out-Null
+        }
+        Start-Process -FilePath explorer.exe -ArgumentList @($path)
+    }.GetNewClosure()
+
     function Start-WallfixOperation {
         param([ValidateSet('scan','preview','apply','restore')][string]$Operation)
 
@@ -428,6 +480,14 @@
         }
         if (-not (Test-Path -LiteralPath $Context.Paths.WallfixScript -PathType Leaf)) {
             throw "nui-wallfix 入口不存在: $($Context.Paths.WallfixScript)"
+        }
+        $runtimeV12 = Join-Path $Context.Paths.WallfixDir 'nuiwallfix\runtime_v12.py'
+        $reportingModule = Join-Path $Context.Paths.WallfixDir 'nuiwallfix\reporting.py'
+        if (
+            -not (Test-Path -LiteralPath $runtimeV12 -PathType Leaf) -or
+            -not (Test-Path -LiteralPath $reportingModule -PathType Leaf)
+        ) {
+            throw '当前 NUI 组件版本不支持执行报告，请先在顶部更新组件。'
         }
 
         $target = $ui.TargetBox.Text.Trim()
@@ -501,8 +561,12 @@
             $label = '正在恢复备份'
         }
 
+        $operationReportRoot = Join-Path $state.ReportRoot ('ck-toolbox-' + (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+        $args += @('--report-dir', $operationReportRoot)
         $state.LastOperation = $Operation
         $state.CancelRequested = $false
+        $state.ReportPath = ''
+        $ui.OpenReportButton.IsEnabled = $false
         $ui.LogBox.Text = ''
         $ui.ProgressBar.Value = 0
         & $setRunningAction $true $label
@@ -514,6 +578,7 @@
         $callbackShowResult = $showResultAction
         $callbackSetRunning = $setRunningAction
 
+        $callbackOperationReportRoot = $operationReportRoot
         $onOutput = {
             param($line)
             [void]$callbackOutput.AppendLine($line)
@@ -531,14 +596,7 @@
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
             & $callbackSetRunning $false
-            if ($wasCancelled) {
-                $callbackUi.ProgressBar.Value = 0
-                $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
-                $callbackUi.StatusLine.Text = '当前任务已停止，未继续处理。'
-                $callbackUi.LogBox.Text = '任务已由用户停止。'
-                return
-            }
+
             $raw = $callbackOutput.ToString().Trim()
             $payload = $null
             try {
@@ -550,6 +608,24 @@
                     try { $payload = $lines[$i] | ConvertFrom-Json } catch { }
                 }
             }
+            if (-not $payload -and (Test-Path -LiteralPath $callbackOperationReportRoot -PathType Container)) {
+                $historyJson = Get-ChildItem -LiteralPath $callbackOperationReportRoot -Filter 'report.json' -File -Recurse -ErrorAction SilentlyContinue |
+                    Sort-Object LastWriteTimeUtc -Descending |
+                    Select-Object -First 1
+                if ($historyJson) {
+                    try {
+                        $reportDocument = Get-Content -LiteralPath $historyJson.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                        if ($reportDocument.PSObject.Properties['native_payload']) {
+                            $payload = $reportDocument.native_payload
+                        } else {
+                            $historyMarkdown = Join-Path $historyJson.Directory.FullName 'report.md'
+                            $callbackState.ReportPath = if (Test-Path -LiteralPath $historyMarkdown -PathType Leaf) { $historyMarkdown } else { $historyJson.FullName }
+                            $callbackUi.OpenReportButton.IsEnabled = $true
+                        }
+                    } catch { }
+                }
+            }
+
             if ($payload) {
                 & $callbackShowResult $payload $exitCode
             } else {
@@ -558,6 +634,19 @@
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { 'nui-wallfix 没有返回结果。' }
+            }
+
+            if ($wasCancelled) {
+                $callbackUi.ProgressBar.Value = 0
+                $callbackUi.ResultStatus.Text = '任务已停止'
+                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                if ($callbackState.ReportPath) {
+                    $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件写出的本次报告。'
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
+                } else {
+                    $callbackUi.StatusLine.Text = '任务已停止；组件尚未写出可用报告。'
+                    $callbackUi.LogBox.Text = if ($raw) { $raw } else { '任务已由用户停止，组件尚未生成报告。' }
+                }
             }
         }.GetNewClosure()
 
@@ -601,6 +690,8 @@
     Register-CkButtonAction -Button $ui.OpenTargetButton -Action $openTargetAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseStateDirButton -Action $chooseStateDirAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenBackupsButton -Action $openBackupsAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ScanButton -Action $scanAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PreviewButton -Action $previewAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ApplyButton -Action $applyAction -OnError $showPageError

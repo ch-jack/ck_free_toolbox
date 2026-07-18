@@ -10,6 +10,8 @@
         Total = 0
         Done = 0
         Failed = 0
+        ReportPath = ''
+        ReportHistoryPath = ''
     }
 
     $xaml = @"
@@ -92,10 +94,11 @@
     </Border>
 
     <Grid Margin="0,16,0,16">
-      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
       <Button x:Name="ScanButton" AutomationProperties.AutomationId="ModelRender.ScanButton" Grid.Column="0" Height="52" Margin="0,0,8,0" FontSize="18" FontWeight="Bold" Background="#2A2D33" Content="⌕  扫描模型"/>
-      <Button x:Name="RunButton" AutomationProperties.AutomationId="ModelRender.RunButton" Grid.Column="1" Height="52" Margin="8,0,8,0" FontSize="18" FontWeight="Bold" Background="#173055" Content="开始渲染"/>
-      <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="ModelRender.OpenOutputButton" Grid.Column="2" Height="52" Margin="8,0,0,0" FontSize="15" Background="#0E1012" Foreground="#858B96" Content="▰  打开输出"/>
+      <Button x:Name="RunButton" AutomationProperties.AutomationId="ModelRender.RunButton" Grid.Column="1" Height="52" Margin="8,0" FontSize="18" FontWeight="Bold" Background="#173055" Content="开始渲染"/>
+      <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="ModelRender.OpenOutputButton" Grid.Column="2" Height="52" Margin="8,0,6,0" FontSize="14" Background="#0E1012" Foreground="#858B96" Content="▰  打开输出"/>
+      <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="ModelRender.OpenReportButton" Grid.Column="3" Height="52" Margin="6,0,0,0" FontSize="14" Background="#173055" Foreground="#58A6FF" Content="打开本次报告" IsEnabled="False"/>
     </Grid>
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,0,0,16">
@@ -147,7 +150,7 @@
     $ui = Get-CkNamedControls -Root $root -Names @(
         'DependencyStatus','BlenderDot','BlenderText','BlenderDownloadButton','BlenderBrowseButton','CodeWalkerDot','CodeWalkerText','DotNetDot','DotNetText','DotNetDownloadButton',
         'SollumzDot','SollumzText','RendererDot','RendererText','CpuText','MemoryText','WorkerText',
-        'InputNameText','InputPathText','ChooseInputButton','ScanButton','RunButton','OpenOutputButton',
+        'InputNameText','InputPathText','ChooseInputButton','ScanButton','RunButton','OpenOutputButton','OpenReportButton',
         'RenderStatusTitle','RenderStepText','RenderPercent','RenderProgress','StepPanel','RenderLine',
         'BatchCounter','BatchDoneText','BatchPercent','BatchProgress','ElapsedText','SearchBox','AssetList',
         'SelectAllButton','ClearButton','LogBox'
@@ -358,6 +361,14 @@
         Start-Process -FilePath explorer.exe -ArgumentList @($state.OutputPath)
     }.GetNewClosure()
 
+    $openReportAction = {
+        $path = [string]$state.ReportPath
+        if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw '本次模型渲染报告不存在，请先完成一次渲染。'
+        }
+        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
+    }.GetNewClosure()
+
     $renderAction = {
         if ($state.Process -and -not $state.Process.Process.HasExited) {
             throw '已有渲染任务正在运行。'
@@ -417,15 +428,25 @@
         $state.Done = 0
         $state.Failed = 0
         $state.StartedAt = Get-Date
+        $state.ReportPath = ''
+        $state.ReportHistoryPath = ''
+        $ui.OpenReportButton.IsEnabled = $false
         Set-CkStepState -Panel $ui.StepPanel -Step 1 -Label '导出模型' -LabelControl $ui.RenderStepText
 
         $callbackState = $state
         $callbackUi = $ui
         $callbackRows = $rows
         $callbackProgress = $updateProgressAction
+        $callbackOutputPath = $state.OutputPath
         $onOutput = {
             param($line)
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line
+            if ($line -match '^\[report\]\s+history=(.+)$') {
+                $callbackState.ReportHistoryPath = $Matches[1].Trim()
+                $callbackState.ReportPath = $callbackState.ReportHistoryPath
+            } elseif (-not $callbackState.ReportHistoryPath -and $line -match '^\[report\]\s+markdown=(.+)$') {
+                $callbackState.ReportPath = $Matches[1].Trim()
+            }
             & $callbackProgress $line
         }.GetNewClosure()
         $onProcessError = {
@@ -445,6 +466,27 @@
                 if ($row.Selected) { $row.Status = if ($exitCode -eq 0) { '完成' } else { '失败' } }
             }
             $callbackUi.AssetList.Items.Refresh()
+            $reportPath = [string]$callbackState.ReportPath
+            if (-not $reportPath -or -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                foreach ($candidateName in @('_render_report.md', '_render_report.json')) {
+                    $candidate = Join-Path $callbackOutputPath $candidateName
+                    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                        $candidateFile = Get-Item -LiteralPath $candidate
+                        if ($candidateFile.LastWriteTimeUtc -ge $callbackState.StartedAt.ToUniversalTime()) {
+                            $reportPath = $candidateFile.FullName
+                            break
+                        }
+                    }
+                }
+            }
+            if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                $callbackState.ReportPath = [IO.Path]::GetFullPath($reportPath)
+                $callbackUi.OpenReportButton.IsEnabled = $true
+                Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
+            } else {
+                $callbackState.ReportPath = ''
+                $callbackUi.OpenReportButton.IsEnabled = $false
+            }
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line "退出码: $exitCode"
         }.GetNewClosure()
 
@@ -519,6 +561,7 @@
     Register-CkButtonAction -Button $ui.SelectAllButton -Action $selectAllAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ClearButton -Action $clearAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.RunButton -Action $renderAction -OnError $showPageError
     Register-CkTextChangedAction -TextBox $ui.SearchBox -Action $searchAction
 
