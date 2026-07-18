@@ -212,6 +212,56 @@ jobs:
 
           Write-Host "Release ZIP: $($archives[0].Name)"
           Write-Host "SHA-256: $((Get-FileHash -Algorithm SHA256 -LiteralPath $archives[0].FullName).Hash)"
+
+      - name: Validate component release rebuild request
+        if: github.event_name == 'workflow_dispatch'
+        shell: powershell
+        env:
+          SOURCE_COMPONENT: ${{ inputs.source_component }}
+          SOURCE_VERSION: ${{ inputs.source_version }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sourceComponent = ([string]$env:SOURCE_COMPONENT).Trim()
+          $sourceVersion = ([string]$env:SOURCE_VERSION).Trim()
+
+          if (-not $sourceComponent -and -not $sourceVersion) {
+            "CK_COMPONENT_REBUILD=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            Write-Host '::notice title=Artifact-only build::No component release inputs were supplied; the package artifact was built, but GitHub Release publication is disabled.'
+            exit 0
+          }
+          if (-not $sourceComponent -or -not $sourceVersion) {
+            throw 'source_component and source_version must either both be supplied or both be empty.'
+          }
+          if ($sourceComponent -cnotin @('xiaoha_cleaner', 'ck_anti_john')) {
+            throw "Unsupported source_component: $sourceComponent"
+          }
+          if ($sourceVersion -cnotmatch '^v(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)$') {
+            throw "source_version must be a stable vSemVer tag such as v1.2.3: $sourceVersion"
+          }
+
+          $toolId = if ($sourceComponent -ceq 'xiaoha_cleaner') { 'xiaoha-cleaner' } else { 'anti-john' }
+          $manifestPaths = @(Get-ChildItem -LiteralPath .\dist -Directory | ForEach-Object {
+            Join-Path $_.FullName 'package-manifest.json'
+          })
+          if ($manifestPaths.Count -ne 1) {
+            throw "Expected one package manifest, found $($manifestPaths.Count)."
+          }
+          $manifest = Get-Content -LiteralPath $manifestPaths[0] -Raw -Encoding UTF8 | ConvertFrom-Json
+          if (-not $manifest.PSObject.Properties['bundledComponents'] -or -not $manifest.bundledComponents) {
+            throw 'Package manifest is missing bundledComponents.'
+          }
+          $recordProperty = $manifest.bundledComponents.PSObject.Properties[$toolId]
+          if (-not $recordProperty) {
+            throw "Package manifest is missing bundled component record: $toolId"
+          }
+          $bundledVersion = [string]$recordProperty.Value.releaseTag
+          if ($bundledVersion -cne $sourceVersion) {
+            throw "Bundled $toolId version $bundledVersion does not match requested component release $sourceVersion."
+          }
+
+          "CK_COMPONENT_REBUILD=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          Write-Host "Verified component-triggered rebuild: $sourceComponent $sourceVersion"
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
@@ -222,7 +272,7 @@ jobs:
           retention-days: 14
 
       - name: Check release version
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && env.CK_COMPONENT_REBUILD == 'true')
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
@@ -240,7 +290,7 @@ jobs:
             throw "Only the standard bundled package may be released, found: $($manifest.flavor)"
           }
       - name: Publish GitHub release
-        if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
+        if: (github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))) || (github.event_name == 'workflow_dispatch' && env.CK_COMPONENT_REBUILD == 'true')
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}

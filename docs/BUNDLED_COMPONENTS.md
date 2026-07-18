@@ -64,7 +64,17 @@ CK 工具箱只发布一个 Windows ZIP：
 
 ## 组件发布自动触发
 
-ck_anti_john 或 xiaoha_cleaner 的正式标签 Release 在测试、打包和附件发布全部成功后，会调用 ck_free_toolbox 的 build-release.yml。工具箱随后重新解析两个组件的最新正式 Release、校验各自 SHA-256，并发布新的唯一正式包。
+ck_anti_john 或 xiaoha_cleaner 的正式标签 Release 在测试、打包和附件发布全部成功后，会调用 ck_free_toolbox 的 build-release.yml，并传入 `source_component` 和 `source_version`。工具箱随后重新解析两个组件的最新正式 Release、校验各自 SHA-256，并构建新的唯一正式包。
+
+组件触发的 `workflow_dispatch` 只有通过以下门禁才会发布 GitHub Release：
+
+1. `source_component` 必须严格等于 `ck_anti_john` 或 `xiaoha_cleaner`；
+2. `source_version` 必须是稳定的 `vX.Y.Z` 标签；
+3. 构建完成后的 `package-manifest.json` 必须包含对应组件，且 `bundledComponents.<tool-id>.releaseTag` 与 `source_version` 完全一致。
+
+这项成品校验可防止 `releases/latest` 尚未更新时发布仍内置旧组件的工具箱包。校验失败时工作流停止，不会发布工具箱 Release。直接在 GitHub 页面手动运行工作流但不填写两个来源参数时，仍会构建并上传 Actions artifact，但会明确跳过版本发布；只填写其中一个参数或填写非法值会使工作流失败。
+
+工具箱仓库自身的 `main` 或 `v*` push 仍按原流程构建并发布，不依赖上述 dispatch 参数。
 
 跨仓库触发需要在两个组件仓库分别配置 Actions Secret：
 
@@ -74,4 +84,4 @@ ck_anti_john 或 xiaoha_cleaner 的正式标签 Release 在测试、打包和附
 - Repository permissions：Actions: Read and write
 - 有效期：按维护周期设置并在到期前轮换
 
-未配置 Secret 时，组件 Release 仍会正常发布，但触发步骤只输出警告，不会启动工具箱构建。令牌不得写入仓库文件、日志、Release 附件或工具箱包内。
+未配置 Secret 时，组件 Release 仍会正常发布，但触发步骤只输出警告，不会启动工具箱构建或发布新的工具箱包。此时需要维护者在组件 Release 可访问后手动刷新工具箱。令牌不得写入仓库文件、日志、Release 附件或工具箱包内。

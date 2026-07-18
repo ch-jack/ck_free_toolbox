@@ -110,6 +110,8 @@
                 "xiaoha-cleaner.py",
                 "XiaohaCleanerAuto.py",
                 "XiaohaCleanerFinal.py",
+                "XiaohaCleaner.py",
+                "xiaoha_cleaner_all_sql.py",
                 "xiaoha_cleaner.py"
             ]
         },
