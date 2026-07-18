@@ -430,7 +430,7 @@
         $args = @('-u', $Context.Paths.AntiJohnScript)
         $label = ''
         if ($Operation -eq 'scan') {
-            $args += @('scan', $target, '--max-bytes', [string]($maxMb * 1MB), '--json')
+            $args += @('scan', $target, '--max-bytes', [string]($maxMb * 1MB), '--progress', '--json')
             $label = '正在扫描后门'
         } elseif ($Operation -in @('preview','apply')) {
             if ($Operation -eq 'apply') {
@@ -443,7 +443,7 @@
                 )
                 if ($answer -ne [System.Windows.MessageBoxResult]::Yes) { return }
             }
-            $args += @('repair', $target, '--max-bytes', [string]($maxMb * 1MB))
+            $args += @('repair', $target, '--max-bytes', [string]($maxMb * 1MB), '--progress')
             $stateDir = $ui.StateDirBox.Text.Trim()
             if ($stateDir) { $args += @('--state-dir', $stateDir) }
             if ($Operation -eq 'apply') { $args += '--write' }
@@ -479,11 +479,72 @@
         $callbackUi = $ui
         $callbackShowResult = $showResultAction
         $callbackSetRunning = $setRunningAction
+        $callbackGetProperty = $getPropertyAction
 
         $onOutput = {
             param($line)
+            if ($line -and $line.StartsWith('CK_PROGRESS ', [StringComparison]::Ordinal)) {
+                $progress = $null
+                try {
+                    $progress = $line.Substring(12) | ConvertFrom-Json
+                } catch { }
+                if ($progress) {
+                    $phase = [string](& $callbackGetProperty $progress 'phase' '')
+                    $completed = [int](& $callbackGetProperty $progress 'completed' 0)
+                    $total = [int](& $callbackGetProperty $progress 'total' 0)
+                    $percent = [double](& $callbackGetProperty $progress 'percent' 0)
+                    $workers = [int](& $callbackGetProperty $progress 'workers' 1)
+                    $current = [string](& $callbackGetProperty $progress 'current' '')
+                    if ($phase -eq 'starting') {
+                        $callbackUi.ProgressBar.IsIndeterminate = $true
+                        $callbackUi.ResultStatus.Text = '正在准备扫描'
+                        $callbackUi.StatusLine.Text = '正在初始化纯静态扫描器。'
+                    } elseif ($phase -eq 'enumerating') {
+                        $callbackUi.ProgressBar.IsIndeterminate = $true
+                        $callbackUi.ResultStatus.Text = '正在统计文件'
+                        $callbackUi.StatusLine.Text = if ($current) {
+                            "已发现 $completed 个文件 · $current"
+                        } else {
+                            "已发现 $completed 个文件"
+                        }
+                    } elseif ($phase -eq 'scanning') {
+                        $callbackUi.ProgressBar.IsIndeterminate = $false
+                        $callbackUi.ProgressBar.Value = [Math]::Min(
+                            99,
+                            [Math]::Max(0, $percent)
+                        )
+                        $callbackUi.ResultStatus.Text = if ($workers -gt 1) {
+                            "多线程扫描 · $workers 线程"
+                        } else {
+                            '静态扫描 · 单线程'
+                        }
+                        $progressText = if ($total -gt 0) {
+                            "已完成 $completed / $total · $percent%"
+                        } else {
+                            '等待扫描任务'
+                        }
+                        $callbackUi.StatusLine.Text = if ($current) {
+                            "$progressText · $current"
+                        } else {
+                            $progressText
+                        }
+                    } elseif ($phase -eq 'completed') {
+                        $callbackUi.ProgressBar.IsIndeterminate = $false
+                        $callbackUi.ProgressBar.Value = 99
+                        $callbackUi.ResultStatus.Text = '正在整理结果'
+                        $callbackUi.StatusLine.Text = if ($total -gt 0) {
+                            "扫描阶段完成 · $completed / $total"
+                        } else {
+                            '扫描阶段完成，正在整理结果。'
+                        }
+                    }
+                }
+                return
+            }
             [void]$callbackOutput.AppendLine($line)
-            $callbackUi.ProgressBar.Value = [Math]::Min(86, $callbackUi.ProgressBar.Value + 5)
+            if ($callbackUi.ProgressBar.Value -lt 86) {
+                $callbackUi.ProgressBar.Value = [Math]::Min(86, $callbackUi.ProgressBar.Value + 5)
+            }
         }.GetNewClosure()
         $onProcessError = { param($message) $callbackUi.StatusLine.Text = $message }.GetNewClosure()
         $onExit = {
