@@ -168,6 +168,11 @@ namespace CKFreeToolbox.Runtime
         {
             return lines.TryDequeue(out line);
         }
+
+        public bool IsEmpty
+        {
+            get { return lines.IsEmpty; }
+        }
     }
 
     public static class CommandLine
@@ -268,27 +273,39 @@ function Start-CkLoggedProcess {
     $timer = New-Object System.Windows.Threading.DispatcherTimer
     $timer.Interval = [TimeSpan]::FromMilliseconds(100)
     $exitHandled = $false
+    $processExitObserved = $false
+    $processExitCode = 0
+    $maxLinesPerTick = 24
     $callbackErrorReported = $false
     $runtimeState = [pscustomobject]@{ LastCallbackError = '' }
 
     $drainOutput = {
+        param([int]$MaxLines)
+        $processed = 0
         $line = $null
-        while ($buffer.TryDequeue([ref]$line)) {
-            & $OnOutput $line
+        while ($processed -lt $MaxLines -and $buffer.TryDequeue([ref]$line)) {
+            [void](& $OnOutput $line)
+            $processed++
             $line = $null
         }
+        return $processed
     }.GetNewClosure()
 
     $tick = {
         try {
-            & $drainOutput
+            [void](& $drainOutput $maxLinesPerTick)
 
             if (-not $exitHandled -and $proc.HasExited) {
-                $proc.WaitForExit()
-                & $drainOutput
-                $exitHandled = $true
-                $timer.Stop()
-                & $OnExit $proc.ExitCode
+                if (-not $processExitObserved) {
+                    $proc.WaitForExit()
+                    $processExitCode = $proc.ExitCode
+                    $processExitObserved = $true
+                }
+                if ($buffer.IsEmpty) {
+                    $exitHandled = $true
+                    $timer.Stop()
+                    [void](& $OnExit $processExitCode)
+                }
             }
         } catch {
             if (-not $callbackErrorReported) {

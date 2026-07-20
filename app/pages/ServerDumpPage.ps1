@@ -8,6 +8,10 @@
         ReportRoot = $reportRoot
         ReportPath = ''
         StartedAt = $null
+        PythonPath = ''
+        DependenciesOk = $false
+        DependenciesReason = ''
+        EnvironmentChecked = $false
     }
 
     $xaml = @"
@@ -84,8 +88,9 @@
             <TextBlock Text="cfx.re link 或 IP:端口" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
             <TextBox x:Name="TargetBox" AutomationProperties.AutomationId="ServerDump.TargetBox" Height="36"/>
           </StackPanel>
-          <Button x:Name="PasteExampleButton" AutomationProperties.AutomationId="ServerDump.PasteExampleButton" Grid.Column="1" Content="示例格式" Height="36" Margin="7,22,0,0" ToolTip="在日志中显示支持的输入格式"/>
+          <Button x:Name="PasteExampleButton" AutomationProperties.AutomationId="ServerDump.PasteExampleButton" Grid.Column="1" Content="示例格式" Height="36" Margin="7,22,0,0" ToolTip="轮流填入 cfx.re 与 IP:端口示例"/>
         </Grid>
+        <TextBlock AutomationProperties.AutomationId="ServerDump.TargetExamples" Text="cfx 示例：https://cfx.re/join/xxxx    IP 示例：1.2.3.4:30120" Foreground="#686E78" FontSize="11" Margin="0,-3,0,10"/>
         <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="88"/><ColumnDefinition Width="88"/></Grid.ColumnDefinitions>
           <StackPanel>
@@ -233,6 +238,11 @@
         $unluacOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'Tools\Decompile\unluac54.jar') -PathType Leaf
         $fixerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'FIXER\FivemDecryptFixer.exe') -PathType Leaf
         $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk
+
+        $state.PythonPath = if ($pythonOk) { [string]$pythonInfo.Path } else { '' }
+        $state.DependenciesOk = [bool]$depsInfo.Ok
+        $state.DependenciesReason = [string]$depsInfo.Reason
+        $state.EnvironmentChecked = $true
 
         Set-CkStatusDot $ui.PythonDot $pythonOk
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
@@ -456,7 +466,17 @@
     }.GetNewClosure()
 
     $showExampleAction = {
-        $ui.LogBox.Text = "支持输入示例：`r`nhttps://cfx.re/join/xxxx`r`n1.2.3.4:30120`r`n`r`n功能含 Dump、解密 FXAP，不含修复模型。"
+        $cfxExample = 'https://cfx.re/join/xxxx'
+        $ipExample = '1.2.3.4:30120'
+        $useIpExample = $ui.TargetBox.Text.Trim() -eq $cfxExample
+        $example = if ($useIpExample) { $ipExample } else { $cfxExample }
+        $ui.TargetBox.Text = $example
+        [void]$ui.TargetBox.Focus()
+        if ($useIpExample) { $ui.TargetBox.SelectAll() } else { $ui.TargetBox.Select($example.Length - 4, 4) }
+        $ui.ResultStatus.Text = if ($useIpExample) { '已填入 IP 示例' } else { '已填入 cfx 示例' }
+        $ui.ResultStatus.Foreground = '#72B7F2'
+        $ui.StatusLine.Text = "cfx 示例：$cfxExample；IP 示例：$ipExample"
+        $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`n功能含 Dump、解密 FXAP，不含修复模型。"
     }.GetNewClosure()
 
     function Start-ServerDump {
@@ -480,9 +500,13 @@
         if ($outputPath.Equals($driveRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '不能直接输出到磁盘根目录。' }
         New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 
-        $python = & $getPythonAction
-        $deps = & $testPackagesAction $python
-        if (-not $deps.Ok) { throw [string]$deps.Reason }
+        if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
+        $python = [string]$state.PythonPath
+        if (-not $python -or -not (Test-Path -LiteralPath $python -PathType Leaf)) { throw 'Python 不可用，请先在页面顶部完成 Python 设置。' }
+        if (-not $state.DependenciesOk) {
+            $reason = if ($state.DependenciesReason) { [string]$state.DependenciesReason } else { 'Python 依赖未就绪，请执行 pip install -r requirements.txt。' }
+            throw $reason
+        }
 
         $resources = $ui.ResourcesBox.Text.Trim()
         if (-not $resources) { $resources = 'all' }
