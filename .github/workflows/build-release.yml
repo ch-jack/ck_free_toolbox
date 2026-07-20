@@ -153,6 +153,9 @@ jobs:
           $toolConfig = Get-Content -LiteralPath (Join-Path $package 'app\config\tools.json') -Raw -Encoding UTF8 |
             ConvertFrom-Json
           foreach ($tool in $toolConfig) {
+            if (-not $tool.PSObject.Properties['component']) {
+              continue
+            }
             if (-not $tool.component.releaseAssetPattern) {
               throw "Missing releaseAssetPattern for component: $($tool.id)"
             }
