@@ -9,6 +9,7 @@
         ReportPath = ''
         StartedAt = $null
         PythonPath = ''
+        JavaPath = ''
         DependenciesOk = $false
         DependenciesReason = ''
         EnvironmentChecked = $false
@@ -40,7 +41,7 @@
           <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="ServerDump.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
         </Grid>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
@@ -57,6 +58,20 @@
           </Border>
           <Border Grid.Column="1" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
             <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="JavaDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text="Java" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="JavaText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="JavaDownloadButton" AutomationProperties.AutomationId="ServerDump.JavaDownloadButton" Content="下载" Width="42" Height="27" Margin="0,0,5,0" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 Eclipse Temurin Java 17 JRE 下载页面"/>
+                <Button x:Name="JavaBrowseButton" AutomationProperties.AutomationId="ServerDump.JavaBrowseButton" Content="选择" Width="42" Height="27" ToolTip="选择包含 java.exe 的 JDK/JRE 安装目录"/>
+              </StackPanel>
+            </Grid>
+          </Border>
+          <Border Grid.Column="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
+            <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DepsDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
@@ -65,7 +80,7 @@
               </StackPanel>
             </Grid>
           </Border>
-          <Border Grid.Column="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
+          <Border Grid.Column="3" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="ComponentDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
@@ -165,7 +180,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','DepsDot','DepsText','ComponentDot','ComponentText',
+        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','ComponentDot','ComponentText',
         'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','KeepTempBox',
         'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
@@ -178,6 +193,11 @@
         $blender = if ($environment.Blender.Ok) { $environment.Blender.Path } else { '' }
         $settings = Get-CkDependencySettings
         return Get-CkPythonInfo -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blender -ConfiguredPath ([string]$settings.PythonPath)
+    }
+
+    function Get-ServerDumpJavaInfo {
+        $settings = Get-CkDependencySettings
+        return Get-CkJavaInfo -Settings $settings
     }
 
     function Test-ServerDumpPythonPackages {
@@ -231,6 +251,8 @@
     function Update-ServerDumpEnvironment {
         $pythonInfo = & $getPythonInfoAction
         $pythonOk = [bool]$pythonInfo.Ok
+        $javaInfo = & $getJavaInfoAction
+        $javaOk = [bool]$javaInfo.Ok
         $depsInfo = if ($pythonOk) { & $testPackagesAction ([string]$pythonInfo.Path) } else { [pscustomobject]@{ Ok = $false; Label = '等待 Python'; Reason = [string]$pythonInfo.Reason } }
         $scriptOk = Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf
         $requirementsOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'requirements.txt') -PathType Leaf
@@ -240,11 +262,13 @@
         $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk
 
         $state.PythonPath = if ($pythonOk) { [string]$pythonInfo.Path } else { '' }
+        $state.JavaPath = if ($javaOk) { [string]$javaInfo.Path } else { '' }
         $state.DependenciesOk = [bool]$depsInfo.Ok
         $state.DependenciesReason = [string]$depsInfo.Reason
         $state.EnvironmentChecked = $true
 
         Set-CkStatusDot $ui.PythonDot $pythonOk
+        Set-CkStatusDot $ui.JavaDot $javaOk
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
         Set-CkStatusDot $ui.ComponentDot $componentOk
 
@@ -252,6 +276,10 @@
         $ui.PythonText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
         $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
+        $ui.JavaText.Text = [string]$javaInfo.Label
+        $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
+        $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
+        $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
         $ui.DepsText.Text = [string]$depsInfo.Label
         $ui.DepsText.ToolTip = [string]$depsInfo.Reason
 
@@ -269,7 +297,7 @@
             $ui.ComponentText.Text = '组件不完整，请重新安装'
         }
 
-        $allOk = $pythonOk -and $depsInfo.Ok -and $componentOk
+        $allOk = $pythonOk -and $javaOk -and $depsInfo.Ok -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
         $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
     }
@@ -277,7 +305,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         $ui.StopButton.IsEnabled = $Running
@@ -339,6 +367,9 @@
         $lines.Add("目标: $($Payload.target)")
         $lines.Add("服务器地址: $($Payload.server_address)")
         $lines.Add("输出目录: $($Payload.output)")
+        if ($Payload.PSObject.Properties['java'] -and $Payload.java) {
+            $lines.Add("Java: $($Payload.java.version) | $($Payload.java.path)")
+        }
         $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；不含模型修复")
         if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
         foreach ($errorItem in @($Payload.errors)) { $lines.Add("错误: $errorItem") }
@@ -378,6 +409,7 @@
     }
 
     $getPythonInfoAction = (Get-Command Get-ServerDumpPythonInfo).ScriptBlock.GetNewClosure()
+    $getJavaInfoAction = (Get-Command Get-ServerDumpJavaInfo).ScriptBlock.GetNewClosure()
     $testPackagesAction = (Get-Command Test-ServerDumpPythonPackages).ScriptBlock.GetNewClosure()
     $getPythonAction = (Get-Command Get-ServerDumpPython).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-ServerDumpEnvironment).ScriptBlock.GetNewClosure()
@@ -434,6 +466,53 @@
             [System.Windows.MessageBox]::Show($owner, $message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
         } else {
             [System.Windows.MessageBox]::Show($message, 'Python 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        }
+    }.GetNewClosure()
+
+    $openJavaDownloadAction = {
+        Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
+    }.GetNewClosure()
+
+    $selectJavaAction = {
+        $settings = Get-CkDependencySettings
+        $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
+        $dialog.Description = '选择 Java 8 或更高版本的 JDK/JRE 安装目录（推荐 Java 17）'
+        $dialog.ShowNewFolderButton = $false
+
+        $initialPath = ''
+        if ($settings.JavaPath -and (Test-Path -LiteralPath ([string]$settings.JavaPath) -PathType Leaf)) {
+            $initialPath = Split-Path -Parent ([string]$settings.JavaPath)
+            if ((Split-Path -Leaf $initialPath) -ieq 'bin') { $initialPath = Split-Path -Parent $initialPath }
+        } else {
+            $detected = & $getJavaInfoAction
+            if ($detected.Ok) {
+                $initialPath = Split-Path -Parent ([string]$detected.Path)
+                if ((Split-Path -Leaf $initialPath) -ieq 'bin') { $initialPath = Split-Path -Parent $initialPath }
+            }
+        }
+        if ($initialPath -and (Test-Path -LiteralPath $initialPath -PathType Container)) {
+            $dialog.SelectedPath = $initialPath
+        }
+
+        try {
+            if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
+            $selected = [IO.Path]::GetFullPath($dialog.SelectedPath)
+        } finally {
+            $dialog.Dispose()
+        }
+
+        $javaPath = Set-CkDependencyPath -Dependency Java -Path $selected
+        $info = Test-CkJavaExecutable -Path $javaPath
+        if (-not $info.Ok) { throw [string]$info.Reason }
+        & $updateEnvironmentAction
+
+        $owner = [System.Windows.Window]::GetWindow($root)
+        $newLine = [Environment]::NewLine
+        $message = "已识别 $($info.Label)$newLine$($info.Version)$newLine$newLine$javaPath$newLine$newLine配置已保存到：$newLine$($Context.Paths.UserConfig)"
+        if ($owner) {
+            [System.Windows.MessageBox]::Show($owner, $message, 'Java 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+        } else {
+            [System.Windows.MessageBox]::Show($message, 'Java 设置完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
         }
     }.GetNewClosure()
 
@@ -531,6 +610,10 @@
             $reason = if ($state.DependenciesReason) { [string]$state.DependenciesReason } else { 'Python 依赖未就绪，请执行 pip install -r requirements.txt。' }
             throw $reason
         }
+        $java = [string]$state.JavaPath
+        if (-not $java -or -not (Test-Path -LiteralPath $java -PathType Leaf)) {
+            throw 'Java 不可用，请先在页面顶部选择 Java 目录；最低 Java 8，推荐 Java 17。'
+        }
 
         $resources = $ui.ResourcesBox.Text.Trim()
         if (-not $resources) { $resources = 'all' }
@@ -546,6 +629,7 @@
             '--resources', $resources,
             '--output', $outputPath,
             '--report', $reportPath,
+            '--java', $java,
             '--non-interactive'
         )
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
@@ -682,6 +766,8 @@
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PasteExampleButton -Action $showExampleAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
