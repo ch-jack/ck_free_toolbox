@@ -47,6 +47,8 @@ $context = [pscustomobject]@{
         WallfixProviders = Join-Path $WorkspaceRoot 'nui-wallfix\providers.json'
         RpfToFivemDir = Join-Path $WorkspaceRoot 'rpf_to_fivem'
         RpfToFivemScript = Join-Path $WorkspaceRoot 'rpf_to_fivem\rpf_to_fivem.py'
+        DumpToolDir = Join-Path $WorkspaceRoot 'dump-tool'
+        DumpToolScript = Join-Path $WorkspaceRoot 'dump-tool\auto.py'
         AntiJohnDir = Join-Path $WorkspaceRoot 'ck_anti_john'
         AntiJohnScript = Join-Path $WorkspaceRoot 'ck_anti_john\ck-anti-john.py'
         XiaohaCleanerDir = Join-Path $WorkspaceRoot 'xiaoha_cleaner'
@@ -56,6 +58,7 @@ $context = [pscustomobject]@{
         DefaultAntiJohnInput = ''
         DefaultXiaohaCleanerInput = ''
         DefaultRpfOutput = Join-Path $WorkspaceRoot 'RpfToFivemOutput'
+        DefaultServerDumpOutput = Join-Path $WorkspaceRoot 'ServerDumpOutput'
         DefaultInput = Join-Path $WorkspaceRoot 'TestVeh'
         DefaultRenderOut = Join-Path $WorkspaceRoot 'TestVeh\_vehicle_renders'
     }

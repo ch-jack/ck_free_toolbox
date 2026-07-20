@@ -140,6 +140,7 @@ jobs:
             'app\pages\ModelRenderPage.ps1',
             'app\pages\NuiWallfixPage.ps1',
             'app\pages\RpfToFivemPage.ps1',
+            'app\pages\ServerDumpPage.ps1',
             'app\pages\AntiJohnPage.ps1',
             'app\pages\XiaohaCleanerPage.ps1',
             'package-manifest.json'

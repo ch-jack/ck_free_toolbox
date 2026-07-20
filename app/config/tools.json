@@ -118,6 +118,29 @@
         "default": false
     },
     {
+        "id": "server-dump",
+        "title": "服务器 Dump",
+        "icon": "⇣",
+        "page": "ServerDumpPage.ps1",
+        "factory": "New-CkServerDumpPage",
+        "sourceUrl": "https://github.com/ch-jack/dump-tool",
+        "component": {
+            "repo": "ch-jack/dump-tool",
+            "installDir": "dump-tool",
+            "bootstrap": "",
+            "releaseAssetPattern": "dump-tool-*-windows.zip",
+            "releaseChecksumAssetPattern": "dump-tool-*-windows.zip.sha256",
+            "requiredFiles": [
+                "auto.py",
+                "requirements.txt",
+                "Bin/Unpacker.exe",
+                "Tools/Decompile/unluac54.jar",
+                "FIXER/FivemDecryptFixer.exe"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",
