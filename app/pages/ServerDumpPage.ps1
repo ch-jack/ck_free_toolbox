@@ -1,4 +1,4 @@
-function New-CkServerDumpPage {
+﻿function New-CkServerDumpPage {
     param([Parameter(Mandatory)]$Context)
 
     $reportRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'server-dump-reports'
