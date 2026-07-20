@@ -71,11 +71,11 @@ git push origin v1.0.2
 
 - 扫描目录中的 .yft、.ydr、.ydd 和 .ymap。
 - 支持载具、武器、饰品、道具、普通 Drawable、Drawable Dictionary 和地图。
-- 支持实时搜索、全选、取消、打开输出目录和批量渲染。
-- 调用 vehicle_renderer/render_all_vehicles.py --asset-types all。
+- 支持按载具、武器、饰品分类筛选，并保留实时搜索、全选、取消、打开输出目录和批量渲染。
+- 分类筛选会传给 `--asset-types`；角度预设提供当前左侧、标准正面和反向正面，兼容本地前向轴相反的模型。
 - 使用已安装 Blender 自带 Python；玩家只需选择安装目录中的 `blender.exe`，最低支持 Blender 4.2（推荐 5.1），CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。
 - RPF 解包和 YTD 纹理中间文件统一写入本次输出目录的 `_temp`，不占用系统临时目录，任务结束自动清理。
-- 每次渲染都会生成独立 Markdown/JSON 执行报告；页面只在确认报告属于本轮任务后启用“打开本次报告”。
+- 每次渲染都会生成带模型名和对应图片的 HTML 表格，以及独立 Markdown/JSON 执行报告；页面确认报告属于本轮任务后启用“打开图片表格”。
 
 ### NUI 自动去墙
 

@@ -18,6 +18,34 @@
 <ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               VerticalScrollBarVisibility="Auto" Padding="26,14,30,36">
+  <ScrollViewer.Resources>
+    <Style TargetType="ComboBox">
+      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Background" Value="#F8FAFC"/>
+      <Setter Property="BorderBrush" Value="#6B7280"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="9,6"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+    <Style TargetType="ComboBoxItem">
+      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Background" Value="#F8FAFC"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Style.Triggers>
+        <Trigger Property="IsHighlighted" Value="True">
+          <Setter Property="Foreground" Value="#0F172A"/>
+          <Setter Property="Background" Value="#DCE8F8"/>
+        </Trigger>
+        <Trigger Property="IsSelected" Value="True">
+          <Setter Property="Foreground" Value="#0F172A"/>
+          <Setter Property="Background" Value="#C9DCF5"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+  </ScrollViewer.Resources>
   <StackPanel>
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="20">
       <StackPanel>
@@ -98,7 +126,7 @@
       <Button x:Name="ScanButton" AutomationProperties.AutomationId="ModelRender.ScanButton" Grid.Column="0" Height="52" Margin="0,0,8,0" FontSize="18" FontWeight="Bold" Background="#2A2D33" Content="⌕  扫描模型"/>
       <Button x:Name="RunButton" AutomationProperties.AutomationId="ModelRender.RunButton" Grid.Column="1" Height="52" Margin="8,0" FontSize="18" FontWeight="Bold" Background="#173055" Content="开始渲染"/>
       <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="ModelRender.OpenOutputButton" Grid.Column="2" Height="52" Margin="8,0,6,0" FontSize="14" Background="#0E1012" Foreground="#858B96" Content="▰  打开输出"/>
-      <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="ModelRender.OpenReportButton" Grid.Column="3" Height="52" Margin="6,0,0,0" FontSize="14" Background="#173055" Foreground="#58A6FF" Content="打开本次报告" IsEnabled="False"/>
+      <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="ModelRender.OpenReportButton" Grid.Column="3" Height="52" Margin="6,0,0,0" FontSize="14" Background="#173055" Foreground="#58A6FF" Content="打开图片表格" IsEnabled="False"/>
     </Grid>
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="20" Margin="0,0,0,16">
@@ -125,7 +153,16 @@
     </Border>
 
     <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions><Border Width="4" Height="22" CornerRadius="3" Background="#8A8F98"/><TextBlock Grid.Column="1" Text="模型列表" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center"/><StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="SelectAllButton" AutomationProperties.AutomationId="ModelRender.SelectAllButton" Content="全选" Foreground="#58A6FF" Background="#0A0B0B"/><Button x:Name="ClearButton" AutomationProperties.AutomationId="ModelRender.ClearButton" Content="取消" Foreground="#8A8F98" Background="#0A0B0B"/></StackPanel></Grid>
-    <TextBox x:Name="SearchBox" AutomationProperties.AutomationId="ModelRender.SearchBox" Height="42" FontSize="15" ToolTip="搜索模型名或资源路径"/>
+    <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition Width="150"/><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+      <ComboBox x:Name="CategoryBox" AutomationProperties.AutomationId="ModelRender.CategoryBox" Height="42" SelectedIndex="0" ToolTip="按模型分类筛选">
+        <ComboBoxItem Content="全部分类" Tag="all"/><ComboBoxItem Content="载具" Tag="vehicle"/><ComboBoxItem Content="武器" Tag="weapon"/><ComboBoxItem Content="饰品" Tag="accessory"/>
+      </ComboBox>
+      <TextBox x:Name="SearchBox" AutomationProperties.AutomationId="ModelRender.SearchBox" Grid.Column="1" Height="42" Margin="10,0" FontSize="15" ToolTip="搜索模型名或资源路径"/>
+      <ComboBox x:Name="AngleBox" AutomationProperties.AutomationId="ModelRender.AngleBox" Grid.Column="2" Height="42" SelectedIndex="0" ToolTip="选择截图角度">
+        <ComboBoxItem Content="左侧" Tag="135"/><ComboBoxItem Content="正面" Tag="180"/><ComboBoxItem Content="反向正面" Tag="0"/>
+      </ComboBox>
+    </Grid>
     <ListView x:Name="AssetList" AutomationProperties.AutomationId="ModelRender.AssetList" MinHeight="140" MaxHeight="320" Background="#090A0A" BorderThickness="0" Margin="0,12,0,18" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
       <ListView.ItemTemplate>
         <DataTemplate>
@@ -152,7 +189,7 @@
         'SollumzDot','SollumzText','RendererDot','RendererText','CpuText','MemoryText','WorkerText',
         'InputNameText','InputPathText','ChooseInputButton','ScanButton','RunButton','OpenOutputButton','OpenReportButton',
         'RenderStatusTitle','RenderStepText','RenderPercent','RenderProgress','StepPanel','RenderLine',
-        'BatchCounter','BatchDoneText','BatchPercent','BatchProgress','ElapsedText','SearchBox','AssetList',
+        'BatchCounter','BatchDoneText','BatchPercent','BatchProgress','ElapsedText','CategoryBox','SearchBox','AngleBox','AssetList',
         'SelectAllButton','ClearButton','LogBox'
     )
 
@@ -162,6 +199,18 @@
 
     $filterAction = {
         param($item)
+        $categoryItem = $ui.CategoryBox.SelectedItem
+        $category = if ($categoryItem -and $categoryItem.Tag) { [string]$categoryItem.Tag } else { 'all' }
+        if ($category -ne 'all') {
+            [string[]]$allowedKinds = switch ($category) {
+                'vehicle' { @('vehicle') }
+                'weapon' { @('weapon') }
+                'accessory' { @('accessory', 'prop', 'drawable', 'drawable-dict') }
+                default { @($category) }
+            }
+            if ($allowedKinds -notcontains [string]$item.Kind) { return $false }
+        }
+
         $term = $ui.SearchBox.Text.Trim()
         if ([string]::IsNullOrWhiteSpace($term)) { return $true }
         return (
@@ -334,7 +383,7 @@
         try {
             & $scanAssetsAction
             $view.Refresh()
-            $ui.BatchCounter.Text = "0/$($rows.Count)"
+            $ui.BatchCounter.Text = "0/$(@($view).Count)"
         } finally {
             $ui.ScanButton.IsEnabled = $true
             $ui.ScanButton.Content = $content
@@ -351,7 +400,10 @@
         $ui.AssetList.Items.Refresh()
     }.GetNewClosure()
 
-    $searchAction = { $view.Refresh() }.GetNewClosure()
+    $searchAction = {
+        $view.Refresh()
+        $ui.BatchCounter.Text = "0/$(@($view).Count)"
+    }.GetNewClosure()
 
     $openOutputAction = {
         if ([string]::IsNullOrWhiteSpace($state.OutputPath)) { throw '输出目录不能为空。' }
@@ -366,7 +418,12 @@
         if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
             throw '本次模型渲染报告不存在，请先完成一次渲染。'
         }
-        Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
+        $extension = [IO.Path]::GetExtension($path).ToLowerInvariant()
+        if (@('.html', '.htm') -contains $extension) {
+            Start-Process -FilePath $path -ErrorAction Stop
+        } else {
+            Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
+        }
     }.GetNewClosure()
 
     $renderAction = {
@@ -380,7 +437,7 @@
             throw "资源路径不存在: $($state.InputPath)"
         }
 
-        $selected = @($rows | Where-Object { $_.Selected })
+        $selected = @($view | Where-Object { $_.Selected })
         if (-not $selected.Count) {
             [System.Windows.MessageBox]::Show('请先扫描并选择模型。', 'CK免费工具箱') | Out-Null
             return
@@ -394,6 +451,14 @@
         if (-not $env.Sollumz.Ok) { throw '模型组件缺少内置 Sollumz，请点击顶部安装组件按钮重新安装。' }
         $settings = Get-CkDependencySettings
         $pythonExe = Get-CkPythonExe -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $env.Blender.Path -ConfiguredPath ([string]$settings.PythonPath) -PreferBlender
+        $categoryItem = $ui.CategoryBox.SelectedItem
+        $category = if ($categoryItem -and $categoryItem.Tag) { [string]$categoryItem.Tag } else { 'all' }
+        $assetType = switch ($category) {
+            'accessory' { 'drawable,drawable-dict' }
+            default { $category }
+        }
+        $angleItem = $ui.AngleBox.SelectedItem
+        $yaw = if ($angleItem -and $angleItem.Tag) { [string]$angleItem.Tag } else { '135' }
         $args = @(
             '-u',
             $Context.Paths.RenderScript,
@@ -401,7 +466,9 @@
 
             '--blender', $env.Blender.Path,
             '--out', $state.OutputPath,
-            '--asset-types', 'all',
+            '--asset-types', $assetType,
+            '--yaw', $yaw,
+            '--ytd-mode', 'match',
             '--workers', $env.RecommendedWorkers,
             '--force',
             '--cutout',
@@ -413,8 +480,13 @@
             if ($row.Kind -ne 'archive') { $args += @('--model', $row.Model) }
         }
 
+        $selectedKeys = @{}
+        foreach ($row in $selected) {
+            $selectedKeys["$($row.Kind)|$($row.Model)|$($row.Source)"] = $true
+        }
         foreach ($row in $rows) {
-            $row.Status = if ($row.Selected) { '渲染中' } else { '跳过' }
+            $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
+            $row.Status = if ($selectedKeys.ContainsKey($key)) { '渲染中' } else { '跳过' }
         }
         $ui.AssetList.Items.Refresh()
         $ui.LogBox.Text = ''
@@ -436,15 +508,21 @@
         $callbackState = $state
         $callbackUi = $ui
         $callbackRows = $rows
+        $callbackSelectedKeys = $selectedKeys
         $callbackProgress = $updateProgressAction
         $callbackOutputPath = $state.OutputPath
         $onOutput = {
             param($line)
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line
-            if ($line -match '^\[report\]\s+history=(.+)$') {
+            if ($line -match '^\[report\]\s+history-html=(.+)$') {
                 $callbackState.ReportHistoryPath = $Matches[1].Trim()
                 $callbackState.ReportPath = $callbackState.ReportHistoryPath
-            } elseif (-not $callbackState.ReportHistoryPath -and $line -match '^\[report\]\s+markdown=(.+)$') {
+            } elseif (-not $callbackState.ReportHistoryPath -and $line -match '^\[report\]\s+html=(.+)$') {
+                $callbackState.ReportPath = $Matches[1].Trim()
+            } elseif (-not $callbackState.ReportHistoryPath -and $line -match '^\[report\]\s+history=(.+)$') {
+                $callbackState.ReportHistoryPath = $Matches[1].Trim()
+                $callbackState.ReportPath = $callbackState.ReportHistoryPath
+            } elseif (-not $callbackState.ReportPath -and $line -match '^\[report\]\s+markdown=(.+)$') {
                 $callbackState.ReportPath = $Matches[1].Trim()
             }
             & $callbackProgress $line
@@ -463,12 +541,13 @@
             $callbackUi.RunButton.IsEnabled = $true
             $callbackUi.RunButton.Content = '开始渲染'
             foreach ($row in $callbackRows) {
-                if ($row.Selected) { $row.Status = if ($exitCode -eq 0) { '完成' } else { '失败' } }
+                $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
+                if ($callbackSelectedKeys.ContainsKey($key)) { $row.Status = if ($exitCode -eq 0) { '完成' } else { '失败' } }
             }
             $callbackUi.AssetList.Items.Refresh()
             $reportPath = [string]$callbackState.ReportPath
             if (-not $reportPath -or -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
-                foreach ($candidateName in @('_render_report.md', '_render_report.json')) {
+                foreach ($candidateName in @('_render_gallery.html', '_render_report.md', '_render_report.json')) {
                     $candidate = Join-Path $callbackOutputPath $candidateName
                     if (Test-Path -LiteralPath $candidate -PathType Leaf) {
                         $candidateFile = Get-Item -LiteralPath $candidate
@@ -564,11 +643,13 @@
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.RunButton -Action $renderAction -OnError $showPageError
     Register-CkTextChangedAction -TextBox $ui.SearchBox -Action $searchAction
+    $ui.CategoryBox.add_SelectionChanged($searchAction)
 
     & $refreshInputAction
     & $updateEnvironmentAction
     & $scanAssetsAction
     $view.Refresh()
+    $ui.BatchCounter.Text = "0/$(@($view).Count)"
 
     return [pscustomobject]@{
         Id = 'model-render'
