@@ -479,6 +479,30 @@
         $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`n功能含 Dump、解密 FXAP，不含修复模型。"
     }.GetNewClosure()
 
+    $pendingLog = New-Object Text.StringBuilder
+    $appendLogTextAction = {
+        param([string]$Text)
+        if ([string]::IsNullOrEmpty($Text)) { return }
+        $logBox = $ui.LogBox
+        $distanceFromBottom = [Math]::Max(0, $logBox.ExtentHeight - $logBox.ViewportHeight - $logBox.VerticalOffset)
+        $followTail = $distanceFromBottom -le 2
+        $logBox.AppendText($Text)
+        if ($followTail -and $logBox.Text.Length -gt 120000) {
+            $logBox.Text = $logBox.Text.Substring($logBox.Text.Length - 120000)
+        }
+        if ($followTail) { $logBox.ScrollToEnd() }
+    }.GetNewClosure()
+    $flushLogAction = {
+        if ($pendingLog.Length -le 0) { return }
+        $text = $pendingLog.ToString()
+        [void]$pendingLog.Clear()
+        [void](& $appendLogTextAction $text)
+    }.GetNewClosure()
+    $logFlushTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $logFlushTimer.Interval = [TimeSpan]::FromMilliseconds(250)
+    $logFlushTick = { [void](& $flushLogAction) }.GetNewClosure()
+    $logFlushTimer.Add_Tick($logFlushTick)
+
     function Start-ServerDump {
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
@@ -529,6 +553,8 @@
         $state.CancelRequested = $false
         $state.ReportPath = ''
         $state.StartedAt = Get-Date
+        $logFlushTimer.Stop()
+        [void]$pendingLog.Clear()
         $ui.OpenReportButton.IsEnabled = $false
         foreach ($counter in @($ui.ResourceCount,$ui.DownloadedCount,$ui.RpfCount,$ui.DecryptedCount,$ui.OutputFileCount,$ui.WarningErrorCount)) { $counter.Text = '0' }
         $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n功能: Dump + FXAP 解密，不含模型修复。"
@@ -540,6 +566,9 @@
         $callbackUi = $ui
         $callbackShowResult = $showResultAction
         $callbackSetRunning = $setRunningAction
+        $callbackPendingLog = $pendingLog
+        $callbackLogTimer = $logFlushTimer
+        $callbackFlushLog = $flushLogAction
 
         $onOutput = {
             param($line)
@@ -564,7 +593,7 @@
                 return
             }
             [void]$callbackOutput.AppendLine($line)
-            if ($line) { Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line }
+            if ($line) { [void]$callbackPendingLog.AppendLine($line) }
         }.GetNewClosure()
 
         $onProcessError = {
@@ -574,6 +603,8 @@
 
         $onExit = {
             param($exitCode)
+            $callbackLogTimer.Stop()
+            [void](& $callbackFlushLog)
             $wasCancelled = $callbackState.CancelRequested
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
@@ -615,7 +646,10 @@
 
         try {
             $state.Process = Start-CkLoggedProcess -FileName $python -Arguments $args -WorkingDirectory $Context.Paths.DumpToolDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
+            $logFlushTimer.Start()
         } catch {
+            $logFlushTimer.Stop()
+            [void]$pendingLog.Clear()
             & $setRunningAction $false
             throw
         }
