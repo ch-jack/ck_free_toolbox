@@ -210,6 +210,10 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
+    (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
+    (Join-Path $packagePath 'app\tools\alchemist\AlchemistCli.exe'),
+    (Join-Path $packagePath 'app\tools\alchemist\alchemist-config.txt'),
+    (Join-Path $packagePath 'app\tools\alchemist\LICENSES.txt'),
     (Join-Path $packagePath 'static\cklogo.ico')
 )
 foreach ($path in $requiredPackageFiles) {
@@ -249,6 +253,7 @@ $manifest = [ordered]@{
         rpfToFivem = $false
         antiJohn = $false
         xiaohaCleaner = $false
+        alchemist = $true
         componentManager = $true
         selfUpdater = $true
     }
@@ -260,6 +265,7 @@ $manifest = [ordered]@{
         componentWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ComponentWorker.ps1')).Hash
         selfUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1')).Hash
         applyUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1')).Hash
+        alchemistCli = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\tools\alchemist\AlchemistCli.exe')).Hash
     }
 }
 [IO.File]::WriteAllText((Join-Path $packagePath 'package-manifest.json'), ($manifest | ConvertTo-Json -Depth 6), $Utf8NoBom)

@@ -116,5 +116,13 @@
             ]
         },
         "default": false
+    },
+    {
+        "id": "enhanced-converter",
+        "title": "增强版转换器",
+        "icon": "✦",
+        "page": "EnhancedConverterPage.ps1",
+        "factory": "New-CkEnhancedConverterPage",
+        "default": false
     }
 ]
