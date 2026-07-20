@@ -188,7 +188,7 @@ $shellXaml = @"
             </Grid>
           </Border>
           <TextBlock Text="CK免费工具箱" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock x:Name="ToolboxVersionText" Text="v1.0.2" Foreground="#6E7580" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
+          <TextBlock x:Name="ToolboxVersionText" AutomationProperties.AutomationId="Toolbox.VersionText" Text="v1.0.2" Foreground="#6E7580" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
         </StackPanel>
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                     <TextBlock x:Name="SelfUpdateStatusText" AutomationProperties.AutomationId="Toolbox.SelfUpdateStatus"
@@ -316,8 +316,7 @@ $componentState = [pscustomobject]@{
 $componentOperationActions = @{ Start = $null; Continue = $null }
 $continueStartupComponentChecksAction = $null
 $selfUpdateState = [pscustomobject]@{
-    Enabled = ((Test-Path -LiteralPath $PortableManifest -PathType Leaf) -and
-        (Test-Path -LiteralPath $selfUpdateWorker -PathType Leaf) -and
+    Enabled = ((Test-Path -LiteralPath $selfUpdateWorker -PathType Leaf) -and
         (Test-Path -LiteralPath $applyUpdateWorker -PathType Leaf))
     CurrentVersion = $ToolboxVersion
     LatestVersion = ''
@@ -901,6 +900,18 @@ foreach ($tool in $tools) {
 
     . $pagePath
     $page = & $tool.factory -Context $context
+    if ($page -is [System.Windows.UIElement]) {
+        $page = [pscustomobject]@{
+            Id = [string]$tool.id
+            Title = [string]$tool.title
+            Icon = [string]$tool.icon
+            Root = $page
+            Activate = $null
+        }
+    }
+    if (-not $page -or -not $page.PSObject.Properties['Root'] -or -not ($page.Root -is [System.Windows.UIElement])) {
+        throw "页面工厂返回无效界面: $($tool.factory)"
+    }
     $page.Root.Visibility = 'Collapsed'
     [void]$pageHost.Children.Add($page.Root)
     $pages[$tool.id] = $page
