@@ -133,6 +133,7 @@
             "requiredFiles": [
                 "auto.py",
                 "requirements.txt",
+                "install.bat",
                 "Bin/Unpacker.exe",
                 "Tools/Decompile/unluac54.jar",
                 "FIXER/FivemDecryptFixer.exe"

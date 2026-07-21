@@ -4,6 +4,7 @@
     $reportRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'server-dump-reports'
     $state = [pscustomobject]@{
         Process = $null
+        DependencyInstallProcess = $null
         CancelRequested = $false
         ReportRoot = $reportRoot
         ReportPath = ''
@@ -72,12 +73,13 @@
           </Border>
           <Border Grid.Column="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
             <Grid>
-              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="70"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DepsDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
                 <TextBlock Text="Python 依赖" FontSize="14" FontWeight="SemiBold"/>
                 <TextBlock x:Name="DepsText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
+              <Button x:Name="InstallDependenciesButton" AutomationProperties.AutomationId="ServerDump.InstallDependenciesButton" Grid.Column="2" Content="安装依赖" Width="66" Height="27" Foreground="#54E0A9" ToolTip="运行 dump-tool\install.bat 安装 psutil、requests 和 pycryptodome"/>
             </Grid>
           </Border>
           <Border Grid.Column="3" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
@@ -134,6 +136,9 @@
           <TextBlock Text="执行" FontSize="18" FontWeight="Bold"/>
           <TextBlock Text="默认 token_choice=1，自动扫描 FiveM 进程 token" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
+        <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,12">
+          <TextBlock AutomationProperties.AutomationId="ServerDump.UsageInstructions" Text="用法：先启动 FiveM，选择服务器并点击进服；服务器加载界面出现后，再点击“开始服务器 Dump”。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="12"/>
+        </Border>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
           <Button x:Name="StartButton" AutomationProperties.AutomationId="ServerDump.StartButton" Content="开始服务器 Dump" Height="44" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/>
@@ -180,7 +185,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','ComponentDot','ComponentText',
+        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','ComponentDot','ComponentText',
         'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','KeepTempBox',
         'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
@@ -259,7 +264,12 @@
         $unpackerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'Bin\Unpacker.exe') -PathType Leaf
         $unluacOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'Tools\Decompile\unluac54.jar') -PathType Leaf
         $fixerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'FIXER\FivemDecryptFixer.exe') -PathType Leaf
-        $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk
+        $installerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'install.bat') -PathType Leaf
+        $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk -and $installerOk
+        $dependencyInstallActive = $false
+        if ($state.DependencyInstallProcess) {
+            try { $dependencyInstallActive = -not $state.DependencyInstallProcess.HasExited } catch { }
+        }
 
         $state.PythonPath = if ($pythonOk) { [string]$pythonInfo.Path } else { '' }
         $state.JavaPath = if ($javaOk) { [string]$javaInfo.Path } else { '' }
@@ -282,6 +292,15 @@
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
         $ui.DepsText.Text = [string]$depsInfo.Label
         $ui.DepsText.ToolTip = [string]$depsInfo.Reason
+        $ui.InstallDependenciesButton.Content = if ($dependencyInstallActive) { '安装中...' } elseif ($depsInfo.Ok) { '重装依赖' } else { '安装依赖' }
+        $ui.InstallDependenciesButton.IsEnabled = $pythonOk -and $installerOk -and -not $dependencyInstallActive
+        $ui.InstallDependenciesButton.ToolTip = if (-not $installerOk) {
+            '服务器 Dump 组件缺少 install.bat，请先更新组件。'
+        } elseif (-not $pythonOk) {
+            '请先选择可用的 Python，再安装依赖。'
+        } else {
+            "使用 $($pythonInfo.Path) 运行 dump-tool\install.bat，只安装 Dump 所需 Python 依赖。"
+        }
 
         if ($componentOk) {
             $ui.ComponentText.Text = 'Dump 与 FXAP 解密组件已就绪'
@@ -293,6 +312,8 @@
             $ui.ComponentText.Text = '缺少 RPF 解包器'
         } elseif (-not $unluacOk) {
             $ui.ComponentText.Text = '缺少 unluac54.jar'
+        } elseif (-not $installerOk) {
+            $ui.ComponentText.Text = '缺少 install.bat'
         } else {
             $ui.ComponentText.Text = '组件不完整，请重新安装'
         }
@@ -305,7 +326,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         $ui.StopButton.IsEnabled = $Running
@@ -424,6 +445,108 @@
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 服务器 Dump') | Out-Null
+    }.GetNewClosure()
+
+    $dependencyInstallTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $dependencyInstallTimer.Interval = [TimeSpan]::FromMilliseconds(400)
+    $dependencyInstallTick = {
+        $process = $state.DependencyInstallProcess
+        if (-not $process) {
+            $dependencyInstallTimer.Stop()
+            return
+        }
+
+        try {
+            if (-not $process.HasExited) { return }
+            $exitCode = [int]$process.ExitCode
+        } catch {
+            $exitCode = 1
+        }
+
+        try { $process.Dispose() } catch { }
+        $state.DependencyInstallProcess = $null
+        $dependencyInstallTimer.Stop()
+
+        try {
+            & $updateEnvironmentAction
+        } catch {
+            & $showPageError "依赖安装窗口已结束，但环境检测失败：$($_.Exception.Message)"
+            return
+        }
+
+        if ($exitCode -eq 0 -and $state.DependenciesOk) {
+            $message = 'Dump 所需 Python 依赖安装完成，依赖检测已刷新。'
+            $ui.StatusLine.Text = $message
+            Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
+            $owner = [System.Windows.Window]::GetWindow($root)
+            if ($owner) {
+                [System.Windows.MessageBox]::Show($owner, $message, 'Python 依赖安装完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+            } else {
+                [System.Windows.MessageBox]::Show($message, 'Python 依赖安装完成', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information) | Out-Null
+            }
+        } else {
+            $detail = if ($state.DependenciesReason) { [string]$state.DependenciesReason } else { "install.bat 退出码：$exitCode" }
+            & $showPageError "Dump Python 依赖安装失败。$detail"
+        }
+    }.GetNewClosure()
+    $dependencyInstallTimer.Add_Tick($dependencyInstallTick)
+
+    $installDependenciesAction = {
+        if ($state.Process -and -not $state.Process.Process.HasExited) {
+            throw '请先停止正在运行的服务器 Dump，再安装 Python 依赖。'
+        }
+        if ($state.DependencyInstallProcess) {
+            try {
+                if (-not $state.DependencyInstallProcess.HasExited) { return }
+                $state.DependencyInstallProcess.Dispose()
+            } catch { }
+            $state.DependencyInstallProcess = $null
+        }
+
+        $installScript = Join-Path $Context.Paths.DumpToolDir 'install.bat'
+        if (-not (Test-Path -LiteralPath $installScript -PathType Leaf)) {
+            throw '服务器 Dump 组件缺少 install.bat，请先点击页面顶部的“安装组件”或“更新组件”。'
+        }
+        $installScriptText = [IO.File]::ReadAllText($installScript, [Text.Encoding]::UTF8)
+        if (-not $installScriptText.Contains('--dependencies-only')) {
+            throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”，再安装 Python 依赖。'
+        }
+
+        $pythonInfo = & $getPythonInfoAction
+        if (-not $pythonInfo.Ok) {
+            throw "Python 不可用：$($pythonInfo.Reason) 请先点击 Python 检测项中的选择按钮。"
+        }
+
+        $cmdExe = if ($env:ComSpec -and (Test-Path -LiteralPath $env:ComSpec -PathType Leaf)) {
+            $env:ComSpec
+        } else {
+            Join-Path $env:SystemRoot 'System32\cmd.exe'
+        }
+        if (-not (Test-Path -LiteralPath $cmdExe -PathType Leaf)) {
+            throw "未找到 cmd.exe：$cmdExe"
+        }
+
+        $previousPython = [Environment]::GetEnvironmentVariable('CK_DUMP_PYTHON', 'Process')
+        $previousNoPause = [Environment]::GetEnvironmentVariable('CK_DUMP_NO_PAUSE', 'Process')
+        $process = $null
+        try {
+            [Environment]::SetEnvironmentVariable('CK_DUMP_PYTHON', [string]$pythonInfo.Path, 'Process')
+            [Environment]::SetEnvironmentVariable('CK_DUMP_NO_PAUSE', '1', 'Process')
+            $arguments = @('/d', '/c', 'call', $installScript, '--dependencies-only')
+            $process = Start-Process -FilePath $cmdExe -ArgumentList (Join-CkArgumentList -Arguments $arguments) -WorkingDirectory $Context.Paths.DumpToolDir -WindowStyle Normal -PassThru -ErrorAction Stop
+        } finally {
+            [Environment]::SetEnvironmentVariable('CK_DUMP_PYTHON', $previousPython, 'Process')
+            [Environment]::SetEnvironmentVariable('CK_DUMP_NO_PAUSE', $previousNoPause, 'Process')
+        }
+        if (-not $process) { throw 'install.bat 安装窗口未启动。' }
+
+        $state.DependencyInstallProcess = $process
+        $ui.InstallDependenciesButton.Content = '安装中...'
+        $ui.InstallDependenciesButton.IsEnabled = $false
+        $ui.DepsText.Text = '正在安装，请查看命令窗口'
+        $ui.DepsText.ToolTip = "正在使用 $($pythonInfo.Path) 安装依赖。"
+        $dependencyInstallTimer.Start()
+        Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] 已启动 install.bat，只安装 Dump Python 依赖。"
     }.GetNewClosure()
 
     $openPythonDownloadAction = {
@@ -583,6 +706,13 @@
     $logFlushTimer.Add_Tick($logFlushTick)
 
     function Start-ServerDump {
+        if ($state.DependencyInstallProcess) {
+            try {
+                if (-not $state.DependencyInstallProcess.HasExited) { throw 'Python 依赖正在安装，请等待安装窗口完成。' }
+            } catch {
+                if ($_.Exception.Message -eq 'Python 依赖正在安装，请等待安装窗口完成。') { throw }
+            }
+        }
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
         foreach ($relative in @('requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe')) {
@@ -766,6 +896,7 @@
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PasteExampleButton -Action $showExampleAction -OnError $showPageError
