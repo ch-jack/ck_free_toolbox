@@ -30,7 +30,7 @@ dist/
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 下载进入隔离 staging，限制大小并拒绝 ZIP 路径穿越。
-- 检查和安装过程输出确定进度；组件下载按 Content-Length 显示实际百分比。
+- 检查和安装过程输出确定进度；组件下载按 Content-Length 显示实际百分比、已下载大小和实时下载速度。
 - 配置了校验附件的组件会校验 Release 发布的 .sha256；所有组件都计算并记录实际 ZIP SHA-256。
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
@@ -42,7 +42,7 @@ dist/
 发布版启动后会异步检查 [ch-jack/ck_free_toolbox](https://github.com/ch-jack/ck_free_toolbox) 最新稳定 Release：
 
 1. 比较 package-manifest.json 中的本地版本和最新 vX.Y.Z 标签。
-2. 用户点击“立即更新”后下载 CK-Free-Toolbox-vX.Y.Z.zip，并显示实际下载进度。
+2. 用户点击“立即更新”后下载 CK-Free-Toolbox-vX.Y.Z.zip，并显示实际下载进度和实时下载速度。
 3. 优先校验同名 .sha256 附件，再校验包内版本、核心文件和 package-manifest.json 哈希。
 4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。

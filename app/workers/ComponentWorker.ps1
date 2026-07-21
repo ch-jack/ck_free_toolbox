@@ -22,6 +22,18 @@ function Write-CkProgress {
     [Console]::Out.WriteLine("CK_PROGRESS $payload")
 }
 
+function Format-CkDownloadSpeed {
+    param([double]$BytesPerSecond)
+
+    if ([double]::IsNaN($BytesPerSecond) -or [double]::IsInfinity($BytesPerSecond) -or $BytesPerSecond -lt 0) {
+        return '0 B/s'
+    }
+    if ($BytesPerSecond -ge 1GB) { return ('{0:N2} GB/s' -f ($BytesPerSecond / 1GB)) }
+    if ($BytesPerSecond -ge 1MB) { return ('{0:N1} MB/s' -f ($BytesPerSecond / 1MB)) }
+    if ($BytesPerSecond -ge 1KB) { return ('{0:N1} KB/s' -f ($BytesPerSecond / 1KB)) }
+    return ('{0:N0} B/s' -f $BytesPerSecond)
+}
+
 function Assert-CkChildPath {
     param([string]$Path, [string]$Parent)
 
@@ -228,22 +240,37 @@ function Save-CkDownload {
         $output = [IO.File]::Open($Destination, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
         $buffer = New-Object byte[] 1048576
         [long]$total = 0
-        $lastPercent = -1
+        $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+        [double]$lastReportSeconds = 0
+        [long]$lastReportBytes = 0
         Write-CkProgress -Percent $StartPercent -Message $Label
         while (($read = $input.Read($buffer, 0, $buffer.Length)) -gt 0) {
             $total += $read
             if ($total -gt $MaxBytes) { throw "组件下载超过大小限制: $MaxBytes bytes" }
             $output.Write($buffer, 0, $read)
-            if ($length -and $length -gt 0) {
-                $percent = $StartPercent + [int](($total / $length) * ($EndPercent - $StartPercent))
-                $percent = [Math]::Min($EndPercent, $percent)
-                if ($percent -gt $lastPercent) {
-                    Write-CkProgress -Percent $percent -Message ("$Label {0:N1}/{1:N1} MB" -f ($total / 1MB), ($length / 1MB))
-                    $lastPercent = $percent
+
+            $elapsedSeconds = $stopwatch.Elapsed.TotalSeconds
+            $reportSeconds = $elapsedSeconds - $lastReportSeconds
+            $isComplete = $length -and $length -gt 0 -and $total -ge $length
+            if ($reportSeconds -ge 0.5 -or $isComplete) {
+                $speed = if ($reportSeconds -gt 0) { ($total - $lastReportBytes) / $reportSeconds } else { 0 }
+                $speedText = Format-CkDownloadSpeed -BytesPerSecond $speed
+                $percent = $StartPercent
+                if ($length -and $length -gt 0) {
+                    $percent = $StartPercent + [int](($total / $length) * ($EndPercent - $StartPercent))
+                    $percent = [Math]::Min($EndPercent, $percent)
+                    $message = "$Label {0:N1}/{1:N1} MB · {2}" -f ($total / 1MB), ($length / 1MB), $speedText
+                } else {
+                    $message = "$Label {0:N1} MB · {1}" -f ($total / 1MB), $speedText
                 }
+                Write-CkProgress -Percent $percent -Message $message
+                $lastReportSeconds = $elapsedSeconds
+                $lastReportBytes = $total
             }
         }
-        Write-CkProgress -Percent $EndPercent -Message "$Label 完成"
+        $averageSeconds = [Math]::Max(0.001, $stopwatch.Elapsed.TotalSeconds)
+        $averageSpeed = Format-CkDownloadSpeed -BytesPerSecond ($total / $averageSeconds)
+        Write-CkProgress -Percent $EndPercent -Message "$Label 完成 · 平均 $averageSpeed"
     } finally {
         if ($output) { $output.Dispose() }
         if ($input) { $input.Dispose() }
