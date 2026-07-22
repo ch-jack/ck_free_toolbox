@@ -117,6 +117,9 @@
           <Button x:Name="ChooseOutputButton" AutomationProperties.AutomationId="ServerDump.ChooseOutputButton" Grid.Column="1" Content="选择目录" Height="36" Margin="7,22,0,0" Background="#173055" Foreground="#58A6FF"/>
           <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="ServerDump.OpenOutputButton" Grid.Column="2" Content="打开输出" Height="36" Margin="7,22,0,0"/>
         </Grid>
+        <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,-2,0,10">
+          <TextBlock Text="存储说明：临时文件默认跟随输出盘，并在每个资源解密后立即清理；请至少保留 5 GB 可用空间。勾选“保留临时目录”会持续占用空间。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
+        </Border>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
           <StackPanel>
@@ -390,6 +393,19 @@
         $lines.Add("输出目录: $($Payload.output)")
         if ($Payload.PSObject.Properties['java'] -and $Payload.java) {
             $lines.Add("Java: $($Payload.java.version) | $($Payload.java.path)")
+        }
+        if ($Payload.PSObject.Properties['storage'] -and $Payload.storage) {
+            $storage = $Payload.storage
+            if ($storage.temp_dir) { $lines.Add("临时工作区: $($storage.temp_dir)") }
+            $tempPolicy = if ([bool]$storage.temp_kept) { '保留本次临时工作区' } else { '逐资源解密后立即清理' }
+            $lines.Add("临时策略: $tempPolicy")
+            $minimumFree = if ($null -ne $storage.minimum_free_gb -and "$($storage.minimum_free_gb)") { $storage.minimum_free_gb } else { 5 }
+            $lines.Add("空间要求: 至少保留 $minimumFree GB")
+            $spaceParts = New-Object System.Collections.Generic.List[string]
+            if ($null -ne $storage.output_initial_free_gb -and "$($storage.output_initial_free_gb)") { $spaceParts.Add("输出盘启动 $($storage.output_initial_free_gb) GB") }
+            if ($null -ne $storage.temp_initial_free_gb -and "$($storage.temp_initial_free_gb)") { $spaceParts.Add("临时盘启动 $($storage.temp_initial_free_gb) GB") }
+            if ($null -ne $storage.output_final_free_gb -and "$($storage.output_final_free_gb)") { $spaceParts.Add("输出盘结束 $($storage.output_final_free_gb) GB") }
+            if ($spaceParts.Count) { $lines.Add("磁盘剩余: $($spaceParts -join ' | ')") }
         }
         $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；不含模型修复")
         if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
@@ -729,9 +745,26 @@
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
         $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
-        $driveRoot = [IO.Path]::GetPathRoot($outputPath).TrimEnd('\')
+        $outputRoot = [IO.Path]::GetPathRoot($outputPath)
+        $driveRoot = $outputRoot.TrimEnd('\')
         if ($outputPath.Equals($driveRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '不能直接输出到磁盘根目录。' }
         New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
+
+        $minimumFreeGB = 5
+        $availableFreeText = '由 dump-tool 启动时检查'
+        if ($outputRoot -match '^[A-Za-z]:\\$') {
+            try {
+                $outputDrive = New-Object System.IO.DriveInfo($outputRoot)
+            } catch {
+                throw "无法检查输出盘剩余空间: $($_.Exception.Message)"
+            }
+            if (-not $outputDrive.IsReady) { throw "输出盘尚未就绪: $outputRoot" }
+            $availableFreeGB = [Math]::Round($outputDrive.AvailableFreeSpace / 1GB, 2)
+            $availableFreeText = "$availableFreeGB GB"
+            if ($outputDrive.AvailableFreeSpace -lt ([int64]($minimumFreeGB * 1GB))) {
+                throw "输出盘剩余空间不足：当前 $availableFreeGB GB，至少需要保留 $minimumFreeGB GB。请更换输出目录或释放空间。"
+            }
+        }
 
         if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
         $python = [string]$state.PythonPath
@@ -760,6 +793,7 @@
             '--output', $outputPath,
             '--report', $reportPath,
             '--java', $java,
+            '--min-free-gb', '5',
             '--non-interactive'
         )
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
@@ -771,7 +805,8 @@
         [void]$pendingLog.Clear()
         $ui.OpenReportButton.IsEnabled = $false
         foreach ($counter in @($ui.ResourceCount,$ui.DownloadedCount,$ui.RpfCount,$ui.DecryptedCount,$ui.OutputFileCount,$ui.WarningErrorCount)) { $counter.Text = '0' }
-        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n功能: Dump + FXAP 解密，不含模型修复。"
+        $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源解密后立即清理临时文件' }
+        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n功能: Dump + FXAP 解密，不含模型修复。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
