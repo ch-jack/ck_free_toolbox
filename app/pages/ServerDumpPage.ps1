@@ -14,6 +14,11 @@
         DependenciesOk = $false
         DependenciesReason = ''
         EnvironmentChecked = $false
+        Operation = ''
+        ResourceListPayload = $null
+        ResourceTarget = ''
+        ResourceNames = @()
+        SelectedResources = @()
     }
 
     $xaml = @"
@@ -121,15 +126,17 @@
           <TextBlock Text="存储说明：临时文件默认跟随输出盘，并在每个资源解密后立即清理；请至少保留 5 GB 可用空间。勾选“保留临时目录”会持续占用空间。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
         </Border>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="116"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="资源选择" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
-            <TextBox x:Name="ResourcesBox" AutomationProperties.AutomationId="ServerDump.ResourcesBox" Height="36" Text="all" ToolTip="输入 all，或填逗号分隔的资源序号/资源名"/>
+            <TextBlock Text="资源匹配" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
+            <TextBox x:Name="ResourcesBox" AutomationProperties.AutomationId="ServerDump.ResourcesBox" Height="36" Text="*" ToolTip="支持 all、序号、精确资源名以及 *、? 通配符；多个条件用逗号分隔"/>
           </StackPanel>
-          <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="10,23,0,0">
+          <Button x:Name="LoadResourcesButton" AutomationProperties.AutomationId="ServerDump.LoadResourcesButton" Grid.Column="1" Content="获取资源清单" Height="36" Margin="8,22,0,0" Background="#173055" Foreground="#58A6FF"/>
+          <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,23,0,0">
             <CheckBox x:Name="KeepTempBox" AutomationProperties.AutomationId="ServerDump.KeepTempBox" Content="保留临时目录"/>
           </StackPanel>
         </Grid>
+        <TextBlock x:Name="ResourceSelectionText" AutomationProperties.AutomationId="ServerDump.ResourceSelectionText" Text="尚未获取资源清单" Foreground="#686E78" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
       </StackPanel>
     </Border>
 
@@ -144,7 +151,7 @@
         </Border>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
-          <Button x:Name="StartButton" AutomationProperties.AutomationId="ServerDump.StartButton" Content="开始服务器 Dump" Height="44" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/>
+          <Button x:Name="StartButton" AutomationProperties.AutomationId="ServerDump.StartButton" Content="开始服务器 Dump" Height="44" IsEnabled="False" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/>
           <Button x:Name="StopButton" AutomationProperties.AutomationId="ServerDump.StopButton" Grid.Column="1" Content="停止任务" Height="44" Margin="7,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
         </Grid>
       </StackPanel>
@@ -189,7 +196,7 @@
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','ComponentDot','ComponentText',
-        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','KeepTempBox',
+        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox',
         'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
@@ -329,7 +336,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         $ui.StopButton.IsEnabled = $Running
@@ -445,6 +452,164 @@
         }
     }
 
+    function Assert-ServerDumpResourceSelectionSupport {
+        $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file')) {
+            throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
+        }
+    }
+
+    function Test-ServerDumpResourceSelector {
+        param($Resource, [string]$Expression)
+
+        $name = [string]$Resource.name
+        $index = [int]$Resource.index
+        foreach ($rawToken in @($Expression -split ',')) {
+            $token = [string]$rawToken
+            $token = $token.Trim()
+            if (-not $token) { continue }
+            if ($token -ieq 'all') { return $true }
+            if ($token -match '^\d+$' -and [int]$token -eq $index) { return $true }
+            if ($name -ieq $token -or $name -like $token) { return $true }
+        }
+        return $false
+    }
+
+    function Clear-ServerDumpResourceSelection {
+        param([string]$Message = '尚未获取资源清单')
+
+        $state.ResourceTarget = ''
+        $state.ResourceNames = @()
+        $state.SelectedResources = @()
+        $ui.ResourceSelectionText.Text = $Message
+        $ui.ResourceSelectionText.ToolTip = ''
+        $ui.ResourceSelectionText.Foreground = '#686E78'
+        $ui.StartButton.IsEnabled = $false
+    }
+
+    function Show-ServerDumpResourceSelection {
+        param($Payload, [string]$InitialPattern)
+
+        $resources = @($Payload.resources)
+        if (-not $resources.Count) { throw '服务器没有返回可选择的资源。' }
+
+        $dialogXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="选择要 Dump 的资源" Width="760" Height="680" MinWidth="620" MinHeight="500"
+        WindowStartupLocation="CenterOwner" Background="#0D0F12" Foreground="#E7E9ED"
+        ResizeMode="CanResizeWithGrip" ShowInTaskbar="False">
+  <Grid Margin="18">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <TextBlock Text="选择要 Dump 的资源" FontSize="20" FontWeight="SemiBold"/>
+    <Grid Grid.Row="1" Margin="0,14,0,10">
+      <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="124"/></Grid.ColumnDefinitions>
+      <TextBox x:Name="PatternBox" Height="36" Padding="8,5" Background="#15181C" Foreground="#E7E9ED" BorderBrush="#303641"
+               ToolTip="支持 all、序号、精确资源名以及 *、? 通配符；多个条件用逗号分隔"/>
+      <Button x:Name="ApplyPatternButton" Grid.Column="1" Content="匹配并勾选" Height="36" Margin="8,0,0,0"
+              Background="#173055" Foreground="#58A6FF"/>
+    </Grid>
+    <Grid Grid.Row="2" Margin="0,0,0,8">
+      <TextBlock x:Name="SelectionCountText" Foreground="#8B9099" VerticalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button x:Name="SelectAllButton" Content="全选" Width="64" Height="28" Margin="0,0,7,0"/>
+        <Button x:Name="ClearAllButton" Content="清空" Width="64" Height="28"/>
+      </StackPanel>
+    </Grid>
+    <Border Grid.Row="3" Background="#111316" BorderBrush="#282D36" BorderThickness="1" CornerRadius="6">
+      <ListBox x:Name="ResourceList" Background="Transparent" Foreground="#D9DCE2" BorderThickness="0"
+               Padding="8" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"/>
+    </Border>
+    <Grid Grid.Row="4" Margin="0,14,0,0">
+      <TextBlock Text="确认后将保存精确资源名；正式 Dump 在主页面单独启动。" Foreground="#686E78" VerticalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <Button x:Name="CancelButton" Content="取消" Width="82" Height="34" Margin="0,0,8,0" IsCancel="True"/>
+        <Button x:Name="ConfirmButton" Content="确认选择" Width="96" Height="34" Background="#124834" Foreground="#54E0A9" IsDefault="True"/>
+      </StackPanel>
+    </Grid>
+  </Grid>
+</Window>
+"@
+        $dialog = Import-CkXaml $dialogXaml
+        $controls = Get-CkNamedControls -Root $dialog -Names @(
+            'PatternBox','ApplyPatternButton','SelectionCountText','SelectAllButton','ClearAllButton',
+            'ResourceList','CancelButton','ConfirmButton'
+        )
+        $owner = [System.Windows.Window]::GetWindow($root)
+        if ($owner) { $dialog.Owner = $owner }
+
+        $pattern = if ([string]::IsNullOrWhiteSpace($InitialPattern)) { '*' } else { $InitialPattern.Trim() }
+        $controls.PatternBox.Text = $pattern
+        $boxes = New-Object System.Collections.Generic.List[object]
+        $result = [pscustomobject]@{ Confirmed = $false; Pattern = $pattern; Resources = @() }
+
+        $updateCountAction = {
+            $selectedCount = @($boxes | Where-Object { $_.IsChecked }).Count
+            $controls.SelectionCountText.Text = "已选择 $selectedCount / $($resources.Count)"
+        }.GetNewClosure()
+
+        foreach ($resource in $resources) {
+            $box = New-Object System.Windows.Controls.CheckBox
+            $box.Content = ('{0,4}  {1}' -f [int]$resource.index, [string]$resource.name)
+            $box.Tag = [string]$resource.name
+            $box.ToolTip = [string]$resource.name
+            $box.Margin = '4,4,4,4'
+            $box.Padding = '2'
+            $box.IsChecked = Test-ServerDumpResourceSelector -Resource $resource -Expression $pattern
+            $handler = { & $updateCountAction }.GetNewClosure()
+            $box.Add_Checked($handler)
+            $box.Add_Unchecked($handler)
+            [void]$boxes.Add($box)
+            [void]$controls.ResourceList.Items.Add($box)
+        }
+        & $updateCountAction
+
+        $applyPatternAction = {
+            $expression = $controls.PatternBox.Text.Trim()
+            foreach ($i in 0..($resources.Count - 1)) {
+                $boxes[$i].IsChecked = Test-ServerDumpResourceSelector -Resource $resources[$i] -Expression $expression
+            }
+            & $updateCountAction
+        }.GetNewClosure()
+        $selectAllAction = {
+            foreach ($box in $boxes) { $box.IsChecked = $true }
+            & $updateCountAction
+        }.GetNewClosure()
+        $clearAllAction = {
+            foreach ($box in $boxes) { $box.IsChecked = $false }
+            & $updateCountAction
+        }.GetNewClosure()
+        $confirmAction = {
+            $selected = @($boxes | Where-Object { $_.IsChecked } | ForEach-Object { [string]$_.Tag })
+            if (-not $selected.Count) {
+                [System.Windows.MessageBox]::Show($dialog, '请至少选择一个资源。', '资源选择', [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Warning) | Out-Null
+                return
+            }
+            $result.Confirmed = $true
+            $result.Pattern = $controls.PatternBox.Text.Trim()
+            $result.Resources = $selected
+            $dialog.DialogResult = $true
+        }.GetNewClosure()
+        $cancelAction = {
+            $dialog.DialogResult = $false
+        }.GetNewClosure()
+
+        Register-CkButtonAction -Button $controls.ApplyPatternButton -Action $applyPatternAction
+        Register-CkButtonAction -Button $controls.SelectAllButton -Action $selectAllAction
+        Register-CkButtonAction -Button $controls.ClearAllButton -Action $clearAllAction
+        Register-CkButtonAction -Button $controls.ConfirmButton -Action $confirmAction
+        Register-CkButtonAction -Button $controls.CancelButton -Action $cancelAction
+        [void]$dialog.ShowDialog()
+        return $result
+    }
+
     $getPythonInfoAction = (Get-Command Get-ServerDumpPythonInfo).ScriptBlock.GetNewClosure()
     $getJavaInfoAction = (Get-Command Get-ServerDumpJavaInfo).ScriptBlock.GetNewClosure()
     $testPackagesAction = (Get-Command Test-ServerDumpPythonPackages).ScriptBlock.GetNewClosure()
@@ -453,6 +618,8 @@
     $setRunningAction = (Get-Command Set-ServerDumpRunning).ScriptBlock.GetNewClosure()
     $getSummaryValueAction = (Get-Command Get-ServerDumpSummaryValue).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-ServerDumpResult).ScriptBlock.GetNewClosure()
+    $clearResourceSelectionAction = (Get-Command Clear-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
+    $showResourceSelectionAction = (Get-Command Show-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
 
     $showPageError = {
         param([string]$message)
@@ -721,6 +888,179 @@
     $logFlushTick = { [void](& $flushLogAction) }.GetNewClosure()
     $logFlushTimer.Add_Tick($logFlushTick)
 
+    function Start-ServerResourceList {
+        if ($state.DependencyInstallProcess) {
+            try {
+                if (-not $state.DependencyInstallProcess.HasExited) { throw 'Python 依赖正在安装，请等待安装窗口完成。' }
+            } catch {
+                if ($_.Exception.Message -eq 'Python 依赖正在安装，请等待安装窗口完成。') { throw }
+            }
+        }
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器任务正在运行。' }
+        if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) {
+            throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。'
+        }
+        Assert-ServerDumpResourceSelectionSupport
+
+        $target = $ui.TargetBox.Text.Trim()
+        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
+        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+            throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
+        }
+        if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
+        $python = [string]$state.PythonPath
+        if (-not $python -or -not (Test-Path -LiteralPath $python -PathType Leaf)) {
+            throw 'Python 不可用，请先在页面顶部完成 Python 设置。'
+        }
+        if (-not $state.DependenciesOk) {
+            $reason = if ($state.DependenciesReason) { [string]$state.DependenciesReason } else { 'Python 依赖未就绪。' }
+            throw $reason
+        }
+
+        $initialPattern = $ui.ResourcesBox.Text.Trim()
+        if (-not $initialPattern) { $initialPattern = '*' }
+        & $clearResourceSelectionAction '正在获取资源清单...'
+        $state.ResourceListPayload = $null
+        $state.CancelRequested = $false
+        $state.Operation = 'resource-list'
+        $logFlushTimer.Stop()
+        [void]$pendingLog.Clear()
+        $newLine = [Environment]::NewLine
+        $ui.LogBox.Text = "正在获取服务器资源清单..." + $newLine + "目标: $target" + $newLine + "此步骤不会创建输出或开始 Dump。"
+        & $setRunningAction $true
+        $ui.ResultStatus.Text = '获取资源清单'
+        $ui.StatusLine.Text = '正在扫描 token 并请求服务器资源配置。'
+
+        $args = @(
+            '-u', $Context.Paths.DumpToolScript,
+            $target,
+            '--token-choice', '1',
+            '--list-resources',
+            '--non-interactive'
+        )
+        $output = New-Object Text.StringBuilder
+        $callbackOutput = $output
+        $callbackState = $state
+        $callbackUi = $ui
+        $callbackSetRunning = $setRunningAction
+        $callbackShowSelection = $showResourceSelectionAction
+        $callbackShowError = $showPageError
+        $callbackClearSelection = $clearResourceSelectionAction
+        $callbackPendingLog = $pendingLog
+        $callbackLogTimer = $logFlushTimer
+        $callbackFlushLog = $flushLogAction
+        $callbackTarget = $target
+        $callbackInitialPattern = $initialPattern
+
+        $onOutput = {
+            param($line)
+            if ($line -and $line.StartsWith('CK_PROGRESS ', [StringComparison]::Ordinal)) {
+                try {
+                    $progress = $line.Substring(12) | ConvertFrom-Json
+                    $callbackUi.ProgressBar.Value = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
+                    $callbackUi.StatusLine.Text = [string]$progress.message
+                } catch { }
+                return
+            }
+            if ($line -and $line.StartsWith('CK_RESOURCE_LIST ', [StringComparison]::Ordinal)) {
+                try {
+                    $callbackState.ResourceListPayload = $line.Substring(17) | ConvertFrom-Json
+                } catch {
+                    $callbackState.ResourceListPayload = [pscustomobject]@{
+                        status = 'error'
+                        error = "资源清单响应无法解析: $($_.Exception.Message)"
+                        resources = @()
+                    }
+                }
+                return
+            }
+            [void]$callbackOutput.AppendLine($line)
+            if ($line) { [void]$callbackPendingLog.AppendLine($line) }
+        }.GetNewClosure()
+
+        $onProcessError = {
+            param($message)
+            $callbackUi.StatusLine.Text = $message
+        }.GetNewClosure()
+
+        $onExit = {
+            param($exitCode)
+            $callbackLogTimer.Stop()
+            [void](& $callbackFlushLog)
+            $wasCancelled = $callbackState.CancelRequested
+            $callbackState.CancelRequested = $false
+            $callbackState.Process = $null
+            $callbackState.Operation = ''
+            & $callbackSetRunning $false
+
+            if ($wasCancelled) {
+                & $callbackClearSelection '资源清单获取已停止'
+                $callbackUi.ResultStatus.Text = '已停止'
+                $callbackUi.StatusLine.Text = '资源清单获取已停止。'
+                return
+            }
+
+            $payload = $callbackState.ResourceListPayload
+            if (-not $payload) {
+                $raw = $callbackOutput.ToString().Trim()
+                $lines = @($raw -split '\r?\n')
+                for ($i = $lines.Count - 1; $i -ge 0 -and -not $payload; $i--) {
+                    try {
+                        $candidate = $lines[$i] | ConvertFrom-Json
+                        if ($candidate.command -eq 'list-resources') { $payload = $candidate }
+                    } catch { }
+                }
+            }
+            if (-not $payload -or $payload.status -ne 'success') {
+                $detail = if ($payload -and $payload.error) { [string]$payload.error } else { "进程退出码: $exitCode" }
+                & $callbackClearSelection '资源清单获取失败'
+                & $callbackShowError "资源清单获取失败：$detail"
+                return
+            }
+
+            try {
+                $selection = & $callbackShowSelection $payload $callbackInitialPattern
+            } catch {
+                & $callbackClearSelection '资源选择窗口打开失败'
+                & $callbackShowError "资源选择窗口打开失败：$($_.Exception.Message)"
+                return
+            }
+            if (-not $selection.Confirmed) {
+                & $callbackClearSelection '已取消资源选择'
+                $callbackUi.ResultStatus.Text = '已取消选择'
+                $callbackUi.StatusLine.Text = '资源清单已获取，但没有确认选择。'
+                return
+            }
+
+            $callbackUi.ResourcesBox.Text = [string]$selection.Pattern
+            $callbackState.ResourceTarget = $callbackTarget
+            $callbackState.ResourceNames = @($payload.resources | ForEach-Object { [string]$_.name })
+            $callbackState.SelectedResources = @($selection.Resources)
+            $selectedCount = $callbackState.SelectedResources.Count
+            $callbackUi.ResourceSelectionText.Text = "已确认 $selectedCount / $($callbackState.ResourceNames.Count) 个资源"
+            $callbackUi.ResourceSelectionText.ToolTip = ($callbackState.SelectedResources -join [Environment]::NewLine)
+            $callbackUi.ResourceSelectionText.Foreground = '#54E0A9'
+            $callbackUi.ResourceCount.Text = [string]$selectedCount
+            $callbackUi.StartButton.IsEnabled = $true
+            $callbackUi.ResultStatus.Text = '资源已确认'
+            $callbackUi.ResultStatus.Foreground = '#31D69A'
+            $callbackUi.StatusLine.Text = "已确认 $selectedCount 个资源；点击开始服务器 Dump 执行第二步。"
+            Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 已确认 $selectedCount 个资源，尚未开始 Dump。"
+        }.GetNewClosure()
+
+        try {
+            $state.Process = Start-CkLoggedProcess -FileName $python -Arguments $args -WorkingDirectory $Context.Paths.DumpToolDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
+            $logFlushTimer.Start()
+        } catch {
+            $state.Operation = ''
+            $logFlushTimer.Stop()
+            [void]$pendingLog.Clear()
+            & $setRunningAction $false
+            & $clearResourceSelectionAction '资源清单启动失败'
+            throw
+        }
+    }
+
     function Start-ServerDump {
         if ($state.DependencyInstallProcess) {
             try {
@@ -731,6 +1071,7 @@
         }
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
+        Assert-ServerDumpResourceSelectionSupport
         foreach ($relative in @('requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe')) {
             $required = Join-Path $Context.Paths.DumpToolDir $relative
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "服务器 Dump 组件不完整，缺少: $relative" }
@@ -741,6 +1082,11 @@
         if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
+
+        if ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count) {
+            throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
+        }
+        $selectedResources = @($state.SelectedResources)
 
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
@@ -778,18 +1124,23 @@
             throw 'Java 不可用，请先在页面顶部选择 Java 目录；最低 Java 8，推荐 Java 17。'
         }
 
-        $resources = $ui.ResourcesBox.Text.Trim()
-        if (-not $resources) { $resources = 'all' }
-
         $runDir = Join-Path $state.ReportRoot ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
         New-Item -ItemType Directory -Force -Path $runDir | Out-Null
         $reportPath = Join-Path $runDir 'report.json'
+        $selectionPath = Join-Path $runDir 'selected-resources.json'
+        $selectionPayload = [ordered]@{
+            schemaVersion = 1
+            target = $target
+            resources = $selectedResources
+        }
+        $selectionJson = $selectionPayload | ConvertTo-Json -Depth 4 -Compress
+        [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
 
         $args = @(
             '-u', $Context.Paths.DumpToolScript,
             $target,
             '--token-choice', '1',
-            '--resources', $resources,
+            '--resources-file', $selectionPath,
             '--output', $outputPath,
             '--report', $reportPath,
             '--java', $java,
@@ -799,6 +1150,7 @@
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
 
         $state.CancelRequested = $false
+        $state.Operation = 'dump'
         $state.ReportPath = ''
         $state.StartedAt = Get-Date
         $logFlushTimer.Stop()
@@ -857,6 +1209,7 @@
             $wasCancelled = $callbackState.CancelRequested
             $callbackState.CancelRequested = $false
             $callbackState.Process = $null
+            $callbackState.Operation = ''
             & $callbackSetRunning $false
 
             $raw = $callbackOutput.ToString().Trim()
@@ -897,6 +1250,7 @@
             $state.Process = Start-CkLoggedProcess -FileName $python -Arguments $args -WorkingDirectory $Context.Paths.DumpToolDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
             $logFlushTimer.Start()
         } catch {
+            $state.Operation = ''
             $logFlushTimer.Stop()
             [void]$pendingLog.Clear()
             & $setRunningAction $false
@@ -904,6 +1258,7 @@
         }
     }
 
+    $loadResourcesAction = (Get-Command Start-ServerResourceList).ScriptBlock.GetNewClosure()
     $startAction = (Get-Command Start-ServerDump).ScriptBlock.GetNewClosure()
     $runAction = { & $startAction }.GetNewClosure()
     $stopAction = {
@@ -912,7 +1267,11 @@
         $ui.StopButton.IsEnabled = $false
         $ui.ResultStatus.Text = '正在停止'
         $ui.ResultStatus.Foreground = '#F4B860'
-        $ui.StatusLine.Text = '正在停止 Python、RPF 解包和 Java 子进程...'
+        $ui.StatusLine.Text = if ($state.Operation -eq 'resource-list') {
+            '正在停止资源清单获取...'
+        } else {
+            '正在停止 Python、RPF 解包和 Java 子进程...'
+        }
         $pidToStop = $state.Process.Process.Id
         try {
             $killerInfo = New-Object Diagnostics.ProcessStartInfo
@@ -929,6 +1288,19 @@
         }
     }.GetNewClosure()
 
+    $targetChangedAction = {
+        if (@($state.SelectedResources).Count -and $ui.TargetBox.Text.Trim() -ne $state.ResourceTarget) {
+            & $clearResourceSelectionAction '目标地址已修改，请重新获取资源清单'
+        }
+    }.GetNewClosure()
+    $resourcePatternChangedAction = {
+        if (@($state.SelectedResources).Count) {
+            & $clearResourceSelectionAction '资源匹配条件已修改，请重新获取资源清单'
+        }
+    }.GetNewClosure()
+    $ui.TargetBox.Add_TextChanged($targetChangedAction)
+    $ui.ResourcesBox.Add_TextChanged($resourcePatternChangedAction)
+
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
@@ -939,6 +1311,7 @@
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
 
