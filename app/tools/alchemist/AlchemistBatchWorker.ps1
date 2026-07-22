@@ -51,6 +51,38 @@ function Get-CkAvailablePath {
     throw "Unable to allocate a unique failed-file path: $Path"
 }
 
+$script:CkGtaAssetSuffixes = @(
+    '.yft', '.ydr', '.ydd', '.ytd', '.ybn', '.ymap', '.ytyp', '.ynv', '.ycd', '.ypt',
+    '.yld', '.yed', '.ymf', '.yvr', '.ywr', '.awc', '.rel',
+    '.yft.xml', '.ydr.xml', '.ydd.xml', '.ytd.xml', '.ybn.xml', '.ymap.xml',
+    '.ytyp.xml', '.ynv.xml', '.ycd.xml', '.ypt.xml', '.yld.xml', '.yed.xml'
+)
+
+function Test-CkGtaAssetFile {
+    param([Parameter(Mandatory)][IO.FileInfo]$File)
+
+    $name = $File.Name.ToLowerInvariant()
+    foreach ($suffix in $script:CkGtaAssetSuffixes) {
+        if ($name.EndsWith($suffix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
+    }
+
+    try {
+        $stream = [IO.File]::Open($File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
+        try {
+            if ($stream.Length -ge 4) {
+                $magicBytes = New-Object byte[] 4
+                if ($stream.Read($magicBytes, 0, 4) -eq 4) {
+                    $magic = [Text.Encoding]::ASCII.GetString($magicBytes)
+                    if ($magic -in @('RSC7', 'RSC8')) { return $true }
+                }
+            }
+        } finally {
+            $stream.Dispose()
+        }
+    } catch { }
+    return $false
+}
+
 function ConvertTo-CkHtmlText {
     param($Value)
     return [Net.WebUtility]::HtmlEncode([string]$Value)
@@ -68,7 +100,8 @@ function Write-CkAlchemistReport {
     foreach ($item in $Items) {
         $statusClass = [string]$item.Status
         $statusLabel = switch ($statusClass) {
-            'success' { 'SUCCESS / &#25104;&#21151;' }
+            'converted' { 'CONVERTED / &#24050;&#36716;&#25442;' }
+            'copied' { 'COPIED / &#21407;&#26679;&#22797;&#21046;' }
             'failed' { 'FAILED / &#22833;&#36133;' }
             'skipped' { 'SKIPPED / &#36339;&#36807;' }
             default { ConvertTo-CkHtmlText $statusClass }
@@ -87,7 +120,8 @@ function Write-CkAlchemistReport {
     }
 
     $duration = $FinishedAt - $StartedAt
-    $mode = if ($Refine) { 'Optimize (--refine)' } else { 'Convert' }
+    $operation = if ($Refine) { 'Optimize assets without conversion (--refine)' } else { 'Convert assets' }
+    $mode = "$operation; GTA5 assets only, code and configuration files are copied unchanged"
     $fatalHtml = if ($FatalError) {
         '<div class="fatal"><strong>Fatal error:</strong> ' + (ConvertTo-CkHtmlText $FatalError) + '</div>'
     } else { '' }
@@ -101,7 +135,7 @@ function Write-CkAlchemistReport {
 <title>Alchemist &#36716;&#25442;&#25253;&#21578;</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d10;--panel:#12151a;--border:#2a3039;--text:#e7eaf0;--muted:#929aa7;--green:#31d69a;--red:#ef7c86;--amber:#f4b860;--blue:#58a6ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1500px;margin:0 auto;padding:28px}.hero,.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}.hero h1{margin:0 0 6px;font-size:28px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}.card{background:#0e1115;border:1px solid var(--border);border-radius:9px;padding:14px}.value{font-size:26px;font-weight:700}.success-text{color:var(--green)}.failed-text{color:var(--red)}.skipped-text{color:var(--amber)}dl{display:grid;grid-template-columns:170px 1fr;gap:8px 14px;margin:0}dt{color:var(--muted)}dd{margin:0;word-break:break-all}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px}th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{position:sticky;top:0;background:#171b21;color:#bfc6d1}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;white-space:nowrap}.badge.success{background:#113a2c;color:var(--green)}.badge.failed{background:#3b1b20;color:var(--red)}.badge.skipped{background:#3a2c13;color:var(--amber)}tr.failed{background:rgba(239,124,134,.035)}.fatal{border:1px solid #6f2d36;background:#30171b;color:#ffb5bc;border-radius:8px;padding:13px;margin-top:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1500px;margin:0 auto;padding:28px}.hero,.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}.hero h1{margin:0 0 6px;font-size:28px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}.card{background:#0e1115;border:1px solid var(--border);border-radius:9px;padding:14px}.value{font-size:26px;font-weight:700}.converted-text{color:var(--green)}.copied-text{color:var(--blue)}.failed-text{color:var(--red)}.skipped-text{color:var(--amber)}dl{display:grid;grid-template-columns:170px 1fr;gap:8px 14px;margin:0}dt{color:var(--muted)}dd{margin:0;word-break:break-all}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px}th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{position:sticky;top:0;background:#171b21;color:#bfc6d1}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;white-space:nowrap}.badge.converted{background:#113a2c;color:var(--green)}.badge.copied{background:#102440;color:var(--blue)}.badge.failed{background:#3b1b20;color:var(--red)}.badge.skipped{background:#3a2c13;color:var(--amber)}tr.failed{background:rgba(239,124,134,.035)}.fatal{border:1px solid #6f2d36;background:#30171b;color:#ffb5bc;border-radius:8px;padding:13px;margin-top:16px}
 </style>
 </head>
 <body><div class="wrap">
@@ -110,7 +144,8 @@ function Write-CkAlchemistReport {
   <div class="muted">$(ConvertTo-CkHtmlText $StartedAt.ToString('yyyy-MM-dd HH:mm:ss')) - $(ConvertTo-CkHtmlText $FinishedAt.ToString('yyyy-MM-dd HH:mm:ss'))</div>
   <div class="grid">
     <div class="card"><div class="muted">Total / &#24635;&#25968;</div><div class="value">$Total</div></div>
-    <div class="card"><div class="muted">Success / &#25104;&#21151;</div><div class="value success-text">$Success</div></div>
+    <div class="card"><div class="muted">Converted / &#24050;&#36716;&#25442;</div><div class="value converted-text">$Converted</div></div>
+    <div class="card"><div class="muted">Copied / &#21407;&#26679;&#22797;&#21046;</div><div class="value copied-text">$Copied</div></div>
     <div class="card"><div class="muted">Failed / &#22833;&#36133;</div><div class="value failed-text">$Failed</div></div>
     <div class="card"><div class="muted">Skipped / &#36339;&#36807;</div><div class="value skipped-text">$Skipped</div></div>
     <div class="card"><div class="muted">Move failed / &#31227;&#21160;&#22833;&#36133;</div><div class="value failed-text">$Unmoved</div></div>
@@ -170,6 +205,8 @@ $inputRoot = if ($inputIsFile) { Split-Path -Parent $InputPath } else { $InputPa
 $inputPrefix = $inputRoot.TrimEnd([char[]]@('\', '/')) + [IO.Path]::DirectorySeparatorChar
 $Total = $files.Count
 $Success = 0
+$Converted = 0
+$Copied = 0
 $Failed = 0
 $Skipped = 0
 $Unmoved = 0
@@ -192,7 +229,9 @@ try {
             $failedPath = ''
             $status = 'failed'
             $errorMessage = ''
-            Write-Output "[ck-file] index=$($Processed + 1) total=$Total file=$relativePath"
+            $isGtaAsset = Test-CkGtaAssetFile -File $file
+            $kind = if ($isGtaAsset) { 'asset' } else { 'passthrough' }
+            Write-Output "[ck-file] index=$($Processed + 1) total=$Total kind=$kind file=$relativePath"
 
             if (Test-Path -LiteralPath $targetPath -PathType Container) {
                 $Skipped++
@@ -202,6 +241,20 @@ try {
                 $Skipped++
                 $status = 'skipped'
                 $errorMessage = 'Destination exists and overwrite is disabled.'
+            } elseif (-not $isGtaAsset) {
+                try {
+                    $targetParent = Split-Path -Parent $targetPath
+                    if ($targetParent) { New-Item -ItemType Directory -Path $targetParent -Force | Out-Null }
+                    Copy-Item -LiteralPath $file.FullName -Destination $targetPath -Force:$Overwrite -ErrorAction Stop
+                    $Copied++
+                    $Success++
+                    $status = 'copied'
+                    Write-Output "[ck-copy] file=$relativePath"
+                } catch {
+                    $Failed++
+                    $errorMessage = 'Passthrough copy failed: ' + $_.Exception.Message
+                    Write-Output "[ck-copy-failed] file=$relativePath"
+                }
             } else {
                 $temporaryPath = Join-Path $tempRoot $relativePath
                 $temporaryParent = Split-Path -Parent $temporaryPath
@@ -233,8 +286,9 @@ try {
                         $targetParent = Split-Path -Parent $targetPath
                         if ($targetParent) { New-Item -ItemType Directory -Path $targetParent -Force | Out-Null }
                         Copy-Item -LiteralPath $temporaryPath -Destination $targetPath -Force:$Overwrite -ErrorAction Stop
+                        $Converted++
                         $Success++
-                        $status = 'success'
+                        $status = 'converted'
                     } catch {
                         $errorMessage = $_.Exception.Message
                     }
@@ -244,7 +298,7 @@ try {
                     if ($tail.Count) { $errorMessage += [Environment]::NewLine + ($tail -join [Environment]::NewLine) }
                 }
 
-                if ($status -ne 'success') {
+                if ($status -ne 'converted') {
                     $Failed++
                     if ($MoveFailed) {
                         try {
@@ -271,12 +325,12 @@ try {
             $rows.Add([pscustomobject]@{
                 RelativePath = $relativePath
                 Status = $status
-                OutputPath = if ($status -eq 'success') { $targetPath } else { '' }
+                OutputPath = if ($status -in @('converted', 'copied')) { $targetPath } else { '' }
                 FailedPath = $failedPath
                 Error = $errorMessage
                 DurationMs = $watch.Elapsed.TotalMilliseconds
             })
-            Write-Output "[ck-progress] processed=$Processed total=$Total success=$Success failed=$Failed skipped=$Skipped unmoved=$Unmoved file=$relativePath"
+            Write-Output "[ck-progress] processed=$Processed total=$Total success=$Success converted=$Converted copied=$Copied failed=$Failed skipped=$Skipped unmoved=$Unmoved file=$relativePath"
         }
     } finally {
         Pop-Location
@@ -298,7 +352,7 @@ try {
     }
 }
 
-Write-Output "[ck-summary] total=$Total success=$Success failed=$Failed skipped=$Skipped unmoved=$Unmoved"
+Write-Output "[ck-summary] total=$Total success=$Success converted=$Converted copied=$Copied failed=$Failed skipped=$Skipped unmoved=$Unmoved"
 if ($fatalError) { exit 2 }
 if ($Failed -gt 0) { exit 1 }
 exit 0

@@ -72,8 +72,9 @@
         FailedDirectoryConflict = T '5931 8D25 6587 4EF6 76EE 5F55 5FC5 987B 4E0E 8F93 5165 3001 8F93 51FA 76EE 5F55 5206 5F00 FF0C 4E14 4E0D 80FD 4F4D 4E8E 5B83 4EEC 5185 90E8 3002'
         WorkerMissing = T '627E 4E0D 5230 9010 6587 4EF6 8F6C 6362 5904 7406 5668 3002'
         PartialDone = T '5B8C 6210 FF0C 90E8 5206 5931 8D25'
-        ContinueHint = T '6BCF 4E2A 6587 4EF6 72EC 7ACB 5904 7406 FF1B 5931 8D25 6587 4EF6 79FB 8D70 540E 7EE7 7EED 4E0B 4E00 4E2A 3002'
-        SuccessCount = T '6210 529F'
+        ContinueHint = T '4EC5 8F6C 6362 0020 0047 0054 0041 0035 0020 6A21 7EC4 8D44 6E90 FF1B 4EE3 7801 548C 914D 7F6E 539F 6837 590D 5236 FF0C 5931 8D25 6A21 7EC4 79FB 8D70 540E 7EE7 7EED 4E0B 4E00 4E2A 3002'
+        ConvertedCount = T '8F6C 6362'
+        CopiedCount = T '539F 6837 590D 5236'
         FailedCount = T '5931 8D25'
         SkippedCount = T '8DF3 8FC7'
         UnmovedCount = T '79FB 52A8 5931 8D25'
@@ -99,6 +100,8 @@
         TotalFiles = 0
         ProcessedFiles = 0
         SuccessFiles = 0
+        ConvertedFiles = 0
+        CopiedFiles = 0
         FailedFiles = 0
         SkippedFiles = 0
         UnmovedFiles = 0
@@ -489,6 +492,8 @@
         $state.TotalFiles = [int]$totalFiles
         $state.ProcessedFiles = 0
         $state.SuccessFiles = 0
+        $state.ConvertedFiles = 0
+        $state.CopiedFiles = 0
         $state.FailedFiles = 0
         $state.SkippedFiles = 0
         $state.UnmovedFiles = 0
@@ -541,12 +546,14 @@
             param($line)
 
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line
-            if ($line -match '^\[ck-file\]\s+index=(?<index>\d+)\s+total=(?<total>\d+)\s+file=(?<file>.*)$') {
+            if ($line -match '^\[ck-file\]\s+index=(?<index>\d+)\s+total=(?<total>\d+)\s+kind=(?<kind>\S+)\s+file=(?<file>.*)$') {
                 $callbackUi.StatusLine.Text = "$($callbackText.Current): $($Matches.file)"
-            } elseif ($line -match '^\[ck-progress\]\s+processed=(?<processed>\d+)\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)\s+file=(?<file>.*)$') {
+            } elseif ($line -match '^\[ck-progress\]\s+processed=(?<processed>\d+)\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+copied=(?<copied>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)\s+file=(?<file>.*)$') {
                 $callbackState.ProcessedFiles = [int]$Matches.processed
                 $callbackState.TotalFiles = [int]$Matches.total
                 $callbackState.SuccessFiles = [int]$Matches.success
+                $callbackState.ConvertedFiles = [int]$Matches.converted
+                $callbackState.CopiedFiles = [int]$Matches.copied
                 $callbackState.FailedFiles = [int]$Matches.failed
                 $callbackState.SkippedFiles = [int]$Matches.skipped
                 $callbackState.UnmovedFiles = [int]$Matches.unmoved
@@ -556,13 +563,15 @@
                 $callbackUi.ProgressBar.IsIndeterminate = $false
                 $callbackUi.ProgressBar.Value = $percent
                 $callbackUi.ProgressText.Text = ('{0:0}% ({1}/{2})' -f $percent, $callbackState.ProcessedFiles, $callbackState.TotalFiles)
-                $callbackUi.StatusLine.Text = "$($callbackText.Processed) $($callbackState.ProcessedFiles)/$($callbackState.TotalFiles) $($callbackText.FileUnit) | $($callbackText.SuccessCount) $($callbackState.SuccessFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
+                $callbackUi.StatusLine.Text = "$($callbackText.Processed) $($callbackState.ProcessedFiles)/$($callbackState.TotalFiles) $($callbackText.FileUnit) | $($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.CopiedCount) $($callbackState.CopiedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
             } elseif ($line -match '^\[ck-report\]\s+path=(?<path>.+)$') {
                 $callbackState.ReportPath = $Matches.path.Trim()
-            } elseif ($line -match '^\[ck-summary\]\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)$') {
+            } elseif ($line -match '^\[ck-summary\]\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+copied=(?<copied>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)$') {
                 $callbackState.TotalFiles = [int]$Matches.total
                 $callbackState.ProcessedFiles = $callbackState.TotalFiles
                 $callbackState.SuccessFiles = [int]$Matches.success
+                $callbackState.ConvertedFiles = [int]$Matches.converted
+                $callbackState.CopiedFiles = [int]$Matches.copied
                 $callbackState.FailedFiles = [int]$Matches.failed
                 $callbackState.SkippedFiles = [int]$Matches.skipped
                 $callbackState.UnmovedFiles = [int]$Matches.unmoved
@@ -579,7 +588,7 @@
             $callbackState.CancelRequested = $false
             & $callbackSetRunning $false
             $reportExists = $callbackState.ReportPath -and (Test-Path -LiteralPath $callbackState.ReportPath -PathType Leaf)
-            $summary = "$($callbackText.SuccessCount) $($callbackState.SuccessFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
+            $summary = "$($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.CopiedCount) $($callbackState.CopiedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
             if ($callbackState.UnmovedFiles -gt 0) {
                 $summary += " | $($callbackText.UnmovedCount) $($callbackState.UnmovedFiles)"
             }
