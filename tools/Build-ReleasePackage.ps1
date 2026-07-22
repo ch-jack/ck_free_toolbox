@@ -219,6 +219,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
     (Join-Path $packagePath 'app\tools\alchemist\AlchemistCli.exe'),
+    (Join-Path $packagePath 'app\tools\alchemist\AlchemistBatchWorker.ps1'),
     (Join-Path $packagePath 'app\tools\alchemist\alchemist-config.txt'),
     (Join-Path $packagePath 'app\tools\alchemist\LICENSES.txt'),
     (Join-Path $packagePath 'static\cklogo.ico')
@@ -273,6 +274,7 @@ $manifest = [ordered]@{
         selfUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\SelfUpdateWorker.ps1')).Hash
         applyUpdateWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ApplyToolboxUpdate.ps1')).Hash
         alchemistCli = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\tools\alchemist\AlchemistCli.exe')).Hash
+        alchemistWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\tools\alchemist\AlchemistBatchWorker.ps1')).Hash
     }
 }
 [IO.File]::WriteAllText((Join-Path $packagePath 'package-manifest.json'), ($manifest | ConvertTo-Json -Depth 6), $Utf8NoBom)
