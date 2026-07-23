@@ -490,6 +490,7 @@
     function Show-ServerDumpResourceSelection {
         param($Payload, [string]$InitialPattern)
 
+        $resourceSelectorAction = $testResourceSelectorAction
         $resources = @($Payload.resources)
         if (-not $resources.Count) { throw '服务器没有返回可选择的资源。' }
 
@@ -562,7 +563,7 @@
             $box.ToolTip = [string]$resource.name
             $box.Margin = '4,4,4,4'
             $box.Padding = '2'
-            $box.IsChecked = Test-ServerDumpResourceSelector -Resource $resource -Expression $pattern
+            $box.IsChecked = & $resourceSelectorAction -Resource $resource -Expression $pattern
             $handler = { & $updateCountAction }.GetNewClosure()
             $box.Add_Checked($handler)
             $box.Add_Unchecked($handler)
@@ -574,7 +575,7 @@
         $applyPatternAction = {
             $expression = $controls.PatternBox.Text.Trim()
             foreach ($i in 0..($resources.Count - 1)) {
-                $boxes[$i].IsChecked = Test-ServerDumpResourceSelector -Resource $resources[$i] -Expression $expression
+                $boxes[$i].IsChecked = & $resourceSelectorAction -Resource $resources[$i] -Expression $expression
             }
             & $updateCountAction
         }.GetNewClosure()
@@ -618,6 +619,8 @@
     $setRunningAction = (Get-Command Set-ServerDumpRunning).ScriptBlock.GetNewClosure()
     $getSummaryValueAction = (Get-Command Get-ServerDumpSummaryValue).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-ServerDumpResult).ScriptBlock.GetNewClosure()
+    $assertResourceSelectionSupportAction = (Get-Command Assert-ServerDumpResourceSelectionSupport).ScriptBlock.GetNewClosure()
+    $testResourceSelectorAction = (Get-Command Test-ServerDumpResourceSelector).ScriptBlock.GetNewClosure()
     $clearResourceSelectionAction = (Get-Command Clear-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
     $showResourceSelectionAction = (Get-Command Show-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
 
@@ -900,7 +903,7 @@
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) {
             throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。'
         }
-        Assert-ServerDumpResourceSelectionSupport
+        & $assertResourceSelectionSupportAction
 
         $target = $ui.TargetBox.Text.Trim()
         if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
@@ -1071,7 +1074,7 @@
         }
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
-        Assert-ServerDumpResourceSelectionSupport
+        & $assertResourceSelectionSupportAction
         foreach ($relative in @('requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe')) {
             $required = Join-Path $Context.Paths.DumpToolDir $relative
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "服务器 Dump 组件不完整，缺少: $relative" }
