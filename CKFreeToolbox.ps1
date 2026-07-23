@@ -216,10 +216,18 @@ $shellXaml = @"
           <RowDefinition Height="*"/>
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <StackPanel Margin="10,16,10,12">
+        <Grid Grid.RowSpan="2" Margin="10,16,4,12">
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+          </Grid.RowDefinitions>
           <TextBlock Text="工具" Foreground="#616874" FontSize="13" FontWeight="Bold" Margin="6,0,0,10"/>
-          <StackPanel x:Name="NavHost"/>
-        </StackPanel>
+          <ScrollViewer x:Name="NavScrollViewer" AutomationProperties.AutomationId="Toolbox.NavScrollViewer" Grid.Row="1"
+                        VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                        PanningMode="VerticalOnly">
+            <StackPanel x:Name="NavHost" Margin="0,0,6,0"/>
+          </ScrollViewer>
+        </Grid>
         <TextBlock Grid.Row="2" Text="POWERED BY CK" Foreground="#3B4048" FontSize="11" TextAlignment="Center" Margin="0,0,0,18"/>
       </Grid>
     </Border>
