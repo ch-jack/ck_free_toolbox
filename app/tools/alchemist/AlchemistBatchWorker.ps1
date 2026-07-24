@@ -51,38 +51,6 @@ function Get-CkAvailablePath {
     throw "Unable to allocate a unique failed-file path: $Path"
 }
 
-$script:CkGtaAssetSuffixes = @(
-    '.yft', '.ydr', '.ydd', '.ytd', '.ybn', '.ymap', '.ytyp', '.ynv', '.ycd', '.ypt',
-    '.yld', '.yed', '.ymf', '.yvr', '.ywr', '.awc', '.rel',
-    '.yft.xml', '.ydr.xml', '.ydd.xml', '.ytd.xml', '.ybn.xml', '.ymap.xml',
-    '.ytyp.xml', '.ynv.xml', '.ycd.xml', '.ypt.xml', '.yld.xml', '.yed.xml'
-)
-
-function Test-CkGtaAssetFile {
-    param([Parameter(Mandatory)][IO.FileInfo]$File)
-
-    $name = $File.Name.ToLowerInvariant()
-    foreach ($suffix in $script:CkGtaAssetSuffixes) {
-        if ($name.EndsWith($suffix, [StringComparison]::OrdinalIgnoreCase)) { return $true }
-    }
-
-    try {
-        $stream = [IO.File]::Open($File.FullName, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite)
-        try {
-            if ($stream.Length -ge 4) {
-                $magicBytes = New-Object byte[] 4
-                if ($stream.Read($magicBytes, 0, 4) -eq 4) {
-                    $magic = [Text.Encoding]::ASCII.GetString($magicBytes)
-                    if ($magic -in @('RSC7', 'RSC8')) { return $true }
-                }
-            }
-        } finally {
-            $stream.Dispose()
-        }
-    } catch { }
-    return $false
-}
-
 function ConvertTo-CkHtmlText {
     param($Value)
     return [Net.WebUtility]::HtmlEncode([string]$Value)
@@ -101,7 +69,7 @@ function Write-CkAlchemistReport {
         $statusClass = [string]$item.Status
         $statusLabel = switch ($statusClass) {
             'converted' { 'CONVERTED / &#24050;&#36716;&#25442;' }
-            'untouched' { 'UNTOUCHED / &#26410;&#36716;&#25442;&#26410;&#22797;&#21046;' }
+            'unattempted' { 'UNATTEMPTED / &#26410;&#23581;&#35797;' }
             'failed' { 'FAILED / &#22833;&#36133;' }
             'skipped' { 'SKIPPED / &#36339;&#36807;' }
             default { ConvertTo-CkHtmlText $statusClass }
@@ -121,7 +89,7 @@ function Write-CkAlchemistReport {
 
     $duration = $FinishedAt - $StartedAt
     $operation = if ($Refine) { 'Optimize assets without conversion (--refine)' } else { 'Convert assets' }
-    $mode = "$operation; only successful GTA5 asset results are written to output; unconverted files stay in input and are not copied"
+    $mode = "$operation; official directory mode; every input file is handed to Alchemist with -j$Threads and successful outputs preserve relative paths"
     $fatalHtml = if ($FatalError) {
         '<div class="fatal"><strong>Fatal error:</strong> ' + (ConvertTo-CkHtmlText $FatalError) + '</div>'
     } else { '' }
@@ -135,7 +103,7 @@ function Write-CkAlchemistReport {
 <title>Alchemist &#36716;&#25442;&#25253;&#21578;</title>
 <style>
 :root{color-scheme:dark;--bg:#0b0d10;--panel:#12151a;--border:#2a3039;--text:#e7eaf0;--muted:#929aa7;--green:#31d69a;--red:#ef7c86;--amber:#f4b860;--blue:#58a6ff}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1500px;margin:0 auto;padding:28px}.hero,.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}.hero h1{margin:0 0 6px;font-size:28px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}.card{background:#0e1115;border:1px solid var(--border);border-radius:9px;padding:14px}.value{font-size:26px;font-weight:700}.converted-text{color:var(--green)}.untouched-text{color:var(--blue)}.failed-text{color:var(--red)}.skipped-text{color:var(--amber)}dl{display:grid;grid-template-columns:170px 1fr;gap:8px 14px;margin:0}dt{color:var(--muted)}dd{margin:0;word-break:break-all}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px}th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{position:sticky;top:0;background:#171b21;color:#bfc6d1}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;white-space:nowrap}.badge.converted{background:#113a2c;color:var(--green)}.badge.untouched{background:#102440;color:var(--blue)}.badge.failed{background:#3b1b20;color:var(--red)}.badge.skipped{background:#3a2c13;color:var(--amber)}tr.failed{background:rgba(239,124,134,.035)}.fatal{border:1px solid #6f2d36;background:#30171b;color:#ffb5bc;border-radius:8px;padding:13px;margin-top:16px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.55 "Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1500px;margin:0 auto;padding:28px}.hero,.panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px}.hero h1{margin:0 0 6px;font-size:28px}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:18px}.card{background:#0e1115;border:1px solid var(--border);border-radius:9px;padding:14px}.value{font-size:26px;font-weight:700}.converted-text{color:var(--green)}.unattempted-text{color:var(--blue)}.failed-text{color:var(--red)}.skipped-text{color:var(--amber)}dl{display:grid;grid-template-columns:170px 1fr;gap:8px 14px;margin:0}dt{color:var(--muted)}dd{margin:0;word-break:break-all}.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px}th,td{border-bottom:1px solid var(--border);padding:10px;text-align:left;vertical-align:top;word-break:break-all}th{position:sticky;top:0;background:#171b21;color:#bfc6d1}.badge{display:inline-block;border-radius:999px;padding:3px 9px;font-size:12px;font-weight:700;white-space:nowrap}.badge.converted{background:#113a2c;color:var(--green)}.badge.unattempted{background:#102440;color:var(--blue)}.badge.failed{background:#3b1b20;color:var(--red)}.badge.skipped{background:#3a2c13;color:var(--amber)}tr.failed{background:rgba(239,124,134,.035)}.fatal{border:1px solid #6f2d36;background:#30171b;color:#ffb5bc;border-radius:8px;padding:13px;margin-top:16px}
 </style>
 </head>
 <body><div class="wrap">
@@ -145,7 +113,7 @@ function Write-CkAlchemistReport {
   <div class="grid">
     <div class="card"><div class="muted">Total / &#24635;&#25968;</div><div class="value">$Total</div></div>
     <div class="card"><div class="muted">Converted / &#24050;&#36716;&#25442;</div><div class="value converted-text">$Converted</div></div>
-    <div class="card"><div class="muted">Untouched / &#26410;&#36716;&#25442;&#26410;&#22797;&#21046;</div><div class="value untouched-text">$Untouched</div></div>
+    <div class="card"><div class="muted">Unattempted / &#26410;&#23581;&#35797;</div><div class="value unattempted-text">$Unattempted</div></div>
     <div class="card"><div class="muted">Failed / &#22833;&#36133;</div><div class="value failed-text">$Failed</div></div>
     <div class="card"><div class="muted">Skipped / &#36339;&#36807;</div><div class="value skipped-text">$Skipped</div></div>
     <div class="card"><div class="muted">Move failed / &#31227;&#21160;&#22833;&#36133;</div><div class="value failed-text">$Unmoved</div></div>
@@ -203,41 +171,111 @@ $files = if ($inputIsFile) {
 }
 $inputRoot = if ($inputIsFile) { Split-Path -Parent $InputPath } else { $InputPath }
 $inputPrefix = $inputRoot.TrimEnd([char[]]@('\', '/')) + [IO.Path]::DirectorySeparatorChar
+$relativeByPath = @{}
+foreach ($file in $files) {
+    $relativePath = if ($inputIsFile) { $file.Name } else { $file.FullName.Substring($inputPrefix.Length) }
+    $relativeByPath[$file.FullName.ToLowerInvariant()] = $relativePath
+}
 $Total = $files.Count
 $Success = 0
 $Converted = 0
-$Untouched = 0
+$Unattempted = 0
 $Failed = 0
 $Skipped = 0
 $Unmoved = 0
 $Processed = 0
+$Scheduled = 0
 $rows = New-Object System.Collections.Generic.List[object]
 $startedAt = Get-Date
 $fatalError = ''
 $tempRoot = Join-Path ([IO.Path]::GetTempPath()) ('CKFreeToolbox-Alchemist-{0}-{1}' -f $PID, [guid]::NewGuid().ToString('N'))
+$cliOutputPath = if ($inputIsFile) { Join-Path $tempRoot $files[0].Name } else { Join-Path $tempRoot 'official-output' }
+$batchOutputLines = New-Object System.Collections.Generic.List[string]
+$attemptedPaths = @{}
+[int]$batchExitCode = 0
+$batchDurationMs = 0.0
 New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
 
 try {
     New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
     if ($MoveFailed) { New-Item -ItemType Directory -Path $FailedDirectory -Force | Out-Null }
-    Push-Location (Split-Path -Parent $CliPath)
-    try {
-        foreach ($file in $files) {
-            $watch = [Diagnostics.Stopwatch]::StartNew()
-            $relativePath = if ($inputIsFile) { $file.Name } else { $file.FullName.Substring($inputPrefix.Length) }
-            $targetPath = Join-Path $OutputDirectory $relativePath
-            $failedPath = ''
-            $status = 'failed'
-            $errorMessage = ''
-            $isGtaAsset = Test-CkGtaAssetFile -File $file
-            $kind = if ($isGtaAsset) { 'asset' } else { 'untouched' }
-            Write-Output "[ck-file] index=$($Processed + 1) total=$Total kind=$kind file=$relativePath"
 
-            if (-not $isGtaAsset) {
-                $Untouched++
-                $status = 'untouched'
-                Write-Output "[ck-untouched] file=$relativePath"
-            } elseif (Test-Path -LiteralPath $targetPath -PathType Container) {
+    if ($Total -gt 0) {
+        $cliArguments = New-Object System.Collections.Generic.List[object]
+        if ($FailOnError) { $cliArguments.Add('--fail-on-error') }
+        if ($Refine) { $cliArguments.Add('--refine') }
+        if ($Relaxed) { $cliArguments.Add('--relaxed') }
+        if ($Overwrite) { $cliArguments.Add('-f') }
+        $cliArguments.Add(('-j{0}' -f $Threads))
+        $cliArguments.Add($InputPath)
+        $cliArguments.Add($cliOutputPath)
+
+        Write-Output "[ck-batch] mode=official-directory threads=$Threads files=$Total"
+        $cliOutputMarker = if ($inputIsFile) {
+            ' to ' + $cliOutputPath
+        } else {
+            ' to ' + $cliOutputPath.TrimEnd([char[]]@('\', '/')) + [IO.Path]::DirectorySeparatorChar
+        }
+        $batchWatch = [Diagnostics.Stopwatch]::StartNew()
+        Push-Location (Split-Path -Parent $CliPath)
+        $previousErrorActionPreference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            & $CliPath @($cliArguments.ToArray()) 2>&1 | ForEach-Object {
+                $line = [string]$_
+                Write-Output $line
+                [void]$batchOutputLines.Add($line)
+
+                $operationPrefix = if ($line.StartsWith('Converting ', [StringComparison]::OrdinalIgnoreCase)) {
+                    'Converting '
+                } elseif ($line.StartsWith('Refining ', [StringComparison]::OrdinalIgnoreCase)) {
+                    'Refining '
+                } else { '' }
+                if ($operationPrefix) {
+                    $body = $line.Substring($operationPrefix.Length)
+                    $markerIndex = $body.IndexOf($cliOutputMarker, [StringComparison]::OrdinalIgnoreCase)
+                    if ($markerIndex -gt 0) {
+                        $sourcePath = $body.Substring(0, $markerIndex)
+                        try { $sourcePath = [IO.Path]::GetFullPath($sourcePath) } catch { $sourcePath = '' }
+                        if ($sourcePath) {
+                            $sourceKey = $sourcePath.ToLowerInvariant()
+                            if ($relativeByPath.ContainsKey($sourceKey) -and -not $attemptedPaths.ContainsKey($sourceKey)) {
+                                $attemptedPaths[$sourceKey] = $true
+                                $Scheduled++
+                                $scheduledRelative = [string]$relativeByPath[$sourceKey]
+                                Write-Output "[ck-batch-progress] scheduled=$Scheduled total=$Total threads=$Threads file=$scheduledRelative"
+                            }
+                        }
+                    }
+                }
+            }
+            $batchExitCode = $LASTEXITCODE
+        } catch {
+            $batchExitCode = -1
+            [void]$batchOutputLines.Add($_.Exception.Message)
+            Write-Output "[ck-cli-error] $($_.Exception.Message)"
+        } finally {
+            $ErrorActionPreference = $previousErrorActionPreference
+            Pop-Location
+            $batchWatch.Stop()
+            $batchDurationMs = $batchWatch.Elapsed.TotalMilliseconds
+        }
+    } else {
+        Write-Output "[ck-batch] mode=official-directory threads=$Threads files=0"
+    }
+
+    foreach ($file in $files) {
+        $relativePath = [string]$relativeByPath[$file.FullName.ToLowerInvariant()]
+        $targetPath = Join-Path $OutputDirectory $relativePath
+        $temporaryPath = if ($inputIsFile) { $cliOutputPath } else { Join-Path $cliOutputPath $relativePath }
+        $failedPath = ''
+        $status = 'failed'
+        $errorMessage = ''
+        $sourceKey = $file.FullName.ToLowerInvariant()
+        $wasAttempted = $attemptedPaths.ContainsKey($sourceKey)
+
+        if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
+            if (Test-Path -LiteralPath $targetPath -PathType Container) {
                 $Skipped++
                 $status = 'skipped'
                 $errorMessage = 'Destination path is a directory.'
@@ -246,84 +284,64 @@ try {
                 $status = 'skipped'
                 $errorMessage = 'Destination exists and overwrite is disabled.'
             } else {
-                $temporaryPath = Join-Path $tempRoot $relativePath
-                $temporaryParent = Split-Path -Parent $temporaryPath
-                if ($temporaryParent) { New-Item -ItemType Directory -Path $temporaryParent -Force | Out-Null }
-                $cliArguments = New-Object System.Collections.Generic.List[object]
-                if ($FailOnError) { $cliArguments.Add('--fail-on-error') }
-                if ($Refine) { $cliArguments.Add('--refine') }
-                if ($Relaxed) { $cliArguments.Add('--relaxed') }
-                if ($Overwrite) { $cliArguments.Add('-f') }
-                $cliArguments.Add(('-j{0}' -f $Threads))
-                $cliArguments.Add($file.FullName)
-                $cliArguments.Add($temporaryPath)
-
-                $outputLines = New-Object System.Collections.Generic.List[string]
-                [int]$exitCode = -1
                 try {
-                    & $CliPath @($cliArguments.ToArray()) 2>&1 | ForEach-Object {
-                        $line = [string]$_
-                        Write-Output $line
-                        $outputLines.Add($line)
-                    }
-                    $exitCode = $LASTEXITCODE
+                    $targetParent = Split-Path -Parent $targetPath
+                    if ($targetParent) { New-Item -ItemType Directory -Path $targetParent -Force | Out-Null }
+                    Copy-Item -LiteralPath $temporaryPath -Destination $targetPath -Force:$Overwrite -ErrorAction Stop
+                    $Converted++
+                    $Success++
+                    $status = 'converted'
                 } catch {
-                    $outputLines.Add($_.Exception.Message)
-                }
-
-                if ($exitCode -eq 0 -and (Test-Path -LiteralPath $temporaryPath -PathType Leaf)) {
-                    try {
-                        $targetParent = Split-Path -Parent $targetPath
-                        if ($targetParent) { New-Item -ItemType Directory -Path $targetParent -Force | Out-Null }
-                        Copy-Item -LiteralPath $temporaryPath -Destination $targetPath -Force:$Overwrite -ErrorAction Stop
-                        $Converted++
-                        $Success++
-                        $status = 'converted'
-                    } catch {
-                        $errorMessage = $_.Exception.Message
-                    }
-                } else {
-                    $tail = @($outputLines | Select-Object -Last 20)
-                    $errorMessage = "Alchemist exit code: $exitCode."
-                    if ($tail.Count) { $errorMessage += [Environment]::NewLine + ($tail -join [Environment]::NewLine) }
-                }
-
-                if ($status -ne 'converted') {
                     $Failed++
-                    if ($MoveFailed) {
-                        try {
-                            $failedPath = Get-CkAvailablePath (Join-Path $FailedDirectory $relativePath)
-                            $failedParent = Split-Path -Parent $failedPath
-                            if ($failedParent) { New-Item -ItemType Directory -Path $failedParent -Force | Out-Null }
-                            Move-Item -LiteralPath $file.FullName -Destination $failedPath -ErrorAction Stop
-                        } catch {
-                            $Unmoved++
-                            $errorMessage = ($errorMessage + [Environment]::NewLine + 'Move failed: ' + $_.Exception.Message).Trim()
-                            $failedPath = ''
-                        }
-                    }
-                    Write-Output "[ck-failed] file=$relativePath moved=$failedPath"
-                }
-
-                if (Test-Path -LiteralPath $temporaryPath -PathType Leaf) {
-                    Remove-Item -LiteralPath $temporaryPath -Force -ErrorAction SilentlyContinue
+                    $errorMessage = 'Converted-output copy failed: ' + $_.Exception.Message
                 }
             }
+        } elseif (-not $wasAttempted) {
+            $Unattempted++
+            $status = 'unattempted'
+            $errorMessage = 'Alchemist did not start this file, usually because --fail-on-error stopped the directory batch early.'
+        } else {
+            $Failed++
+            $escapedSourcePath = $file.FullName.Replace('\', '\\')
+            $fileMessages = @($batchOutputLines | Where-Object {
+                $messageLine = [string]$_
+                $messageLine.IndexOf($file.FullName, [StringComparison]::OrdinalIgnoreCase) -ge 0 -or
+                $messageLine.IndexOf($escapedSourcePath, [StringComparison]::OrdinalIgnoreCase) -ge 0
+            } | Select-Object -Last 5)
+            $errorMessage = "Alchemist produced no output (exit code: $batchExitCode)."
+            if ($fileMessages.Count) { $errorMessage += [Environment]::NewLine + ($fileMessages -join [Environment]::NewLine) }
 
-            $watch.Stop()
-            $Processed++
-            $rows.Add([pscustomobject]@{
-                RelativePath = $relativePath
-                Status = $status
-                OutputPath = if ($status -eq 'converted') { $targetPath } else { '' }
-                FailedPath = $failedPath
-                Error = $errorMessage
-                DurationMs = $watch.Elapsed.TotalMilliseconds
-            })
-            Write-Output "[ck-progress] processed=$Processed total=$Total success=$Success converted=$Converted untouched=$Untouched failed=$Failed skipped=$Skipped unmoved=$Unmoved file=$relativePath"
+            if ($MoveFailed) {
+                try {
+                    $failedPath = Get-CkAvailablePath (Join-Path $FailedDirectory $relativePath)
+                    $failedParent = Split-Path -Parent $failedPath
+                    if ($failedParent) { New-Item -ItemType Directory -Path $failedParent -Force | Out-Null }
+                    Move-Item -LiteralPath $file.FullName -Destination $failedPath -ErrorAction Stop
+                } catch {
+                    $Unmoved++
+                    $errorMessage = ($errorMessage + [Environment]::NewLine + 'Move failed: ' + $_.Exception.Message).Trim()
+                    $failedPath = ''
+                }
+            }
+            Write-Output "[ck-failed] file=$relativePath moved=$failedPath"
         }
-    } finally {
-        Pop-Location
+
+        Write-Output "[ck-file] index=$($Processed + 1) total=$Total kind=$status file=$relativePath"
+        $Processed++
+        $rows.Add([pscustomobject]@{
+            RelativePath = $relativePath
+            Status = $status
+            OutputPath = if ($status -eq 'converted') { $targetPath } else { '' }
+            FailedPath = $failedPath
+            Error = $errorMessage
+            DurationMs = if ($wasAttempted -or (Test-Path -LiteralPath $temporaryPath -PathType Leaf)) { $batchDurationMs } else { 0 }
+        })
+        Write-Output "[ck-progress] processed=$Processed total=$Total success=$Success converted=$Converted unattempted=$Unattempted failed=$Failed skipped=$Skipped unmoved=$Unmoved file=$relativePath"
+    }
+
+    if ($Total -gt 0 -and $attemptedPaths.Count -eq 0 -and $Converted -eq 0 -and $Failed -eq 0) {
+        $fatalError = "Alchemist did not attempt any input files (exit code: $batchExitCode)."
+        Write-Output "[ck-fatal] $fatalError"
     }
 } catch {
     $fatalError = $_.Exception.Message
@@ -342,7 +360,7 @@ try {
     }
 }
 
-Write-Output "[ck-summary] total=$Total success=$Success converted=$Converted untouched=$Untouched failed=$Failed skipped=$Skipped unmoved=$Unmoved"
+Write-Output "[ck-summary] total=$Total success=$Success converted=$Converted unattempted=$Unattempted failed=$Failed skipped=$Skipped unmoved=$Unmoved"
 if ($fatalError) { exit 2 }
-if ($Failed -gt 0) { exit 1 }
+if ($Failed -gt 0 -or $Unattempted -gt 0) { exit 1 }
 exit 0

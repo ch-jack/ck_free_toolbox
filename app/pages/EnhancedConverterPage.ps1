@@ -19,19 +19,18 @@
         Checking = T '68C0 6D4B 4E2D'
         Ready = T '0041 006C 0063 0068 0065 006D 0069 0073 0074 0020 0043 004C 0049 0020 5DF2 5C31 7EEA'
         Missing = T '7F3A 5C11 0020 0041 006C 0063 0068 0065 006D 0069 0073 0074 0043 006C 0069 002E 0065 0078 0065'
-        InputLabel = T '8F93 5165 6587 4EF6 6216 76EE 5F55'
+        InputLabel = T '8F93 5165 76EE 5F55'
         OutputLabel = T '8F93 51FA 76EE 5F55'
-        ChooseFile = T '9009 62E9 6587 4EF6'
         ChooseFolder = T '9009 62E9 76EE 5F55'
         OpenOutput = T '6253 5F00 8F93 51FA'
         Params = T '4EFB 52A1 53C2 6570'
-        FailOnError = T '5355 6587 4EF6 9047 9519 7ACB 5373 505C 6B62 FF08 002D 002D 0066 0061 0069 006C 002D 006F 006E 002D 0065 0072 0072 006F 0072 FF09'
-        FailOnErrorTip = T '53EA 5F71 54CD 5F53 524D 6587 4EF6 FF1B 8BE5 6587 4EF6 5931 8D25 540E 4ECD 7EE7 7EED 4E0B 4E00 4E2A'
+        FailOnError = T '9996 4E2A 9519 8BEF 65F6 63D0 524D 505C 6B62 FF08 002D 002D 0066 0061 0069 006C 002D 006F 006E 002D 0065 0072 0072 006F 0072 FF09'
+        FailOnErrorTip = T '002D 002D 0066 0061 0069 006C 002D 006F 006E 002D 0065 0072 0072 006F 0072 FF1A 9047 5230 9996 4E2A 9519 8BEF 540E 7531 5B98 65B9 5DE5 5177 63D0 524D 505C 6B62 FF0C 5DF2 5F00 59CB 7684 5E76 53D1 4EFB 52A1 53EF 80FD 4ECD 4F1A 5B8C 6210'
         Refine = T '4F18 5316 8D44 6E90 FF08 975E 8F6C 6362 FF09'
         RefineTip = T '002D 002D 0072 0065 0066 0069 006E 0065 FF1A 4F18 5316 8D44 6E90 FF0C 4E0D 6267 884C 8F6C 6362'
         Relaxed = T '5BBD 677E 6A21 5F0F FF08 81EA 52A8 4FEE 590D FF09'
         RelaxedTip = T '002D 002D 0072 0065 006C 0061 0078 0065 0064 FF1A 81EA 52A8 4FEE 590D 5E76 964D 4F4E 4E25 683C 68C0 67E5'
-        Threads = T '7EBF 7A0B 6570 FF08 002D 006A 004E FF0C 9ED8 8BA4 0020 0031 0032 FF09'
+        Threads = T '5B98 65B9 5E76 53D1 7EBF 7A0B 6570 FF08 002D 006A 004E FF0C 9ED8 8BA4 0020 0031 0032 FF09'
         Overwrite = T '8986 76D6 73B0 6709 6587 4EF6 0028 002D 0066 0029'
         OverwriteTip = T '672A 542F 7528 65F6 8DF3 8FC7 5DF2 5B58 5728 7684 540C 540D 8F93 51FA 6587 4EF6'
         Telemetry = T '5DF2 968F 9644 0020 0061 006C 0063 0068 0065 006D 0069 0073 0074 002D 0063 006F 006E 0066 0069 0067 002E 0074 0078 0074 0020 542F 7528 5B98 65B9 9065 6D4B 3002'
@@ -51,14 +50,13 @@
         Logs = T '4EFB 52A1 65E5 5FD7'
         LogWaiting = T '7B49 5F85 4EFB 52A1 8F93 51FA 002E 002E 002E'
         Command = T '547D 4EE4 9884 89C8'
-        InputMissing = T '8BF7 9009 62E9 5B58 5728 7684 8F93 5165 6587 4EF6 6216 76EE 5F55 3002'
+        InputMissing = T '8BF7 9009 62E9 5B58 5728 7684 8F93 5165 76EE 5F55 3002'
         OutputMissing = T '8BF7 9009 62E9 8F93 51FA 76EE 5F55 3002'
         InvalidThreads = T '7EBF 7A0B 6570 5FC5 987B 662F 0020 0031 002D 0031 0030 0032 0034 0020 4E4B 95F4 7684 6574 6570 3002'
         CliMissing = T '627E 4E0D 5230 0020 0041 006C 0063 0068 0065 006D 0069 0073 0074 0043 006C 0069 002E 0065 0078 0065 3002'
         StartingConvert = T '5F00 59CB 8F6C 6362 002E 002E 002E'
         StartingOptimize = T '5F00 59CB 4F18 5316 002E 002E 002E'
         ExitCode = T '8FDB 7A0B 9000 51FA 7801'
-        BrowseInputFile = T '9009 62E9 9700 8981 8F6C 6362 7684 8F93 5165 6587 4EF6'
         BrowseInputFolder = T '9009 62E9 9700 8981 8F6C 6362 7684 8F93 5165 76EE 5F55'
         BrowseOutput = T '9009 62E9 8F93 51FA 76EE 5F55'
         FailedDirectoryLabel = T '5931 8D25 6587 4EF6 76EE 5F55'
@@ -72,9 +70,9 @@
         FailedDirectoryConflict = T '5931 8D25 6587 4EF6 76EE 5F55 5FC5 987B 4E0E 8F93 5165 3001 8F93 51FA 76EE 5F55 5206 5F00 FF0C 4E14 4E0D 80FD 4F4D 4E8E 5B83 4EEC 5185 90E8 3002'
         WorkerMissing = T '627E 4E0D 5230 9010 6587 4EF6 8F6C 6362 5904 7406 5668 3002'
         PartialDone = T '5B8C 6210 FF0C 90E8 5206 5931 8D25'
-        ContinueHint = T '4EC5 8F6C 6362 0020 0047 0054 0041 0035 0020 6A21 7EC4 8D44 6E90 FF1B 672A 8F6C 6362 6587 4EF6 4FDD 7559 5728 8F93 5165 76EE 5F55 4E14 4E0D 590D 5236 FF0C 6210 529F 7ED3 679C 6309 539F 76F8 5BF9 8DEF 5F84 5199 5165 8F93 51FA FF1B 5931 8D25 6A21 7EC4 79FB 8D70 540E 7EE7 7EED 4E0B 4E00 4E2A 3002'
+        ContinueHint = T '6574 4E2A 8F93 5165 76EE 5F55 76F4 63A5 4EA4 7ED9 0020 0046 0069 0076 0065 004D 0020 5B98 65B9 0020 0041 006C 0063 0068 0065 006D 0069 0073 0074 0020 0043 004C 0049 FF1B 002D 006A 004E 0020 7531 5B98 65B9 6267 884C 5E76 53D1 FF0C 6210 529F 8F93 51FA 4FDD 6301 539F 76F8 5BF9 8DEF 5F84 FF0C 5931 8D25 6587 4EF6 6309 8BBE 7F6E 79FB 8D70 3002'
         ConvertedCount = T '8F6C 6362'
-        UntouchedCount = T '672A 8F6C 6362 FF08 4E0D 590D 5236 FF09'
+        UnattemptedCount = T '672A 5C1D 8BD5'
         FailedCount = T '5931 8D25'
         SkippedCount = T '8DF3 8FC7'
         UnmovedCount = T '79FB 52A8 5931 8D25'
@@ -90,6 +88,8 @@
         Processed = T '5DF2 5904 7406'
         FileUnit = T '4E2A 6587 4EF6'
         Current = T '5F53 524D'
+        OfficialBatch = T '5B98 65B9 76EE 5F55 5E76 53D1'
+        Started = T '5DF2 5F00 59CB'
         CallbackError = T '8FDB 7A0B 56DE 8C03 9519 8BEF'
         StopFailed = T '505C 6B62 4EFB 52A1 5931 8D25'
     }
@@ -101,7 +101,7 @@
         ProcessedFiles = 0
         SuccessFiles = 0
         ConvertedFiles = 0
-        UntouchedFiles = 0
+        UnattemptedFiles = 0
         FailedFiles = 0
         SkippedFiles = 0
         UnmovedFiles = 0
@@ -134,7 +134,7 @@
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
       <StackPanel>
         <TextBlock Text="$($text.InputLabel)" Foreground="#B8C0CC" FontSize="13" Margin="0,0,0,6"/>
-        <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><TextBox x:Name="InputBox" Height="38"/><Button x:Name="ChooseInputFileButton" Grid.Column="1" Content="$($text.ChooseFile)" Height="38" Margin="8,0,0,0" Background="#173055" Foreground="#58A6FF"/><Button x:Name="ChooseInputFolderButton" Grid.Column="2" Content="$($text.ChooseFolder)" Height="38" Margin="8,0,0,0"/></Grid>
+        <Grid Margin="0,0,0,12"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><TextBox x:Name="InputBox" Height="38"/><Button x:Name="ChooseInputFolderButton" Grid.Column="1" Content="$($text.ChooseFolder)" Height="38" Margin="8,0,0,0" Background="#173055" Foreground="#58A6FF"/></Grid>
         <TextBlock Text="$($text.OutputLabel)" Foreground="#B8C0CC" FontSize="13" Margin="0,0,0,6"/>
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><TextBox x:Name="OutputBox" Height="38"/><Button x:Name="ChooseOutputButton" Grid.Column="1" Content="$($text.ChooseFolder)" Height="38" Margin="8,0,0,0" Background="#173055" Foreground="#58A6FF"/><Button x:Name="OpenOutputButton" Grid.Column="2" Content="$($text.OpenOutput)" Height="38" Margin="8,0,0,0"/></Grid>
         <CheckBox x:Name="MoveFailedBox" Content="$($text.MoveFailed)" IsChecked="True" Margin="0,14,0,8" ToolTip="$($text.MoveFailedTip)"/>
@@ -170,7 +170,7 @@
 "@
 
     $root = Import-CkXaml $xaml
-    $ui = Get-CkNamedControls -Root $root -Names @('EnvironmentDot','EnvironmentText','InputBox','ChooseInputFileButton','ChooseInputFolderButton','OutputBox','ChooseOutputButton','OpenOutputButton','MoveFailedBox','FailedDirectoryBox','ChooseFailedDirectoryButton','OpenFailedDirectoryButton','FailOnErrorBox','RefineBox','RelaxedBox','ThreadsBox','OverwriteBox','StartButton','StopButton','OpenReportButton','ResultStatus','ProgressBar','ProgressText','StatusLine','CommandBox','LogBox')
+    $ui = Get-CkNamedControls -Root $root -Names @('EnvironmentDot','EnvironmentText','InputBox','ChooseInputFolderButton','OutputBox','ChooseOutputButton','OpenOutputButton','MoveFailedBox','FailedDirectoryBox','ChooseFailedDirectoryButton','OpenFailedDirectoryButton','FailOnErrorBox','RefineBox','RelaxedBox','ThreadsBox','OverwriteBox','StartButton','StopButton','OpenReportButton','ResultStatus','ProgressBar','ProgressText','StatusLine','CommandBox','LogBox')
 
     $desktopPath = [Environment]::GetFolderPath('Desktop')
     if ([string]::IsNullOrWhiteSpace($desktopPath)) {
@@ -234,9 +234,8 @@
             }
         }
 
-        $inputIsFile = $inputPath -and (Test-Path -LiteralPath $inputPath -PathType Leaf)
         $inputIsDirectory = $inputPath -and (Test-Path -LiteralPath $inputPath -PathType Container)
-        if ($Validate -and -not $inputIsFile -and -not $inputIsDirectory) { throw $text.InputMissing }
+        if ($Validate -and -not $inputIsDirectory) { throw $text.InputMissing }
         if ($Validate -and $outputDirectory -and (Test-Path -LiteralPath $outputDirectory -PathType Leaf)) { throw $text.OutputNotDirectory }
         if ($Validate -and $moveFailed -and $failedDirectory -and (Test-Path -LiteralPath $failedDirectory -PathType Leaf)) { throw $text.FailedDirectoryMissing }
 
@@ -247,9 +246,6 @@
         $threadArgument = if ($validThreads) { [string]$threads } elseif ($threadsValue) { $threadsValue } else { '12' }
 
         $effectiveOutputPath = $outputDirectory
-        if ($inputIsFile -and $outputDirectory) {
-            $effectiveOutputPath = Join-Path $outputDirectory ([IO.Path]::GetFileName($inputPath))
-        }
 
         if ($Validate) {
             $trimChars = [char[]]@('\', '/')
@@ -258,15 +254,11 @@
             if ($outputComparable.Equals($outputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw $text.OutputRootDenied }
 
             $inputComparable = $inputPath.TrimEnd($trimChars)
-            if ($inputIsDirectory) {
-                $inputRoot = ([IO.Path]::GetPathRoot($inputPath)).TrimEnd($trimChars)
-                if ($inputComparable.Equals($inputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw $text.InputRootDenied }
-                if ($inputComparable.Equals($outputComparable, [StringComparison]::OrdinalIgnoreCase)) { throw $text.InputSameOutput }
-                $inputPrefix = $inputComparable + [IO.Path]::DirectorySeparatorChar
-                if ($outputComparable.StartsWith($inputPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw $text.OutputInsideInput }
-            } elseif ($effectiveOutputPath.Equals($inputPath, [StringComparison]::OrdinalIgnoreCase)) {
-                throw $text.InputSameOutput
-            }
+            $inputRoot = ([IO.Path]::GetPathRoot($inputPath)).TrimEnd($trimChars)
+            if ($inputComparable.Equals($inputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw $text.InputRootDenied }
+            if ($inputComparable.Equals($outputComparable, [StringComparison]::OrdinalIgnoreCase)) { throw $text.InputSameOutput }
+            $inputPrefix = $inputComparable + [IO.Path]::DirectorySeparatorChar
+            if ($outputComparable.StartsWith($inputPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw $text.OutputInsideInput }
 
             if ($moveFailed) {
                 $failedComparable = $failedDirectory.TrimEnd($trimChars)
@@ -291,8 +283,8 @@
         if ($ui.RelaxedBox.IsChecked -eq $true) { $arguments.Add('--relaxed') }
         if ($ui.OverwriteBox.IsChecked -eq $true) { $arguments.Add('-f') }
         $arguments.Add(('-j{0}' -f $threadArgument))
-        $arguments.Add($(if ($inputPath) { $inputPath } else { '<each-input-file>' }))
-        $arguments.Add($(if ($effectiveOutputPath) { $effectiveOutputPath } else { '<matching-output-file>' }))
+        $arguments.Add($(if ($inputPath) { $inputPath } else { '<input-directory>' }))
+        $arguments.Add($(if ($effectiveOutputPath) { $effectiveOutputPath } else { '<output-directory>' }))
 
         return [pscustomobject]@{
             Arguments = [object[]]$arguments.ToArray()
@@ -300,7 +292,6 @@
             OutputDirectory = $outputDirectory
             FailedDirectory = $failedDirectory
             EffectiveOutputPath = $effectiveOutputPath
-            InputIsFile = [bool]$inputIsFile
             InputIsDirectory = [bool]$inputIsDirectory
             IsOptimize = ($ui.RefineBox.IsChecked -eq $true)
             Overwrite = ($ui.OverwriteBox.IsChecked -eq $true)
@@ -327,7 +318,6 @@
 
         foreach ($control in @(
             $ui.InputBox,
-            $ui.ChooseInputFileButton,
             $ui.ChooseInputFolderButton,
             $ui.OutputBox,
             $ui.ChooseOutputButton,
@@ -362,26 +352,7 @@
 
     $scanInputAction = {
         param($Invocation)
-
-        if ($Invocation.InputIsFile) { return 1 }
         return @(Get-ChildItem -LiteralPath $Invocation.InputPath -File -Recurse -Force -ErrorAction Stop).Count
-    }.GetNewClosure()
-
-    $chooseInputFileAction = {
-        $dialog = New-Object System.Windows.Forms.OpenFileDialog
-        $dialog.Title = $text.BrowseInputFile
-        $dialog.Filter = 'All files (*.*)|*.*'
-        $dialog.Multiselect = $false
-        $dialog.RestoreDirectory = $true
-        $initialDirectory = & $getExistingDirectoryAction $ui.InputBox.Text
-        if ($initialDirectory) { $dialog.InitialDirectory = $initialDirectory }
-        try {
-            if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
-                $ui.InputBox.Text = $dialog.FileName
-            }
-        } finally {
-            $dialog.Dispose()
-        }
     }.GetNewClosure()
 
     $chooseInputFolderAction = {
@@ -493,7 +464,7 @@
         $state.ProcessedFiles = 0
         $state.SuccessFiles = 0
         $state.ConvertedFiles = 0
-        $state.UntouchedFiles = 0
+        $state.UnattemptedFiles = 0
         $state.FailedFiles = 0
         $state.SkippedFiles = 0
         $state.UnmovedFiles = 0
@@ -546,14 +517,25 @@
             param($line)
 
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line
-            if ($line -match '^\[ck-file\]\s+index=(?<index>\d+)\s+total=(?<total>\d+)\s+kind=(?<kind>\S+)\s+file=(?<file>.*)$') {
+            if ($line -match '^\[ck-batch\]\s+mode=official-directory\s+threads=(?<threads>\d+)\s+files=(?<total>\d+)$') {
+                $callbackState.TotalFiles = [int]$Matches.total
+                $callbackUi.StatusLine.Text = "$($callbackText.OfficialBatch): -j$($Matches.threads) | $($callbackState.TotalFiles) $($callbackText.FileUnit)"
+            } elseif ($line -match '^\[ck-batch-progress\]\s+scheduled=(?<scheduled>\d+)\s+total=(?<total>\d+)\s+threads=(?<threads>\d+)\s+file=(?<file>.*)$') {
+                $scheduled = [int]$Matches.scheduled
+                $callbackState.TotalFiles = [int]$Matches.total
+                $percent = if ($callbackState.TotalFiles -gt 0) { [Math]::Min(90, [Math]::Floor(($scheduled * 90.0) / $callbackState.TotalFiles)) } else { 0 }
+                $callbackUi.ProgressBar.IsIndeterminate = $false
+                $callbackUi.ProgressBar.Value = $percent
+                $callbackUi.ProgressText.Text = ('{0:0}% ({1}/{2})' -f $percent, $scheduled, $callbackState.TotalFiles)
+                $callbackUi.StatusLine.Text = "$($callbackText.OfficialBatch): -j$($Matches.threads) | $($callbackText.Started) $scheduled/$($callbackState.TotalFiles) | $($callbackText.Current): $($Matches.file)"
+            } elseif ($line -match '^\[ck-file\]\s+index=(?<index>\d+)\s+total=(?<total>\d+)\s+kind=(?<kind>\S+)\s+file=(?<file>.*)$') {
                 $callbackUi.StatusLine.Text = "$($callbackText.Current): $($Matches.file)"
-            } elseif ($line -match '^\[ck-progress\]\s+processed=(?<processed>\d+)\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+untouched=(?<untouched>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)\s+file=(?<file>.*)$') {
+            } elseif ($line -match '^\[ck-progress\]\s+processed=(?<processed>\d+)\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+unattempted=(?<unattempted>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)\s+file=(?<file>.*)$') {
                 $callbackState.ProcessedFiles = [int]$Matches.processed
                 $callbackState.TotalFiles = [int]$Matches.total
                 $callbackState.SuccessFiles = [int]$Matches.success
                 $callbackState.ConvertedFiles = [int]$Matches.converted
-                $callbackState.UntouchedFiles = [int]$Matches.untouched
+                $callbackState.UnattemptedFiles = [int]$Matches.unattempted
                 $callbackState.FailedFiles = [int]$Matches.failed
                 $callbackState.SkippedFiles = [int]$Matches.skipped
                 $callbackState.UnmovedFiles = [int]$Matches.unmoved
@@ -563,15 +545,15 @@
                 $callbackUi.ProgressBar.IsIndeterminate = $false
                 $callbackUi.ProgressBar.Value = $percent
                 $callbackUi.ProgressText.Text = ('{0:0}% ({1}/{2})' -f $percent, $callbackState.ProcessedFiles, $callbackState.TotalFiles)
-                $callbackUi.StatusLine.Text = "$($callbackText.Processed) $($callbackState.ProcessedFiles)/$($callbackState.TotalFiles) $($callbackText.FileUnit) | $($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.UntouchedCount) $($callbackState.UntouchedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
+                $callbackUi.StatusLine.Text = "$($callbackText.Processed) $($callbackState.ProcessedFiles)/$($callbackState.TotalFiles) $($callbackText.FileUnit) | $($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.UnattemptedCount) $($callbackState.UnattemptedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
             } elseif ($line -match '^\[ck-report\]\s+path=(?<path>.+)$') {
                 $callbackState.ReportPath = $Matches.path.Trim()
-            } elseif ($line -match '^\[ck-summary\]\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+untouched=(?<untouched>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)$') {
+            } elseif ($line -match '^\[ck-summary\]\s+total=(?<total>\d+)\s+success=(?<success>\d+)\s+converted=(?<converted>\d+)\s+unattempted=(?<unattempted>\d+)\s+failed=(?<failed>\d+)\s+skipped=(?<skipped>\d+)\s+unmoved=(?<unmoved>\d+)$') {
                 $callbackState.TotalFiles = [int]$Matches.total
                 $callbackState.ProcessedFiles = $callbackState.TotalFiles
                 $callbackState.SuccessFiles = [int]$Matches.success
                 $callbackState.ConvertedFiles = [int]$Matches.converted
-                $callbackState.UntouchedFiles = [int]$Matches.untouched
+                $callbackState.UnattemptedFiles = [int]$Matches.unattempted
                 $callbackState.FailedFiles = [int]$Matches.failed
                 $callbackState.SkippedFiles = [int]$Matches.skipped
                 $callbackState.UnmovedFiles = [int]$Matches.unmoved
@@ -588,7 +570,7 @@
             $callbackState.CancelRequested = $false
             & $callbackSetRunning $false
             $reportExists = $callbackState.ReportPath -and (Test-Path -LiteralPath $callbackState.ReportPath -PathType Leaf)
-            $summary = "$($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.UntouchedCount) $($callbackState.UntouchedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
+            $summary = "$($callbackText.ConvertedCount) $($callbackState.ConvertedFiles) | $($callbackText.UnattemptedCount) $($callbackState.UnattemptedFiles) | $($callbackText.FailedCount) $($callbackState.FailedFiles) | $($callbackText.SkippedCount) $($callbackState.SkippedFiles)"
             if ($callbackState.UnmovedFiles -gt 0) {
                 $summary += " | $($callbackText.UnmovedCount) $($callbackState.UnmovedFiles)"
             }
@@ -597,7 +579,7 @@
                 $callbackUi.ResultStatus.Text = $callbackText.Stopped
                 $callbackUi.ResultStatus.Foreground = '#F4B860'
                 $callbackUi.StatusLine.Text = "$($callbackText.Stopped) | $summary"
-            } elseif ($callbackState.FailedFiles -gt 0 -and $callbackState.ProcessedFiles -ge $callbackState.TotalFiles) {
+            } elseif (($callbackState.FailedFiles -gt 0 -or $callbackState.UnattemptedFiles -gt 0) -and $callbackState.ProcessedFiles -ge $callbackState.TotalFiles) {
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.ProgressText.Text = "100% ($($callbackState.ProcessedFiles)/$($callbackState.TotalFiles))"
                 $callbackUi.ResultStatus.Text = $callbackText.PartialDone
@@ -696,7 +678,6 @@
         & $startAction
     }.GetNewClosure()
 
-    Register-CkButtonAction -Button $ui.ChooseInputFileButton -Action $chooseInputFileAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseInputFolderButton -Action $chooseInputFolderAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
