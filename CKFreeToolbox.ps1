@@ -196,6 +196,10 @@ $shellXaml = @"
           <Button x:Name="SelfUpdateButton" AutomationProperties.AutomationId="Toolbox.SelfUpdateButton"
                   Content="检查更新" Width="92" Height="30" Margin="0,0,12,0"
                   Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="12"/>
+          <Button x:Name="JoinQqGroupButton" AutomationProperties.AutomationId="Toolbox.JoinQqGroupButton"
+                  Content="一键加群" Width="96" Height="30" Margin="0,0,12,0"
+                  Background="#14213A" BorderBrush="#315A91" Foreground="#7DB5FF" FontSize="12"
+                  ToolTip="加入QQ群 1063823087"/>
           <Border Background="#101A16" BorderBrush="#1E4D3C" BorderThickness="1" CornerRadius="6" Padding="10,6">
             <StackPanel Orientation="Horizontal">
               <Ellipse Width="8" Height="8" Fill="#31D69A" Margin="0,0,7,0" VerticalAlignment="Center"/>
@@ -303,6 +307,7 @@ $componentProgressBar = $window.FindName('ComponentProgressBar')
 $toolboxVersionText = $window.FindName('ToolboxVersionText')
 $selfUpdateStatusText = $window.FindName('SelfUpdateStatusText')
 $selfUpdateButton = $window.FindName('SelfUpdateButton')
+$joinQqGroupButton = $window.FindName('JoinQqGroupButton')
 $selfUpdateProgressBar = $window.FindName('SelfUpdateProgressBar')
 $toolboxVersionText.Text = "v$ToolboxVersion"
 
@@ -872,6 +877,40 @@ $updateSelfUpdateUiAction = (Get-Command Update-CkSelfUpdateUi).ScriptBlock.GetN
 $startSelfUpdateOperationAction = (Get-Command Start-CkSelfUpdateOperation).ScriptBlock.GetNewClosure()
 $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
 
+$qqGroupNumber = '1063823087'
+$joinQqGroupAction = {
+    $payload = '{"groupUin":' + $qqGroupNumber + ',"timeStamp":' + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + '}'
+    $payloadHex = -join ([Text.Encoding]::UTF8.GetBytes($payload) | ForEach-Object { $_.ToString('X2') })
+    $joinUris = @(
+        "mqqapi://card/show_pslcard?src_type=internal&version=1&uin=$qqGroupNumber&card_type=group&source=qrcode",
+        "tencent://groupwpa/?subcmd=all&param=$payloadHex"
+    )
+
+    foreach ($joinUri in $joinUris) {
+        try {
+            Start-Process -FilePath $joinUri -ErrorAction Stop | Out-Null
+            return
+        } catch { }
+    }
+
+    $copied = $false
+    try {
+        [System.Windows.Clipboard]::SetText($qqGroupNumber)
+        $copied = $true
+    } catch { }
+    $message = if ($copied) {
+        "未能唤起 QQ。群号 $qqGroupNumber 已复制，请在 QQ 中搜索并申请加入。"
+    } else {
+        "未能唤起 QQ，请在 QQ 中手动搜索群号 $qqGroupNumber。"
+    }
+    [System.Windows.MessageBox]::Show(
+        $window,
+        $message,
+        '加入QQ群',
+        [System.Windows.MessageBoxButton]::OK,
+        [System.Windows.MessageBoxImage]::Information
+    ) | Out-Null
+}.GetNewClosure()
 $openSourceAction = {
     $url = [string]$openSourceButton.Tag
     $uri = $null
@@ -898,6 +937,7 @@ $selfUpdateAction = {
 Register-CkButtonAction -Button $openSourceButton -Action $openSourceAction
 Register-CkButtonAction -Button $componentActionButton -Action $componentAction
 Register-CkButtonAction -Button $selfUpdateButton -Action $selfUpdateAction
+Register-CkButtonAction -Button $joinQqGroupButton -Action $joinQqGroupAction
 
 foreach ($tool in $tools) {
     $toolConfigs[$tool.id] = $tool
