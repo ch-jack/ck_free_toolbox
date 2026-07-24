@@ -878,30 +878,28 @@ $startSelfUpdateOperationAction = (Get-Command Start-CkSelfUpdateOperation).Scri
 $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
 
 $qqGroupNumber = '1063823087'
+$qqGroupJoinUrl = 'http://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=2bIM9yZ9iV58Ir26yxl3IYCxBpFfFDfE&authKey=7VBdTBehczxZhfvWes8vBKtRonswPrKxYwLkBOSyhzJBY1YrnoJ1IqCoPtGTOfAa&noverify=0&group_code=1063823087'
 $joinQqGroupAction = {
-    $payload = '{"groupUin":' + $qqGroupNumber + ',"timeStamp":' + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + '}'
-    $payloadHex = -join ([Text.Encoding]::UTF8.GetBytes($payload) | ForEach-Object { $_.ToString('X2') })
-    $joinUris = @(
-        "mqqapi://card/show_pslcard?src_type=internal&version=1&uin=$qqGroupNumber&card_type=group&source=qrcode",
-        "tencent://groupwpa/?subcmd=all&param=$payloadHex"
-    )
-
-    foreach ($joinUri in $joinUris) {
-        try {
-            Start-Process -FilePath $joinUri -ErrorAction Stop | Out-Null
-            return
-        } catch { }
+    $uri = $null
+    if (-not [Uri]::TryCreate($qqGroupJoinUrl, [UriKind]::Absolute, [ref]$uri) -or
+        $uri.Scheme -notin @('http', 'https') -or $uri.Host -ne 'qm.qq.com') {
+        throw 'QQ群链接配置无效。'
     }
+
+    try {
+        Start-Process -FilePath $uri.AbsoluteUri -ErrorAction Stop | Out-Null
+        return
+    } catch { }
 
     $copied = $false
     try {
-        [System.Windows.Clipboard]::SetText($qqGroupNumber)
+        [System.Windows.Clipboard]::SetText($qqGroupJoinUrl)
         $copied = $true
     } catch { }
     $message = if ($copied) {
-        "未能唤起 QQ。群号 $qqGroupNumber 已复制，请在 QQ 中搜索并申请加入。"
+        "未能打开加群页面。完整加群链接已复制，请粘贴到浏览器打开。`n`nQQ群：$qqGroupNumber"
     } else {
-        "未能唤起 QQ，请在 QQ 中手动搜索群号 $qqGroupNumber。"
+        "未能打开加群页面，请手动复制以下链接到浏览器：`n`n$qqGroupJoinUrl`n`nQQ群：$qqGroupNumber"
     }
     [System.Windows.MessageBox]::Show(
         $window,
