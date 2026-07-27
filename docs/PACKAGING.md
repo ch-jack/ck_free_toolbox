@@ -16,6 +16,7 @@ dist/
 ~~~
 
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
+SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件工作器按需创建。
 
 ## 运行时 Release 组件
 
@@ -26,6 +27,7 @@ dist/
 - RPF 转 FiveM 对应 [ch-jack/rpf2fivem](https://github.com/ch-jack/rpf2fivem)。
 - 扫描移除后门对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
 - 一键清理小哈对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
+- 地图冲突合并对应 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
@@ -36,6 +38,7 @@ dist/
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
 模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF、扫描移除后门与一键清理小哈组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
+SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL；工具箱只依赖系统 .NET Framework 4.8 和用户本机 GTA V。
 
 ## 工具箱自更新
 
@@ -47,7 +50,8 @@ dist/
 4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。
 6. `config.json`、vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner、TestVeh 和其他用户文件不参与替换。
-7. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
+7. snowy-merger、其 vanilla_cache 和 SnowyMergerOutput 也不参与工具箱核心替换。
+8. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## Blender 和 Python 不进入发布包
 
@@ -114,6 +118,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 客户端直接执行 `rpf_to_fivem.py ... --json`，不启动服务器或后台服务。
 5. 页面解析 `_rpf_to_fivem_report.json`，显示资源结果、警告和输出路径。
 
+## 地图冲突合并运行流程
+
+1. 组件缺失时，从 ch-jack/SnowyMerger 最新稳定 Release 下载 SnowyMerger-vX.Y.Z.zip 和同名 SHA-256。
+2. 统一组件工作器执行下载限制、SHA-256 校验、安全解压、必需 DLL 检查、旧版本备份和失败回滚。
+3. 页面校验 .NET Framework 4.8、YmapMerger.exe、CodeWalker.Core.dll 及包含 GTA5.exe 的 GTA V 目录。
+4. 客户端直接执行 YmapMerger.exe -g <gta> -i <mods> -o <output>，并实时消费标准输出。
+5. 结果写入 <output>/snowy_merger，完整任务日志写入用户本地 CKFreeToolbox 报告目录。
+
 ## 扫描移除后门安全流程
 
 1. 组件缺失时，从 `ch-jack/ck_anti_john` 最新稳定 Release 下载 ZIP 和 SHA-256。
@@ -135,12 +147,14 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
 - ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
+- ZIP 中不存在 snowy-merger/；SnowyMergerPage.ps1 和 tools.json 注册必须存在。
 - 首次启动时五个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
 - 扫描移除后门组件安装后可扫描目录/ZIP、预览移除、确认写入并按 Run ID 恢复。
 - 一键清理小哈组件安装后可扫描 server-data/resources、隔离命中文件、按报告恢复，并在备份确认后选择性清理关联 SQL。
+- SnowyMerger 组件安装后可捕获 CLI 日志、识别无冲突输入，并把结果写入 snowy_merger resource。
 - Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
 - Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
 - Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。

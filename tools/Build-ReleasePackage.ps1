@@ -183,6 +183,12 @@ $userGuide = @(
     '2. 选择输出目录，按需调整覆盖、临时目录与安全限制。',
     '3. 点击开始转换，每个 RPF 会生成一个独立 FiveM resource。',
     '4. 转换后可直接打开输出目录，并查看资源明细和 JSON 报告。',
+    '地图冲突合并：',
+    '1. 选择包含 GTA5.exe 的 GTA V 安装目录。工具会读取原版 RPF 作为合并基线。',
+    '2. 选择包含两个或更多地图 resources 的 Mods 目录，以及 snowy_merger 的输出父目录。',
+    '3. 点击开始合并；页面会实时显示冲突数量、已处理文件组和完整日志。',
+    '4. 结果写入 <输出>\snowy_merger，并保存一份本地任务日志。',
+    '5. 在服务器中让 snowy_merger 晚于被替代的地图资源启动，并处理重复冲突文件。',
     '',
     '一键清理小哈：',
     '1. 选择 FiveM server-data 或 resources 目录，先执行“只读扫描”。',
@@ -206,7 +212,9 @@ $userGuide = @(
     '发布包不包含 Blender、Python、Node.js 或 Java。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+，FXAP 页面需要 Node.js 18+；Java 8+ 仅用于 Lua 反编译。',
     'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、服务器 Dump 和 FXAP 组件按需安装。',
+    'SnowyMerger 地图冲突合并组件同样按需安装，不会预装进工具箱发布包。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
+    '运行后安装的 snowy-merger 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -224,6 +232,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
     (Join-Path $packagePath 'app\pages\ServerDumpPage.ps1'),
     (Join-Path $packagePath 'app\pages\FxapDecryptorPage.ps1'),
+    (Join-Path $packagePath 'app\pages\SnowyMergerPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
@@ -280,6 +289,7 @@ $manifest = [ordered]@{
         xiaohaCleaner = $false
         dumpTool = $false
         fxapDecryptor = $false
+        snowyMerger = $false
         alchemist = $true
         componentManager = $true
         selfUpdater = $true

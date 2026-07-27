@@ -3,6 +3,7 @@
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
 本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和一键清理小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
+地图冲突合并页面接入 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)，同样通过稳定 Release 按需安装，不在工具箱仓库内复制其引擎源码。
 
 ## 界面预览
 
@@ -34,6 +35,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 
 - 重新构建 `CK免费工具箱.exe`。
 - 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 和 `xiaoha_cleaner`。
+- SnowyMerger 的 snowy-merger 目录也不预装；页面缺少组件时通过统一组件管理器下载、校验、备份并切换。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
 - 不复制 Blender、Python、Node.js 或 Java；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
@@ -98,6 +100,14 @@ git push origin v1.0.2
 - 长任务可停止；完成后显示成功、失败、输出文件、警告和逐资源明细，并只允许打开本轮转换生成的 JSON 报告。
 - 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
 - Python 缺失时提供官网和选择按钮，选择结果与 Blender 路径共用根目录 `config.json`。
+### 地图冲突合并
+
+- 选择 GTA V 本体、包含多个 FiveM 地图 resources 的 Mods 目录和输出父目录。
+- 以 GTA V 原版 RPF 为基线合并重复 YMAP，并同步处理对应 YBN/YDR、scenario YMT、META、water.xml 和 heightmap.dat。
+- 页面实时显示冲突数量、已处理文件组、进度与原始日志，长任务可以停止。
+- 输出固定写入 <输出目录>/snowy_merger/，任务日志归档到 %LOCALAPPDATA%/CKFreeToolbox/snowy-merger-reports/。
+- 组件从 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger) 的稳定 Release 安装，并校验独立 SHA-256 附件。
+- 运行依赖系统 .NET Framework 4.8 和本机 GTA V；不需要 Python、Node.js、Java 或后台服务。
 
 ### FXAP 文件夹解密
 
@@ -156,6 +166,7 @@ git push origin v1.0.2
 - 更新 ZIP 会校验 Release SHA-256、包版本、核心文件和清单哈希。
 - 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
 - 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
+- 已安装的 snowy-merger 组件及其 vanilla_cache 同样位于工具箱核心更新边界之外，不会被自更新删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -169,6 +180,7 @@ git push origin v1.0.2
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
 - Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；Python 页面校验 3.7+；FXAP 页面校验外部 Node.js 18+，并允许选择外部 Java 目录用于 Lua 反编译；.NET 4.8 使用系统安装并只提供官网。
+- 地图冲突合并页面会校验 .NET Framework 4.8、YmapMerger.exe、CodeWalker.Core.dll 和包含 GTA5.exe 的 GTA V 路径。
 
 ## 已验证
 
@@ -211,12 +223,14 @@ ck_free_toolbox/
 ~~~
 
 当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
 ## 开发与发布目录
 
 工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
+开发模式下同级 snowy-merger 目录也会直接被检测；正式轻量包仍只包含页面与统一安装代码。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 

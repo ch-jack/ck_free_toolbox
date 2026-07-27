@@ -174,6 +174,37 @@
         "default": false
     },
     {
+        "id": "snowy-merger",
+        "title": "地图冲突合并",
+        "icon": "≋",
+        "page": "SnowyMergerPage.ps1",
+        "factory": "New-CkSnowyMergerPage",
+        "sourceUrl": "https://github.com/ch-jack/SnowyMerger",
+        "component": {
+            "repo": "ch-jack/SnowyMerger",
+            "installDir": "snowy-merger",
+            "bootstrap": "",
+            "releaseAssetPattern": "SnowyMerger-*.zip",
+            "releaseChecksumAssetPattern": "SnowyMerger-*.zip.sha256",
+            "requiredFiles": [
+                "YmapMerger.exe",
+                "YmapMerger.exe.config",
+                "CodeWalker.Core.dll",
+                "Ookii.Dialogs.WinForms.dll",
+                "ShadersGen9Conversion.xml",
+                "SharpDX.dll",
+                "SharpDX.Mathematics.dll",
+                "strings.txt",
+                "System.Buffers.dll",
+                "System.Memory.dll",
+                "System.Numerics.Vectors.dll",
+                "System.Resources.Extensions.dll",
+                "System.Runtime.CompilerServices.Unsafe.dll"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",

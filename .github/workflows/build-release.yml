@@ -142,6 +142,7 @@ jobs:
             'app\pages\RpfToFivemPage.ps1',
             'app\pages\ServerDumpPage.ps1',
             'app/pages/FxapDecryptorPage.ps1',
+            'app\pages\SnowyMergerPage.ps1',
             'app\pages\AntiJohnPage.ps1',
             'app\pages\XiaohaCleanerPage.ps1',
             'app\pages\EnhancedConverterPage.ps1',
@@ -159,6 +160,9 @@ jobs:
 
           if (-not $manifest.bundled.alchemist) {
             throw 'Package manifest is missing the bundled Alchemist flag.'
+          }
+          if ($manifest.bundled.snowyMerger) {
+            throw 'SnowyMerger must remain an on-demand external component.'
           }
           $alchemistCliPath = Join-Path $package 'app\tools\alchemist\AlchemistCli.exe'
           $alchemistWorkerPath = Join-Path $package 'app\tools\alchemist\AlchemistBatchWorker.ps1'
@@ -200,6 +204,9 @@ jobs:
             if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
               throw "Unexpected bundled component: $componentDirectory"
             }
+          }
+          if (Test-Path -LiteralPath (Join-Path $package 'snowy-merger')) {
+            throw 'Unexpected bundled component: snowy-merger'
           }
 
           foreach ($toolId in @('anti-john', 'xiaoha-cleaner')) {
