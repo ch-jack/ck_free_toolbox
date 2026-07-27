@@ -1,6 +1,6 @@
 ﻿function Set-CkDependencyPath {
     param(
-        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java')][string]$Dependency,
+        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node')][string]$Dependency,
         [Parameter(Mandatory)][string]$Path
     )
 
@@ -10,8 +10,10 @@
         'blender.exe'
     } elseif ($Dependency -eq 'Python') {
         'python.exe'
-    } else {
+    } elseif ($Dependency -eq 'Java') {
         'java.exe'
+    } else {
+        'node.exe'
     }
     $resolved = Find-CkDependencyFile -Root $fullPath -FileName $fileName
     if (-not $resolved) { throw ("选择的位置没有找到 {0}: {1}" -f $fileName, $fullPath) }
@@ -290,6 +292,144 @@ function Get-CkJavaInfo {
     }
 }
 
+function Test-CkNodeExecutable {
+    param([Parameter(Mandatory)][string]$Path)
+
+    $resolved = Find-CkDependencyFile -Root $Path -FileName 'node.exe'
+    if (-not $resolved) {
+        return [pscustomobject]@{
+            Ok = $false
+            Label = '未找到 node.exe'
+            Path = ''
+            Version = ''
+            Major = 0
+            Reason = "选择的位置中没有找到 node.exe: $Path"
+        }
+    }
+
+    $process = $null
+    try {
+        $psi = New-Object Diagnostics.ProcessStartInfo
+        $psi.FileName = $resolved
+        $psi.Arguments = '--version'
+        $psi.UseShellExecute = $false
+        $psi.RedirectStandardOutput = $true
+        $psi.RedirectStandardError = $true
+        $psi.CreateNoWindow = $true
+        try {
+            $psi.StandardOutputEncoding = [Text.Encoding]::UTF8
+            $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
+        } catch { }
+
+        $process = New-Object Diagnostics.Process
+        $process.StartInfo = $psi
+        if (-not $process.Start()) { throw 'Node.js 版本检测进程未启动。' }
+        if (-not $process.WaitForExit(8000)) {
+            try { $process.Kill() } catch { }
+            return [pscustomobject]@{
+                Ok = $false
+                Label = 'Node.js 检测超时'
+                Path = $resolved
+                Version = ''
+                Major = 0
+                Reason = 'node --version 超过 8 秒没有返回。'
+            }
+        }
+
+        $stdout = $process.StandardOutput.ReadToEnd().Trim()
+        $stderr = $process.StandardError.ReadToEnd().Trim()
+        if ($process.ExitCode -ne 0) {
+            $detail = if ($stderr) { $stderr } else { "退出码 $($process.ExitCode)" }
+            return [pscustomobject]@{
+                Ok = $false
+                Label = 'Node.js 无法运行'
+                Path = $resolved
+                Version = ''
+                Major = 0
+                Reason = "node --version 执行失败: $detail"
+            }
+        }
+        if ($stdout -notmatch '^v?(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:[-+].*)?$') {
+            return [pscustomobject]@{
+                Ok = $false
+                Label = '无法识别 Node.js 版本'
+                Path = $resolved
+                Version = $stdout
+                Major = 0
+                Reason = "无法从 node --version 识别版本: $stdout"
+            }
+        }
+
+        $major = [int]$Matches.major
+        $version = "$($Matches.major).$($Matches.minor).$($Matches.patch)"
+        $ok = $major -ge 18
+        return [pscustomobject]@{
+            Ok = $ok
+            Label = $(if ($ok) { "Node.js $version 已就绪" } else { "Node.js $version 版本过低" })
+            Path = $resolved
+            Version = $version
+            Major = $major
+            Reason = $(if ($ok) { '' } else { "需要 Node.js 18 或更高版本。当前: $version" })
+        }
+    } catch {
+        return [pscustomobject]@{
+            Ok = $false
+            Label = 'Node.js 检测失败'
+            Path = $resolved
+            Version = ''
+            Major = 0
+            Reason = $_.Exception.Message
+        }
+    } finally {
+        if ($process) { $process.Dispose() }
+    }
+}
+
+function Get-CkNodeInfo {
+    param($Settings)
+
+    if (-not $Settings) { $Settings = Get-CkDependencySettings }
+    $candidates = New-Object System.Collections.Generic.List[string]
+    if ($Settings.NodePath) { $candidates.Add([string]$Settings.NodePath) }
+
+    $nodeCommand = Get-Command node.exe -ErrorAction SilentlyContinue
+    if ($nodeCommand -and $nodeCommand.Source) { $candidates.Add([string]$nodeCommand.Source) }
+
+    foreach ($scope in @('Process', 'User', 'Machine')) {
+        foreach ($name in @('NVM_SYMLINK', 'NVM_HOME')) {
+            try {
+                $value = [Environment]::GetEnvironmentVariable($name, $scope)
+                if ($value) { $candidates.Add((Join-Path $value 'node.exe')) }
+            } catch { }
+        }
+    }
+
+    foreach ($root in @(
+        [Environment]::GetFolderPath('ProgramFiles'),
+        [Environment]::GetFolderPath('ProgramFilesX86'),
+        (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'Programs')
+    )) {
+        if ($root) { $candidates.Add((Join-Path (Join-Path $root 'nodejs') 'node.exe')) }
+    }
+
+    $firstFailure = $null
+    foreach ($candidate in @($candidates | Where-Object { $_ } | Select-Object -Unique)) {
+        $info = Test-CkNodeExecutable -Path ([string]$candidate)
+        if ($info.Ok) { return $info }
+        if (-not $firstFailure) { $firstFailure = $info }
+    }
+    if ($firstFailure) { return $firstFailure }
+
+    return [pscustomobject]@{
+        Ok = $false
+        Label = '未检测到 Node.js'
+        Path = ''
+        Version = ''
+        Major = 0
+        Reason = '未检测到 Node.js 18 或更高版本。请安装后选择 node.exe。'
+    }
+}
+
 function Get-CkDotNetInfo {
     try {
         $framework = Get-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full' -ErrorAction Stop
@@ -371,4 +511,4 @@ function Get-CkToolboxEnvironment {
     }
 }
 
-Export-ModuleMember -Function Get-CkToolboxEnvironment, Set-CkDependencyPath, Get-CkJavaInfo, Test-CkJavaExecutable
+Export-ModuleMember -Function Get-CkToolboxEnvironment, Set-CkDependencyPath, Get-CkJavaInfo, Test-CkJavaExecutable, Get-CkNodeInfo, Test-CkNodeExecutable

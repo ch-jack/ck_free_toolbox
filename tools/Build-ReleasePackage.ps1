@@ -170,6 +170,14 @@ $userGuide = @(
     '3. 功能含服务器 Dump、解密 FXAP，不含修复模型。',
     '4. 任务结束后可打开输出目录，并查看本次 Markdown/JSON 报告。',
     '',
+    'FXAP 文件夹解密：',
+    '1. 选择直接包含 .fxap 的 resource，或包含多个 resource 的父目录。',
+    '2. CFX server key 可留空；缺少 grants_clk 时由 fxap_only 自行请求 Cloudflare。',
+    '3. 工具箱不提供、保存或传递 Bearer Token；鉴权只由 fxap_only 处理。',
+    '4. Node.js 18+ 需要外部安装；Java 可选，也可以在页面选择外部 Java 目录。',
+    '5. 输出自动写到相邻的 <目录名>_decrypted；未安装 Java 时 Lua 保留为 .luac。',
+    '6. 任务结束后可打开本次 Markdown/JSON 报告，也可从“报告历史”查看以往记录。',
+    '',
     'RPF 转 FiveM：',
     '1. 打开 RPF 转 FiveM 页面，选择输入目录、单个 RPF 或压缩包。',
     '2. 选择输出目录，按需调整覆盖、临时目录与安全限制。',
@@ -195,10 +203,10 @@ $userGuide = @(
     '2. 发现新版后点击顶部“立即更新”，工具箱会下载、校验、退出替换并自动重启。',
     '3. 自更新只替换工具箱核心文件，不删除 config.json、已安装组件、TestVeh、模型或渲染输出。',
     '',
-    '发布包不包含 Blender 或 Python。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+。',
+    '发布包不包含 Blender、Python、Node.js 或 Java。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+，FXAP 页面需要 Node.js 18+；Java 8+ 仅用于 Lua 反编译。',
     'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
-    '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI 和 RPF 组件按需安装。',
-    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
+    '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、服务器 Dump 和 FXAP 组件按需安装。',
+    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -215,6 +223,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\NuiWallfixPage.ps1'),
     (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
     (Join-Path $packagePath 'app\pages\ServerDumpPage.ps1'),
+    (Join-Path $packagePath 'app\pages\FxapDecryptorPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
@@ -238,6 +247,12 @@ if (Test-Path -LiteralPath (Join-Path $packagePath 'config.json') -PathType Leaf
 if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'python.exe').Count -gt 0) {
     throw '发布包不应包含 Python 运行时。'
 }
+if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'node.exe').Count -gt 0) {
+    throw '发布包不应包含 Node.js 运行时。'
+}
+if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'java.exe').Count -gt 0) {
+    throw '发布包不应包含 Java 运行时。'
+}
 
 $manifest = [ordered]@{
     product = 'CK免费工具箱'
@@ -249,6 +264,8 @@ $manifest = [ordered]@{
     requirements = [ordered]@{
         blender = '4.2 or later, installed separately'
         python = 'Validated Python 3.7+ selected by the user, system Python, py.exe, or Blender Python'
+        node = 'Node.js 18 or later, installed separately'
+        java = 'Optional Java 8 or later for Lua decompilation, installed separately'
         dotNetFramework = '4.8'
     }
     bundled = [ordered]@{
@@ -261,6 +278,8 @@ $manifest = [ordered]@{
         rpfToFivem = $false
         antiJohn = $false
         xiaohaCleaner = $false
+        dumpTool = $false
+        fxapDecryptor = $false
         alchemist = $true
         componentManager = $true
         selfUpdater = $true

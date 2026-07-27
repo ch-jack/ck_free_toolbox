@@ -24,6 +24,9 @@
             if ($legacy.PSObject.Properties['JavaPath']) {
                 $config.dependencies.javaPath = [string]$legacy.JavaPath
             }
+            if ($legacy.PSObject.Properties['NodePath']) {
+                $config.dependencies.nodePath = [string]$legacy.NodePath
+            }
         } catch { }
     }
     Save-CkToolboxConfig -Config $config
@@ -37,6 +40,7 @@ function New-CkToolboxConfig {
             blenderPath = ''
             pythonPath = ''
             javaPath = ''
+            nodePath = ''
         }
     }
 }
@@ -70,6 +74,9 @@ function ConvertTo-CkToolboxConfig {
     if (-not $config.dependencies.PSObject.Properties['javaPath']) {
         $config.dependencies | Add-Member -NotePropertyName javaPath -NotePropertyValue ''
     }
+    if (-not $config.dependencies.PSObject.Properties['nodePath']) {
+        $config.dependencies | Add-Member -NotePropertyName nodePath -NotePropertyValue ''
+    }
     if ($config.PSObject.Properties['BlenderPath'] -and -not $config.dependencies.blenderPath) {
         $config.dependencies.blenderPath = [string]$config.BlenderPath
     }
@@ -79,9 +86,13 @@ function ConvertTo-CkToolboxConfig {
     if ($config.PSObject.Properties['JavaPath'] -and -not $config.dependencies.javaPath) {
         $config.dependencies.javaPath = [string]$config.JavaPath
     }
+    if ($config.PSObject.Properties['NodePath'] -and -not $config.dependencies.nodePath) {
+        $config.dependencies.nodePath = [string]$config.NodePath
+    }
     if ($config.PSObject.Properties['BlenderPath']) { $config.PSObject.Properties.Remove('BlenderPath') }
     if ($config.PSObject.Properties['PythonPath']) { $config.PSObject.Properties.Remove('PythonPath') }
     if ($config.PSObject.Properties['JavaPath']) { $config.PSObject.Properties.Remove('JavaPath') }
+    if ($config.PSObject.Properties['NodePath']) { $config.PSObject.Properties.Remove('NodePath') }
     return $config
 }
 
@@ -126,12 +137,13 @@ function Get-CkDependencySettings {
         BlenderPath = [string]$config.dependencies.blenderPath
         PythonPath = [string]$config.dependencies.pythonPath
         JavaPath = [string]$config.dependencies.javaPath
+        NodePath = [string]$config.dependencies.nodePath
     }
 }
 
 function Set-CkToolboxDependencyPath {
     param(
-        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java')][string]$Dependency,
+        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node')][string]$Dependency,
         [Parameter(Mandatory)][string]$Path
     )
 
@@ -141,8 +153,10 @@ function Set-CkToolboxDependencyPath {
         $config.dependencies.blenderPath = $fullPath
     } elseif ($Dependency -eq 'Python') {
         $config.dependencies.pythonPath = $fullPath
-    } else {
+    } elseif ($Dependency -eq 'Java') {
         $config.dependencies.javaPath = $fullPath
+    } else {
+        $config.dependencies.nodePath = $fullPath
     }
     Save-CkToolboxConfig -Config $config
     return $fullPath

@@ -142,6 +142,37 @@
         "default": false
     },
     {
+        "id": "fxap-decryptor",
+        "title": "FXAP 文件夹解密",
+        "icon": "◇",
+        "page": "FxapDecryptorPage.ps1",
+        "factory": "New-CkFxapDecryptorPage",
+        "sourceUrl": "https://github.com/ch-jack/fxap_only",
+        "component": {
+            "repo": "ch-jack/fxap_only",
+            "installDir": "fxap-decryptor",
+            "bootstrap": "",
+            "releaseAssetPattern": "fxap-only-*-windows.zip",
+            "releaseChecksumAssetPattern": "fxap-only-*-windows.zip.sha256",
+            "requiredFiles": [
+                "index.js",
+                "package.json",
+                "VERSION",
+                "component-manifest.json",
+                "src/cloudflare-grants.js",
+                "src/constants.js",
+                "src/crypto.js",
+                "src/decryptor.js",
+                "src/discover.js",
+                "src/java-decompiler.js",
+                "src/keymaster.js",
+                "tools/unluac54.jar",
+                "tools/unluac54.jar.sha256"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",

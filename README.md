@@ -2,7 +2,7 @@
 
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及五个功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、扫描移除后门和一键清理小哈引擎分别在 [CK-model_renderer](https://github.com/ch-jack/CK-model_renderer)、[nui-wallfix](https://github.com/ch-jack/nui-wallfix)、[rpf2fivem](https://github.com/ch-jack/rpf2fivem)、[ck_anti_john](https://github.com/ch-jack/ck_anti_john) 和 [xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner) 维护，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和一键清理小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
 
 ## 界面预览
 
@@ -33,13 +33,13 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 开发者双击 `一键打包发布包.cmd`，脚本会自动：
 
 - 重新构建 `CK免费工具箱.exe`。
-- 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。
+- 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 和 `xiaoha_cleaner`。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
-- 不复制 Blender 或 Python；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
+- 不复制 Blender、Python、Node.js 或 Java；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
 - 写入使用说明、版本、运行时组件策略和 SHA-256 清单。
 
-默认产物位于 `dist/CK免费工具箱-v1.0.2/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender 仍需用户独立安装。
+默认产物位于 `dist/CK免费工具箱-v1.0.2/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender、Python、Node.js 和 Java 均需用户独立安装。
 
 命令行用法：
 
@@ -51,12 +51,12 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 ## GitHub 自动构建与发布
 
-`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取五个功能组件：
+`.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取任何已登记的外置功能组件：
 
 - 推送到 `main` 时，自动生成 `v1.0.<run>` 版本，构建 EXE/ZIP、上传 Artifact 并创建正式 GitHub Release。
 - Pull Request 只执行构建验证，不发布 Release。
 - 手动推送 `v*` 标签时仍按指定标签发布；自动版本会同步写入 EXE、界面和包清单。
-- 自动构建和发布都不会下载或打包 Blender。
+- 自动构建和发布都不会下载或打包 Blender、Python、Node.js、Java 或外置功能组件。
 
 发布命令：
 
@@ -99,6 +99,16 @@ git push origin v1.0.2
 - 直接调用 Release 内的 `rpf_to_fivem.py`、`CkRpfExtractor.exe` 和 `7z.exe`，不需要后端或源码仓库。
 - Python 缺失时提供官网和选择按钮，选择结果与 Blender 路径共用根目录 `config.json`。
 
+### FXAP 文件夹解密
+
+- 选择直接包含 `.fxap` 的单个 resource，或包含多个 resource 的父目录；输出自动写到相邻的 `<目录名>_decrypted`。
+- CFX server key 可留空；未提供 key 或 Keymaster 缺少目标 `grants_clk` 时，由 `fxap_only` 自行请求 Cloudflare。
+- 工具箱不提供、保存或传递 Bearer Token，Cloudflare 鉴权及后续接口变化只由 `fxap_only` 负责。
+- 页面实时显示资源、解密、复制、Lua 输出和失败数量，并支持停止任务与打开输出目录。
+- 每次任务结束都会生成 Markdown 和 JSON 报告；页面可直接打开本次报告或报告历史，报告不会写入 CFX key 或 Bearer Token。
+- Node.js 18+ 和 Java 都使用用户外部安装；Java 可选，缺失或反编译失败时保留 `.luac`。
+- 组件从 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only) 的稳定 Release 安装并校验 SHA-256，不包含 `decrypt-eup-stream.js` 功能。
+
 ### 扫描移除后门
 
 - 支持选择单个 FiveM resource、整个 `resources` 目录或 ZIP。
@@ -122,8 +132,8 @@ git push origin v1.0.2
 
 ### 统一依赖配置
 
-- 首次启动在工具箱根目录生成 `config.json`，统一保存 `dependencies.blenderPath` 和 `dependencies.pythonPath`。
-- 自动迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json` 中的 Blender/Python 路径；迁移后运行时只读写根目录配置。
+- 首次启动在工具箱根目录生成 `config.json`，统一保存 `dependencies.blenderPath`、`dependencies.pythonPath`、`dependencies.javaPath` 和 `dependencies.nodePath`。
+- 自动迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json` 中的 Blender、Python、Java 和 Node.js 路径；迁移后运行时只读写根目录配置。
 - 工具箱自更新不会替换或删除 `config.json`，发布 ZIP 也不包含默认配置，避免覆盖用户选择。
 - Python 候选必须通过真实版本命令并满足 3.7+；支持用户选择、系统 Python、`py.exe` 和有效的 Blender Python。
 
@@ -145,7 +155,7 @@ git push origin v1.0.2
 - 发现新版本时顶部显示“立即更新”，下载阶段显示实际进度。
 - 更新 ZIP 会校验 Release SHA-256、包版本、核心文件和清单哈希。
 - 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
-- 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
+- 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -158,7 +168,7 @@ git push origin v1.0.2
 - 标题、正文、按钮、日志和步骤组件使用紧凑字号与间距，减少首屏拥挤。
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
-- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；NUI/RPF/扫描移除后门/一键清理小哈页面为 Python 提供“官网”和“选择”按钮并校验 3.7+；.NET 4.8 使用系统安装并只提供官网。
+- Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；Python 页面校验 3.7+；FXAP 页面校验外部 Node.js 18+，并允许选择外部 Java 目录用于 Lua 反编译；.NET 4.8 使用系统安装并只提供官网。
 
 ## 已验证
 
@@ -200,13 +210,13 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、扫描移除后门和一键清理小哈。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
 ## 开发与发布目录
 
-工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
+工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 
