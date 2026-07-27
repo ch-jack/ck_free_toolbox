@@ -102,8 +102,8 @@ git push origin v1.0.2
 ### FXAP 文件夹解密
 
 - 选择直接包含 `.fxap` 的单个 resource，或包含多个 resource 的父目录；输出自动写到相邻的 `<目录名>_decrypted`。
-- CFX server key 可留空；未提供 key 或 Keymaster 缺少目标 `grants_clk` 时，由 `fxap_only` 自行请求 Cloudflare。
-- 工具箱不提供、保存或传递 Bearer Token，Cloudflare 鉴权及后续接口变化只由 `fxap_only` 负责。
+- CFX server key 可留空；未提供 key 或当前 resource 密钥不完整时，由 `fxap_only` 按 resource ID 查询 Keymaster grants API，客户端派生再调用 Cloudflare。
+- 工具箱不提供、保存或传递 Bearer Token；grants API 鉴权和 Cloudflare 派生配置都只由 `fxap_only` 负责。
 - 页面实时显示资源、解密、复制、Lua 输出和失败数量，并支持停止任务与打开输出目录。
 - 每次任务结束都会生成 Markdown 和 JSON 报告；页面可直接打开本次报告或报告历史，报告不会写入 CFX key 或 Bearer Token。
 - Node.js 18+ 和 Java 都使用用户外部安装；Java 可选，缺失或反编译失败时保留 `.luac`。

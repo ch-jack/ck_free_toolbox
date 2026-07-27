@@ -160,6 +160,7 @@
                 "VERSION",
                 "component-manifest.json",
                 "src/cloudflare-grants.js",
+                "src/grants-api.js",
                 "src/constants.js",
                 "src/crypto.js",
                 "src/decryptor.js",

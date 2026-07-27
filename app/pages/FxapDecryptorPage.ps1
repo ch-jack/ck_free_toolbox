@@ -115,7 +115,7 @@
           <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="FxapDecryptor.OpenOutputButton" Grid.Column="1" Content="打开输出" Height="36" Margin="7,22,0,0" IsEnabled="False"/>
         </Grid>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,11,0,0">
-          <TextBlock Text="未填写 CFX key 或 Keymaster 中缺少 grants_clk 时，fxap_only 会自行请求 Cloudflare。工具箱不提供、保存或传递接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
+          <TextBlock Text="未填写 CFX key 或当前 resource 密钥不完整时，fxap_only 会按 resource ID 查询 grants API；客户端派生仍由 Cloudflare 完成。工具箱不提供、保存或传递接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
         </Border>
       </StackPanel>
     </Border>
