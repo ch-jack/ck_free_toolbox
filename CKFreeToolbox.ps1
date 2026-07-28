@@ -179,7 +179,7 @@ $shellXaml = @"
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="148"/>
+      <ColumnDefinition Width="132"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
@@ -354,12 +354,14 @@ function New-NavButton {
     [System.Windows.Automation.AutomationProperties]::SetAutomationId($button, "Nav-$($Tool.id)")
     $button.Height = 68
     $button.Margin = '0,0,0,8'
-    $button.HorizontalContentAlignment = 'Stretch'
+    $button.Padding = '2,6'
+    $button.HorizontalAlignment = 'Center'
+    $button.HorizontalContentAlignment = 'Center'
     $button.Background = '#111419'
     $button.BorderBrush = '#242A34'
 
     $stack = New-Object System.Windows.Controls.StackPanel
-    $stack.HorizontalAlignment = 'Stretch'
+    $stack.HorizontalAlignment = 'Center'
     $icon = New-Object System.Windows.Controls.TextBlock
     $icon.Text = [string]$Tool.icon
     $icon.FontSize = if ([string]$Tool.icon -eq 'A⊞') { 18 } else { 22 }
@@ -368,9 +370,9 @@ function New-NavButton {
     $label.Text = [string]$Tool.title
     $label.FontSize = 12
     $label.Foreground = '#8B929E'
-    $label.HorizontalAlignment = 'Stretch'
+    $label.HorizontalAlignment = 'Center'
     $label.TextAlignment = 'Center'
-    $label.TextTrimming = 'CharacterEllipsis'
+    $label.TextTrimming = 'None'
     $label.ToolTip = [string]$Tool.title
     $label.Margin = '0,3,0,0'
     [void]$stack.Children.Add($icon)
