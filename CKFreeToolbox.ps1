@@ -179,7 +179,7 @@ $shellXaml = @"
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="104"/>
+      <ColumnDefinition Width="176"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
@@ -225,7 +225,7 @@ $shellXaml = @"
           <RowDefinition Height="*"/>
           <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <Grid Grid.RowSpan="2" Margin="10,16,4,12">
+        <Grid Grid.RowSpan="2" Margin="12,16,6,12">
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -234,7 +234,7 @@ $shellXaml = @"
           <ScrollViewer x:Name="NavScrollViewer" AutomationProperties.AutomationId="Toolbox.NavScrollViewer" Grid.Row="1"
                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                         PanningMode="VerticalOnly">
-            <StackPanel x:Name="NavHost" Margin="0,0,6,0"/>
+            <StackPanel x:Name="NavHost" Margin="0,0,4,0"/>
           </ScrollViewer>
         </Grid>
         <TextBlock Grid.Row="2" Text="POWERED BY CK" Foreground="#3B4048" FontSize="11" TextAlignment="Center" Margin="0,0,0,18"/>
@@ -352,22 +352,26 @@ function New-NavButton {
     $button.Tag = $Tool.id
     [System.Windows.Automation.AutomationProperties]::SetName($button, [string]$Tool.title)
     [System.Windows.Automation.AutomationProperties]::SetAutomationId($button, "Nav-$($Tool.id)")
-    $button.Height = 64
-    $button.Margin = '0,0,0,10'
+    $button.Height = 68
+    $button.Margin = '0,0,0,8'
+    $button.HorizontalContentAlignment = 'Stretch'
     $button.Background = '#111419'
     $button.BorderBrush = '#242A34'
 
     $stack = New-Object System.Windows.Controls.StackPanel
-    $stack.HorizontalAlignment = 'Center'
+    $stack.HorizontalAlignment = 'Stretch'
     $icon = New-Object System.Windows.Controls.TextBlock
     $icon.Text = [string]$Tool.icon
     $icon.FontSize = if ([string]$Tool.icon -eq 'A⊞') { 18 } else { 22 }
     $icon.HorizontalAlignment = 'Center'
     $label = New-Object System.Windows.Controls.TextBlock
     $label.Text = [string]$Tool.title
-    $label.FontSize = 11
+    $label.FontSize = 12
     $label.Foreground = '#8B929E'
-    $label.HorizontalAlignment = 'Center'
+    $label.HorizontalAlignment = 'Stretch'
+    $label.TextAlignment = 'Center'
+    $label.TextTrimming = 'CharacterEllipsis'
+    $label.ToolTip = [string]$Tool.title
     $label.Margin = '0,3,0,0'
     [void]$stack.Children.Add($icon)
     [void]$stack.Children.Add($label)

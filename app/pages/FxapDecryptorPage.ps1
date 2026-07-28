@@ -14,6 +14,8 @@
         JavaVersion = ''
         LogBuilder = (New-Object Text.StringBuilder)
         Process = $null
+        ApiHealthTask = $null
+        ApiLastCheck = [datetime]::MinValue
         CancelRequested = $false
         Ready = $false
         NodePath = ''
@@ -43,7 +45,13 @@
               <TextBlock Text="选择资源目录即可自动解密；CFX key 可选，接口鉴权由 fxap_only 内部处理。" Foreground="#8B9099" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
-          <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="FxapDecryptor.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
+          <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+              <Ellipse x:Name="ApiStatusDot" AutomationProperties.AutomationId="FxapDecryptor.ApiStatusDot" Width="9" Height="9" Fill="#F4B860" Margin="0,0,7,0" VerticalAlignment="Center"/>
+              <TextBlock x:Name="ApiStatusText" AutomationProperties.AutomationId="FxapDecryptor.ApiStatus" Text="API 检测中" Foreground="#F4B860" FontSize="12" FontWeight="SemiBold"/>
+            </StackPanel>
+            <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="FxapDecryptor.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0"/>
+          </StackPanel>
         </Grid>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
@@ -171,7 +179,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','NodeDot','NodeText','NodeDownloadButton','NodeBrowseButton','JavaDot','JavaText',
+        'EnvironmentStatus','ApiStatusDot','ApiStatusText','NodeDot','NodeText','NodeDownloadButton','NodeBrowseButton','JavaDot','JavaText',
         'JavaDownloadButton','JavaBrowseButton','ComponentDot','ComponentText','InputBox','ChooseFolderButton',
         'CfxKeyBox','OutputBox','OpenOutputButton','StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount',
         'DecryptedCount','CopiedCount','LuaCount','FailureCount','ProgressBar','StatusLine','LogBox'
@@ -181,13 +189,21 @@
         return Get-CkNodeInfo -Settings (Get-CkDependencySettings)
     }
 
+    Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
+    $apiHealthUrl = 'https://www.fengshao.icu/health/ready'
+    $apiHttpClient = New-Object Net.Http.HttpClient
+    $apiHttpClient.Timeout = [TimeSpan]::FromSeconds(5)
+    $apiHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd('CKFreeToolbox/1')
+    $apiHealthTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $apiHealthTimer.Interval = [TimeSpan]::FromMilliseconds(200)
+
     function Get-FxapJavaInfo {
         return Get-CkJavaInfo -Settings (Get-CkDependencySettings)
     }
 
     function Get-FxapComponentInfo {
         $required = @(
-            'index.js','package.json','VERSION','component-manifest.json','src\cloudflare-grants.js',
+            'index.js','package.json','VERSION','component-manifest.json','src\cloudflare-grants.js','src\grants-api.js',
             'src\constants.js','src\crypto.js','src\decryptor.js','src\discover.js',
             'src\java-decompiler.js','src\keymaster.js','tools\unluac54.jar','tools\unluac54.jar.sha256'
         )
@@ -203,6 +219,49 @@
             Ok = ($missing.Count -eq 0)
             Missing = $missing
             Version = $version
+        }
+    }
+
+    function Set-FxapApiHealthStatus {
+        param(
+            [Parameter(Mandatory)][ValidateSet('checking','available','unavailable')][string]$Status,
+            [string]$Detail = ''
+        )
+
+        switch ($Status) {
+            'available' {
+                $ui.ApiStatusDot.Fill = '#31D69A'
+                $ui.ApiStatusText.Text = 'API 可用'
+                $ui.ApiStatusText.Foreground = '#31D69A'
+            }
+            'unavailable' {
+                $ui.ApiStatusDot.Fill = '#EF6B73'
+                $ui.ApiStatusText.Text = 'API 不可用'
+                $ui.ApiStatusText.Foreground = '#EF6B73'
+            }
+            default {
+                $ui.ApiStatusDot.Fill = '#F4B860'
+                $ui.ApiStatusText.Text = 'API 检测中'
+                $ui.ApiStatusText.Foreground = '#F4B860'
+            }
+        }
+        $tooltip = $apiHealthUrl
+        if ($Detail) { $tooltip += [Environment]::NewLine + $Detail }
+        $ui.ApiStatusDot.ToolTip = $tooltip
+        $ui.ApiStatusText.ToolTip = $tooltip
+    }
+
+    function Start-FxapApiHealthCheck {
+        if ($state.ApiHealthTask) { return }
+        if (((Get-Date) - $state.ApiLastCheck).TotalSeconds -lt 30) { return }
+
+        & $setApiHealthStatusAction -Status checking -Detail '正在检查 /health/ready'
+        try {
+            $state.ApiHealthTask = $apiHttpClient.GetAsync($apiHealthUrl)
+            $apiHealthTimer.Start()
+        } catch {
+            $state.ApiLastCheck = Get-Date
+            & $setApiHealthStatusAction -Status unavailable -Detail $_.Exception.Message
         }
     }
 
@@ -461,6 +520,40 @@
     $resetStatisticsAction = (Get-Command Reset-FxapStatistics).ScriptBlock.GetNewClosure()
     $parseOutputAction = (Get-Command Update-FxapProgressFromLine).ScriptBlock.GetNewClosure()
     $saveReportAction = (Get-Command Save-FxapReport).ScriptBlock.GetNewClosure()
+    $setApiHealthStatusAction = (Get-Command Set-FxapApiHealthStatus).ScriptBlock.GetNewClosure()
+    $startApiHealthCheckAction = (Get-Command Start-FxapApiHealthCheck).ScriptBlock.GetNewClosure()
+    $apiHealthTick = {
+        $task = $state.ApiHealthTask
+        if (-not $task -or -not $task.IsCompleted) { return }
+
+        $apiHealthTimer.Stop()
+        $state.ApiHealthTask = $null
+        $state.ApiLastCheck = Get-Date
+        try {
+            if ($task.IsCanceled) { throw 'API 健康检查超时。' }
+            if ($task.IsFaulted) { throw $task.Exception.GetBaseException() }
+            $response = $task.GetAwaiter().GetResult()
+            try {
+                $statusCode = [int]$response.StatusCode
+                if ($response.IsSuccessStatusCode) {
+                    & $setApiHealthStatusAction -Status available -Detail "HTTP $statusCode · /health/ready"
+                } else {
+                    & $setApiHealthStatusAction -Status unavailable -Detail "HTTP $statusCode · /health/ready"
+                }
+            } finally {
+                if ($response) { $response.Dispose() }
+            }
+        } catch {
+            $detail = $_.Exception.Message
+            if (-not $detail) { $detail = '无法连接 API。' }
+            & $setApiHealthStatusAction -Status unavailable -Detail $detail
+        }
+    }.GetNewClosure()
+    $apiHealthTimer.Add_Tick($apiHealthTick)
+    $activateAction = {
+        & $updateEnvironmentAction
+        & $startApiHealthCheckAction
+    }.GetNewClosure()
 
     $showPageError = {
         param([string]$message)
@@ -709,12 +802,12 @@
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
 
-    & $updateEnvironmentAction
+    & $activateAction
     return [pscustomobject]@{
         Id = 'fxap-decryptor'
         Title = 'FXAP 文件夹解密'
         Icon = '◇'
         Root = $root
-        Activate = $updateEnvironmentAction
+        Activate = $activateAction
     }
 }
