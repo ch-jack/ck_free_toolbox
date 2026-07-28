@@ -16,6 +16,7 @@
         Process = $null
         ApiHealthTask = $null
         ApiLastCheck = [datetime]::MinValue
+        ApiHealthUrl = ''
         CancelRequested = $false
         Ready = $false
         NodePath = ''
@@ -190,7 +191,6 @@
     }
 
     Add-Type -AssemblyName System.Net.Http -ErrorAction SilentlyContinue
-    $apiHealthUrl = 'https://www.fengshao.icu/health/ready'
     $apiHttpClient = New-Object Net.Http.HttpClient
     $apiHttpClient.Timeout = [TimeSpan]::FromSeconds(5)
     $apiHttpClient.DefaultRequestHeaders.UserAgent.ParseAdd('CKFreeToolbox/1')
@@ -215,16 +215,32 @@
         if (Test-Path -LiteralPath $versionPath -PathType Leaf) {
             try { $version = [IO.File]::ReadAllText($versionPath).Trim() } catch { }
         }
+        $apiHealthUrl = ''
+        $manifestPath = Join-Path $Context.Paths.FxapDecryptorDir 'component-manifest.json'
+        if (Test-Path -LiteralPath $manifestPath -PathType Leaf) {
+            try {
+                $manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($manifest.PSObject.Properties['apiHealthUrl']) {
+                    $candidate = [string]$manifest.apiHealthUrl
+                    $healthUri = [Uri]$null
+                    if ([Uri]::TryCreate($candidate, [UriKind]::Absolute, [ref]$healthUri) -and
+                        $healthUri.Scheme -eq [Uri]::UriSchemeHttps) {
+                        $apiHealthUrl = $healthUri.AbsoluteUri
+                    }
+                }
+            } catch { }
+        }
         return [pscustomobject]@{
             Ok = ($missing.Count -eq 0)
             Missing = $missing
             Version = $version
+            ApiHealthUrl = $apiHealthUrl
         }
     }
 
     function Set-FxapApiHealthStatus {
         param(
-            [Parameter(Mandatory)][ValidateSet('checking','available','unavailable')][string]$Status,
+            [Parameter(Mandatory)][ValidateSet('unconfigured','checking','available','unavailable')][string]$Status,
             [string]$Detail = ''
         )
 
@@ -239,13 +255,18 @@
                 $ui.ApiStatusText.Text = 'API 不可用'
                 $ui.ApiStatusText.Foreground = '#EF6B73'
             }
+            'unconfigured' {
+                $ui.ApiStatusDot.Fill = '#6E7580'
+                $ui.ApiStatusText.Text = 'API 待组件'
+                $ui.ApiStatusText.Foreground = '#8B929E'
+            }
             default {
                 $ui.ApiStatusDot.Fill = '#F4B860'
                 $ui.ApiStatusText.Text = 'API 检测中'
                 $ui.ApiStatusText.Foreground = '#F4B860'
             }
         }
-        $tooltip = $apiHealthUrl
+        $tooltip = if ($state.ApiHealthUrl) { $state.ApiHealthUrl } else { '组件清单未提供 apiHealthUrl' }
         if ($Detail) { $tooltip += [Environment]::NewLine + $Detail }
         $ui.ApiStatusDot.ToolTip = $tooltip
         $ui.ApiStatusText.ToolTip = $tooltip
@@ -253,11 +274,15 @@
 
     function Start-FxapApiHealthCheck {
         if ($state.ApiHealthTask) { return }
+        if ([string]::IsNullOrWhiteSpace($state.ApiHealthUrl)) {
+            & $setApiHealthStatusAction -Status unconfigured -Detail '更新 FXAP 组件后可检测 API 状态。'
+            return
+        }
         if (((Get-Date) - $state.ApiLastCheck).TotalSeconds -lt 30) { return }
 
-        & $setApiHealthStatusAction -Status checking -Detail '正在检查 /health/ready'
+        & $setApiHealthStatusAction -Status checking -Detail '正在检查组件 API'
         try {
-            $state.ApiHealthTask = $apiHttpClient.GetAsync($apiHealthUrl)
+            $state.ApiHealthTask = $apiHttpClient.GetAsync($state.ApiHealthUrl)
             $apiHealthTimer.Start()
         } catch {
             $state.ApiLastCheck = Get-Date
@@ -293,6 +318,12 @@
         $nodeOk = [bool]$nodeInfo.Ok
         $javaOk = [bool]$javaInfo.Ok
         $componentOk = [bool]$componentInfo.Ok
+
+        $nextApiHealthUrl = [string]$componentInfo.ApiHealthUrl
+        if (-not [string]::Equals($state.ApiHealthUrl, $nextApiHealthUrl, [StringComparison]::OrdinalIgnoreCase)) {
+            $state.ApiHealthUrl = $nextApiHealthUrl
+            $state.ApiLastCheck = [datetime]::MinValue
+        }
 
         $state.NodePath = if ($nodeOk) { [string]$nodeInfo.Path } else { '' }
         $state.JavaPath = if ($javaOk) { [string]$javaInfo.Path } else { '' }
@@ -536,9 +567,9 @@
             try {
                 $statusCode = [int]$response.StatusCode
                 if ($response.IsSuccessStatusCode) {
-                    & $setApiHealthStatusAction -Status available -Detail "HTTP $statusCode · /health/ready"
+                    & $setApiHealthStatusAction -Status available -Detail "HTTP $statusCode"
                 } else {
-                    & $setApiHealthStatusAction -Status unavailable -Detail "HTTP $statusCode · /health/ready"
+                    & $setApiHealthStatusAction -Status unavailable -Detail "HTTP $statusCode"
                 }
             } finally {
                 if ($response) { $response.Dispose() }

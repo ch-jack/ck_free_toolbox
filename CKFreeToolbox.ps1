@@ -179,7 +179,7 @@ $shellXaml = @"
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="176"/>
+      <ColumnDefinition Width="148"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
