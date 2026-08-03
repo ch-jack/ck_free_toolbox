@@ -54,6 +54,15 @@
             <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="FxapDecryptor.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold" Margin="0,4,0,0"/>
           </StackPanel>
         </Grid>
+        <Border x:Name="ApiImpactNoticePanel" Background="#111820" BorderBrush="#2B4A68" BorderThickness="1" CornerRadius="6"
+                Padding="10,7" Margin="0,0,0,12" Visibility="Collapsed">
+          <Grid>
+            <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <TextBlock Text="API 说明" Foreground="#72B7F2" FontSize="11" FontWeight="SemiBold" Margin="0,0,9,0"/>
+            <TextBlock x:Name="ApiImpactNotice" AutomationProperties.AutomationId="FxapDecryptor.ApiImpactNotice" Grid.Column="1"
+                       Text="API 状态不影响解密功能，仅影响无密钥解密服务。" Foreground="#8B929E" FontSize="11" TextWrapping="Wrap"/>
+          </Grid>
+        </Border>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
@@ -180,7 +189,7 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','ApiStatusDot','ApiStatusText','NodeDot','NodeText','NodeDownloadButton','NodeBrowseButton','JavaDot','JavaText',
+        'EnvironmentStatus','ApiStatusDot','ApiStatusText','ApiImpactNoticePanel','NodeDot','NodeText','NodeDownloadButton','NodeBrowseButton','JavaDot','JavaText',
         'JavaDownloadButton','JavaBrowseButton','ComponentDot','ComponentText','InputBox','ChooseFolderButton',
         'CfxKeyBox','OutputBox','OpenOutputButton','StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount',
         'DecryptedCount','CopiedCount','LuaCount','FailureCount','ProgressBar','StatusLine','LogBox'
@@ -266,6 +275,7 @@
                 $ui.ApiStatusText.Foreground = '#F4B860'
             }
         }
+        $ui.ApiImpactNoticePanel.Visibility = if ($Status -in @('unavailable','unconfigured')) { 'Visible' } else { 'Collapsed' }
         $tooltip = if ($state.ApiHealthUrl) { $state.ApiHealthUrl } else { '组件清单未提供 apiHealthUrl' }
         if ($Detail) { $tooltip += [Environment]::NewLine + $Detail }
         $ui.ApiStatusDot.ToolTip = $tooltip
