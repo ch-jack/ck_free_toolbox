@@ -45,7 +45,7 @@ SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL�
 发布版启动后会异步检查 [ch-jack/ck_free_toolbox](https://github.com/ch-jack/ck_free_toolbox) 最新稳定 Release：
 
 1. 比较 package-manifest.json 中的本地版本和最新 vX.Y.Z 标签。
-2. 用户点击“立即更新”后优先下载 `CK免费工具箱-vX.Y.Z.zip`，并显示实际下载进度和实时下载速度；旧 Release 仍可兼容原英文附件名。
+2. 用户点击“立即更新”后下载 CK-Free-Toolbox-vX.Y.Z.zip，并显示实际下载进度和实时下载速度。
 3. 优先校验同名 .sha256 附件，再校验包内版本、核心文件和 package-manifest.json 哈希。
 4. 将验证后的核心文件暂存到安装目录内的 .ck-self-update。
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。

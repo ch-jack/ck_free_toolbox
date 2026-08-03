@@ -100,23 +100,11 @@ function Get-CkLatestRelease {
             throw "工具箱 Release 标签格式无效: $tag"
         }
         $version = $Matches[1]
+        $assetName = "CK-Free-Toolbox-$tag.zip"
         $escapedTag = [Uri]::EscapeDataString($tag)
-        $assetName = ''
-        $assetUrl = ''
-        $assetCandidates = @(
-            "CK免费工具箱-$tag.zip",
-            "CK-Free-Toolbox-$tag.zip"
-        )
-        foreach ($candidate in $assetCandidates) {
-            $candidateUrl = "https://github.com/$Repository/releases/download/$escapedTag/$([Uri]::EscapeDataString($candidate))"
-            if (Test-CkHttpAsset -Client $client -Url $candidateUrl) {
-                $assetName = $candidate
-                $assetUrl = $candidateUrl
-                break
-            }
-        }
-        if (-not $assetName) {
-            throw "工具箱 Release 缺少附件: $($assetCandidates -join ' 或 ')"
+        $assetUrl = "https://github.com/$Repository/releases/download/$escapedTag/$([Uri]::EscapeDataString($assetName))"
+        if (-not (Test-CkHttpAsset -Client $client -Url $assetUrl)) {
+            throw "工具箱 Release 缺少附件: $assetName"
         }
 
         $checksumName = "$assetName.sha256"

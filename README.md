@@ -56,7 +56,6 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 `.github/workflows/build-release.yml` 只检出并构建本仓库，不拉取任何已登记的外置功能组件：
 
 - 推送到 `main` 时，自动生成 `v1.0.<run>` 版本，构建 EXE/ZIP、上传 Artifact 并创建正式 GitHub Release。
-- Actions Artifact 和 GitHub Release 的正式下载包统一使用中文名 `CK免费工具箱-vX.Y.Z.zip`；Release 另保留同内容的英文附件供已安装旧版自动更新使用。
 - Pull Request 只执行构建验证，不发布 Release。
 - 手动推送 `v*` 标签时仍按指定标签发布；自动版本会同步写入 EXE、界面和包清单。
 - 自动构建和发布都不会下载或打包 Blender、Python、Node.js、Java 或外置功能组件。

@@ -299,7 +299,7 @@ jobs:
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CK免费工具箱-${{ github.sha }}
+          name: CK-Free-Toolbox-${{ github.sha }}
           path: dist/*.zip
           if-no-files-found: error
           compression-level: 0
@@ -334,31 +334,16 @@ jobs:
           if ($sourceArchives.Count -ne 1) {
             throw "Expected exactly one release ZIP, found $($sourceArchives.Count)."
           }
-          $assetName = "CK免费工具箱-$($env:CK_RELEASE_TAG).zip"
-          $releaseArchive = $sourceArchives[0].FullName
-          if ($sourceArchives[0].Name -cne $assetName) {
-            $releaseArchive = Join-Path (Resolve-Path .\dist) $assetName
-            Copy-Item -LiteralPath $sourceArchives[0].FullName -Destination $releaseArchive -Force
-          }
+          $assetName = "CK-Free-Toolbox-$($env:CK_RELEASE_TAG).zip"
+          $releaseArchive = Join-Path (Resolve-Path .\dist) $assetName
+          Copy-Item -LiteralPath $sourceArchives[0].FullName -Destination $releaseArchive -Force
           $checksumPath = "$releaseArchive.sha256"
           $archiveHash = (Get-FileHash -LiteralPath $releaseArchive -Algorithm SHA256).Hash.ToLowerInvariant()
           [IO.File]::WriteAllText(
             $checksumPath,
             "$archiveHash  $assetName" + [Environment]::NewLine,
-            (New-Object Text.UTF8Encoding($false))
+            (New-Object Text.ASCIIEncoding)
           )
-
-          # 已安装的旧版只认识英文附件名；保留同内容副本，避免改名后中断自动更新。
-          $legacyAssetName = "CK-Free-Toolbox-$($env:CK_RELEASE_TAG).zip"
-          $legacyReleaseArchive = Join-Path (Resolve-Path .\dist) $legacyAssetName
-          Copy-Item -LiteralPath $releaseArchive -Destination $legacyReleaseArchive -Force
-          $legacyChecksumPath = "$legacyReleaseArchive.sha256"
-          [IO.File]::WriteAllText(
-            $legacyChecksumPath,
-            "$archiveHash  $legacyAssetName" + [Environment]::NewLine,
-            (New-Object Text.UTF8Encoding($false))
-          )
-          $releaseAssets = @($releaseArchive, $checksumPath, $legacyReleaseArchive, $legacyChecksumPath)
 
           $ErrorActionPreference = 'SilentlyContinue'
           gh release view $env:CK_RELEASE_TAG --repo $env:GITHUB_REPOSITORY *> $null
@@ -374,16 +359,10 @@ jobs:
                 }
               }
             }
-            gh release upload $env:CK_RELEASE_TAG @releaseAssets --clobber --repo $env:GITHUB_REPOSITORY
+            gh release upload $env:CK_RELEASE_TAG $releaseArchive $checksumPath --clobber --repo $env:GITHUB_REPOSITORY
           } else {
-            gh release create $env:CK_RELEASE_TAG @releaseAssets --target $env:GITHUB_SHA --title $env:CK_RELEASE_TAG --generate-notes --repo $env:GITHUB_REPOSITORY
+            gh release create $env:CK_RELEASE_TAG $releaseArchive $checksumPath --target $env:GITHUB_SHA --title $env:CK_RELEASE_TAG --generate-notes --repo $env:GITHUB_REPOSITORY
           }
           if ($LASTEXITCODE -ne 0) {
             throw "GitHub release command exited with code $LASTEXITCODE"
-          }
-          $publishedAssets = @(gh release view $env:CK_RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets --jq '.assets[].name')
-          foreach ($expectedAsset in @($assetName, "$assetName.sha256", $legacyAssetName, "$legacyAssetName.sha256")) {
-            if ($publishedAssets -cnotcontains $expectedAsset) {
-              throw "Published release asset name mismatch: $expectedAsset"
-            }
           }

@@ -2,9 +2,7 @@
 
 CK 工具箱只发布一个 Windows ZIP：
 
-- CK免费工具箱-vX.Y.Z.zip
-
-GitHub Release 同时保留一个内容与哈希完全相同的 `CK-Free-Toolbox-vX.Y.Z.zip` 兼容附件，仅用于让已经安装的旧版继续完成自动更新；面向用户的正式下载名为中文名。
+- CK-Free-Toolbox-vX.Y.Z.zip
 
 这个正式包直接内置“扫描移除后门”和“一键清理小哈”。联网和断网环境使用同一个包、同一个入口和同一套操作：
 
@@ -62,7 +60,7 @@ GitHub Release 同时保留一个内容与哈希完全相同的 `CK-Free-Toolbox
     $base = Get-ChildItem .\dist -Directory | Select-Object -First 1
     .\tools\Build-BundledComponents.ps1 -BasePackagePath $base.FullName
 
-正式发布由 .github/workflows/build-release.yml 自动完成。Release 发布一个中文名正式 ZIP 及其 `.sha256`，并附带同内容的旧版自动更新兼容副本。
+正式发布由 .github/workflows/build-release.yml 自动完成。Release 只发布一个正式 ZIP 和它对应的 .sha256 文件。
 
 ## 组件发布自动触发
 
