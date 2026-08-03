@@ -35,12 +35,17 @@
 
 function New-CkToolboxConfig {
     return [pscustomobject][ordered]@{
-        schemaVersion = 1
+        schemaVersion = 2
         dependencies = [pscustomobject][ordered]@{
             blenderPath = ''
             pythonPath = ''
             javaPath = ''
             nodePath = ''
+        }
+        agreements = [pscustomobject][ordered]@{
+            disclaimerAccepted = $false
+            disclaimerVersion = 0
+            disclaimerAcceptedAt = ''
         }
     }
 }
@@ -58,9 +63,9 @@ function ConvertTo-CkToolboxConfig {
     if (-not $Value) { return New-CkToolboxConfig }
     $config = $Value
     if (-not $config.PSObject.Properties['schemaVersion']) {
-        $config | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 1
+        $config | Add-Member -NotePropertyName schemaVersion -NotePropertyValue 2
     } else {
-        $config.schemaVersion = [Math]::Max(1, [int]$config.schemaVersion)
+        $config.schemaVersion = [Math]::Max(2, [int]$config.schemaVersion)
     }
     if (-not $config.PSObject.Properties['dependencies'] -or -not $config.dependencies) {
         $config | Add-Member -NotePropertyName dependencies -NotePropertyValue ([pscustomobject][ordered]@{}) -Force
@@ -77,6 +82,26 @@ function ConvertTo-CkToolboxConfig {
     if (-not $config.dependencies.PSObject.Properties['nodePath']) {
         $config.dependencies | Add-Member -NotePropertyName nodePath -NotePropertyValue ''
     }
+    if (-not $config.PSObject.Properties['agreements'] -or -not $config.agreements) {
+        $config | Add-Member -NotePropertyName agreements -NotePropertyValue ([pscustomobject][ordered]@{}) -Force
+    }
+    if (-not $config.agreements.PSObject.Properties['disclaimerAccepted']) {
+        $config.agreements | Add-Member -NotePropertyName disclaimerAccepted -NotePropertyValue $false
+    }
+    if (-not $config.agreements.PSObject.Properties['disclaimerVersion']) {
+        $config.agreements | Add-Member -NotePropertyName disclaimerVersion -NotePropertyValue 0
+    }
+    if (-not $config.agreements.PSObject.Properties['disclaimerAcceptedAt']) {
+        $config.agreements | Add-Member -NotePropertyName disclaimerAcceptedAt -NotePropertyValue ''
+    }
+
+    $accepted = $false
+    try { $accepted = [Convert]::ToBoolean($config.agreements.disclaimerAccepted) } catch { }
+    $acceptedVersion = 0
+    try { $acceptedVersion = [Math]::Max(0, [int]$config.agreements.disclaimerVersion) } catch { }
+    $config.agreements.disclaimerAccepted = $accepted
+    $config.agreements.disclaimerVersion = $acceptedVersion
+    $config.agreements.disclaimerAcceptedAt = [string]$config.agreements.disclaimerAcceptedAt
     if ($config.PSObject.Properties['BlenderPath'] -and -not $config.dependencies.blenderPath) {
         $config.dependencies.blenderPath = [string]$config.BlenderPath
     }
@@ -162,4 +187,30 @@ function Set-CkToolboxDependencyPath {
     return $fullPath
 }
 
-Export-ModuleMember -Function Initialize-CkToolboxConfig, Get-CkToolboxConfigPath, Get-CkToolboxConfig, Save-CkToolboxConfig, Get-CkDependencySettings, Set-CkToolboxDependencyPath
+function Test-CkToolboxDisclaimerAccepted {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateRange(1, 2147483647)]
+        [int]$Version
+    )
+
+    $config = Get-CkToolboxConfig
+    return (($config.agreements.disclaimerAccepted -eq $true) -and
+        ([int]$config.agreements.disclaimerVersion -ge $Version))
+}
+
+function Set-CkToolboxDisclaimerAccepted {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateRange(1, 2147483647)]
+        [int]$Version
+    )
+
+    $config = Get-CkToolboxConfig
+    $config.agreements.disclaimerAccepted = $true
+    $config.agreements.disclaimerVersion = $Version
+    $config.agreements.disclaimerAcceptedAt = [DateTimeOffset]::Now.ToString('o')
+    Save-CkToolboxConfig -Config $config
+}
+
+Export-ModuleMember -Function Initialize-CkToolboxConfig, Get-CkToolboxConfigPath, Get-CkToolboxConfig, Save-CkToolboxConfig, Get-CkDependencySettings, Set-CkToolboxDependencyPath, Test-CkToolboxDisclaimerAccepted, Set-CkToolboxDisclaimerAccepted

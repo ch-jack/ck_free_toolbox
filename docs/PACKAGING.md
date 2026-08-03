@@ -63,7 +63,7 @@ SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL�
 - YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
 - Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
 - Blender 仍使用其自带 Python，最低支持版本为 4.2；选择 4.1 或更早版本会明确标记为不支持。
-- Blender/Python 选择结果统一保存在工具箱根目录 `config.json` 的 `dependencies` 节点。
+- Blender/Python 选择结果统一保存在工具箱根目录 `config.json` 的 `dependencies` 节点；首次启动的免责条款同意状态保存在 `agreements` 节点。
 - 首次启动会迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json`；之后不再从旧文件运行时读写。
 - 发布 ZIP 不包含根目录 `config.json`，自更新核心文件列表也不包含它，因此不会覆盖用户选择。
 - 模型组件把 RPF/YTD 临时文件放在本次输出目录的 `_temp`，正常结束自动清理，不使用系统 `%TEMP%`。
@@ -148,6 +148,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
 - ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
 - ZIP 中不存在 snowy-merger/；SnowyMergerPage.ps1 和 tools.json 注册必须存在。
+- 全新配置首次启动显示免责条款；未勾选时同意按钮不可用，拒绝或关闭后不进入主界面，同意后再次启动不重复弹出同版本条款。
 - 首次启动时五个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。

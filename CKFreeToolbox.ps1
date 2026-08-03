@@ -33,6 +33,154 @@ Import-Module (Join-Path $ModuleRoot 'EnvironmentProbe.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'ProcessRunner.psm1') -Force
 [void](Initialize-CkToolboxConfig -Path $UserConfigPath -LegacyPath $LegacyConfigPath)
 
+$DisclaimerVersion = 1
+
+function Show-CkDisclaimerGate {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateRange(1, 2147483647)]
+        [int]$Version
+    )
+
+    if (Test-CkToolboxDisclaimerAccepted -Version $Version) {
+        return $true
+    }
+
+    $disclaimerXaml = @"
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="CK免费工具箱 - 使用及免责条款"
+        Width="700" Height="610" MinWidth="620" MinHeight="540"
+        WindowStartupLocation="CenterScreen" ResizeMode="CanResize"
+        Background="#090A0A" FontFamily="Microsoft YaHei" Foreground="#E5E7EB"
+        ShowInTaskbar="True">
+  <Window.Resources>
+    <Style TargetType="Button">
+      <Setter Property="Foreground" Value="#E5E7EB"/>
+      <Setter Property="Background" Value="#171A1F"/>
+      <Setter Property="BorderBrush" Value="#343A46"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="18,9"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="FontSize" Value="13"/>
+    </Style>
+    <Style TargetType="CheckBox">
+      <Setter Property="Foreground" Value="#D5DAE2"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+  </Window.Resources>
+  <Grid Margin="28,24,28,22">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <StackPanel>
+      <TextBlock Text="使用及免责条款" FontSize="25" FontWeight="Bold"/>
+      <TextBlock Text="请认真阅读。只有明确同意后，才能进入 CK 免费工具箱。"
+                 Foreground="#8B929E" FontSize="13" Margin="0,7,0,0"/>
+    </StackPanel>
+
+    <Border Grid.Row="1" Background="#101A16" BorderBrush="#1E4D3C" BorderThickness="1"
+            CornerRadius="7" Padding="14,11" Margin="0,18,0,14">
+      <TextBlock Text="本工具箱及其组件的相关代码均已在 GitHub 公开开源；各项目的版权、开源许可与使用条件，以对应 GitHub 仓库的声明为准。"
+                 Foreground="#9DE0C6" FontSize="13" TextWrapping="Wrap" LineHeight="22"/>
+    </Border>
+
+    <Border Grid.Row="2" Background="#0D0F12" BorderBrush="#242A33" BorderThickness="1" CornerRadius="7">
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="18,15">
+        <StackPanel>
+          <TextBlock Text="1. 工具定位" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="本工具箱仅提供开源项目的聚合、下载、校验和本地调用能力，不代表 GitHub 或任何开源项目作者对您的具体用途进行授权、推荐、背书或保证。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
+
+          <TextBlock Text="2. 使用者责任" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="您应自行确认使用行为符合所在地法律法规、对应项目的开源许可证及目标平台规则，并自行判断工具和代码是否适合您的使用场景。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
+
+          <TextBlock Text="3. 风险与备份" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="运行任何功能前，请自行检查输入、备份重要文件和数据。因使用、误用或无法使用本工具箱而产生的文件变更、数据损失、服务异常、账号或其他风险，由您自行承担。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
+
+          <TextBlock Text="4. 与 GitHub 项目作者无关" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="您使用本工具箱实施的一切行为及其产生的结果，均由您自行负责，与对应 GitHub 项目的作者、贡献者和维护者无关；上述人员不因其代码被本工具箱收录或调用而承担责任。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
+
+          <TextBlock Text="5. 按现状提供" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="在法律允许的范围内，本工具箱及相关开源代码均按现状提供，不承诺其始终可用、完全准确、无缺陷或适用于特定目的。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,2"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <CheckBox x:Name="DisclaimerAcknowledgeCheckBox" Grid.Row="3"
+              Content="我已阅读、理解并同意以上使用及免责条款"
+              Margin="2,16,0,15" VerticalAlignment="Center"/>
+
+    <Grid Grid.Row="4">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+      <TextBlock Text="不同意将直接退出，且不会进入工具箱。" Foreground="#6E7580"
+                 FontSize="12" VerticalAlignment="Center"/>
+      <Button x:Name="DisclaimerDeclineButton" Grid.Column="1" Content="不同意并退出"
+              MinWidth="122" Margin="0,0,10,0" IsCancel="True"/>
+      <Button x:Name="DisclaimerAcceptButton" Grid.Column="2" Content="同意并继续"
+              MinWidth="122" IsDefault="True" IsEnabled="False"
+              Background="#12382D" BorderBrush="#277A5E" Foreground="#9DE0C6" FontWeight="SemiBold"/>
+    </Grid>
+  </Grid>
+</Window>
+"@
+
+    $dialog = Import-CkXaml $disclaimerXaml
+    if (Test-Path -LiteralPath $IconPath -PathType Leaf) {
+        $dialog.Icon = [System.Windows.Media.Imaging.BitmapFrame]::Create(
+            [Uri]::new($IconPath, [UriKind]::Absolute)
+        )
+    }
+
+    $acknowledgeCheckBox = $dialog.FindName('DisclaimerAcknowledgeCheckBox')
+    $acceptButton = $dialog.FindName('DisclaimerAcceptButton')
+    $declineButton = $dialog.FindName('DisclaimerDeclineButton')
+    $dialog.Tag = $false
+
+    $acknowledgeCheckBox.Add_Checked({ $acceptButton.IsEnabled = $true }.GetNewClosure())
+    $acknowledgeCheckBox.Add_Unchecked({ $acceptButton.IsEnabled = $false }.GetNewClosure())
+    $declineButton.Add_Click({
+        $dialog.Tag = $false
+        $dialog.DialogResult = $false
+    }.GetNewClosure())
+    $acceptButton.Add_Click({
+        try {
+            Set-CkToolboxDisclaimerAccepted -Version $Version
+            $dialog.Tag = $true
+            $dialog.DialogResult = $true
+        } catch {
+            [System.Windows.MessageBox]::Show(
+                $dialog,
+                "同意状态无法写入本地配置，工具箱暂时不能继续。`n`n$($_.Exception.Message)",
+                'CK免费工具箱 - 配置保存失败',
+                [System.Windows.MessageBoxButton]::OK,
+                [System.Windows.MessageBoxImage]::Error
+            ) | Out-Null
+        }
+    }.GetNewClosure())
+
+    [void]$dialog.ShowDialog()
+    return ($dialog.Tag -eq $true)
+}
+
+if (-not (Show-CkDisclaimerGate -Version $DisclaimerVersion)) {
+    return
+}
+
 $context = [pscustomobject]@{
     Paths = [pscustomobject]@{
         ScriptRoot = $ScriptRoot
