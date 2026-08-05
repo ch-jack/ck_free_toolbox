@@ -33,7 +33,7 @@ Import-Module (Join-Path $ModuleRoot 'EnvironmentProbe.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'ProcessRunner.psm1') -Force
 [void](Initialize-CkToolboxConfig -Path $UserConfigPath -LegacyPath $LegacyConfigPath)
 
-$DisclaimerVersion = 1
+$DisclaimerVersion = 2
 
 function Show-CkDisclaimerGate {
     param(
@@ -98,19 +98,23 @@ function Show-CkDisclaimerGate {
           <TextBlock Text="本工具箱仅提供开源项目的聚合、下载、校验和本地调用能力，不代表 GitHub 或任何开源项目作者对您的具体用途进行授权、推荐、背书或保证。"
                      TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
 
-          <TextBlock Text="2. 使用者责任" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="2. 二次创作与禁止收费" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="允许在遵守对应 GitHub 仓库开源许可证的前提下，对本工具箱和开源组件进行学习、修改、整合及二次创作。未经相关权利人另行书面授权，禁止以任何形式对本工具箱、开源组件或其二创、整合版本收费，包括出售、付费下载、付费授权、会员专享、捆绑收费，或以技术服务费、安装费等名义变相收费；各独立组件的权利归属和许可边界仍以其仓库 LICENSE 为准。"
+                     TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
+
+          <TextBlock Text="3. 使用者责任" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
           <TextBlock Text="您应自行确认使用行为符合所在地法律法规、对应项目的开源许可证及目标平台规则，并自行判断工具和代码是否适合您的使用场景。"
                      TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
 
-          <TextBlock Text="3. 风险与备份" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="4. 风险与备份" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
           <TextBlock Text="运行任何功能前，请自行检查输入、备份重要文件和数据。因使用、误用或无法使用本工具箱而产生的文件变更、数据损失、服务异常、账号或其他风险，由您自行承担。"
                      TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
 
-          <TextBlock Text="4. 与 GitHub 项目作者无关" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="5. 与 GitHub 项目作者无关" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
           <TextBlock Text="您使用本工具箱实施的一切行为及其产生的结果，均由您自行负责，与对应 GitHub 项目的作者、贡献者和维护者无关；上述人员不因其代码被本工具箱收录或调用而承担责任。"
                      TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,14"/>
 
-          <TextBlock Text="5. 按现状提供" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
+          <TextBlock Text="6. 按现状提供" FontWeight="Bold" FontSize="14" Foreground="#FFFFFF"/>
           <TextBlock Text="在法律允许的范围内，本工具箱及相关开源代码均按现状提供，不承诺其始终可用、完全准确、无缺陷或适用于特定目的。"
                      TextWrapping="Wrap" LineHeight="22" Foreground="#B8C0CC" Margin="0,5,0,2"/>
         </StackPanel>

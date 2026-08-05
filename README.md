@@ -143,6 +143,7 @@ git push origin v1.0.2
 ### 统一依赖配置
 
 - 首次启动会先显示“使用及免责条款”；只有勾选确认并点击“同意并继续”后才进入工具箱，拒绝或关闭弹窗会直接退出。
+- 条款允许在遵守对应仓库开源许可证的前提下进行学习、修改、整合和二次创作，同时禁止出售、付费下载、付费授权、会员专享、捆绑收费及变相收费；独立组件仍以其仓库 `LICENSE` 为准。
 - 首次启动在工具箱根目录生成 `config.json`，统一保存 `dependencies.blenderPath`、`dependencies.pythonPath`、`dependencies.javaPath`、`dependencies.nodePath`，以及 `agreements` 中的条款版本、同意状态和同意时间。
 - 自动迁移旧 `%LOCALAPPDATA%\CKFreeToolbox\settings.json` 中的 Blender、Python、Java 和 Node.js 路径；迁移后运行时只读写根目录配置。
 - 工具箱自更新不会替换或删除 `config.json`，发布 ZIP 也不包含默认配置，避免覆盖用户选择。

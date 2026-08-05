@@ -148,7 +148,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
 - ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
 - ZIP 中不存在 snowy-merger/；SnowyMergerPage.ps1 和 tools.json 注册必须存在。
-- 全新配置首次启动显示免责条款；未勾选时同意按钮不可用，拒绝或关闭后不进入主界面，同意后再次启动不重复弹出同版本条款。
+- 全新配置首次启动显示免责条款；未勾选时同意按钮不可用，拒绝或关闭后不进入主界面，同意后再次启动不重复弹出同版本条款。条款版本 2 新增“允许二创、禁止收费”，已同意版本 1 的配置必须重新确认。
 - 首次启动时五个页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
