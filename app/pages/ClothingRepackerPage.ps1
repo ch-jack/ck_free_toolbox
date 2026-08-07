@@ -21,6 +21,72 @@
               xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
               VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
               Padding="22,16,28,32">
+  <ScrollViewer.Resources>
+    <Style TargetType="{x:Type ComboBox}">
+      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Background" Value="#F4F7FB"/>
+      <Setter Property="BorderBrush" Value="#596273"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="9,6"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Style.Triggers>
+        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+          <Setter Property="BorderBrush" Value="#58A6FF"/>
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground" Value="#4B5563"/>
+          <Setter Property="Background" Value="#D7DCE3"/>
+          <Setter Property="BorderBrush" Value="#8B95A3"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style TargetType="{x:Type ComboBoxItem}">
+      <Setter Property="Foreground" Value="#F4F7FB"/>
+      <Setter Property="Background" Value="#20242B"/>
+      <Setter Property="BorderBrush" Value="#343A46"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Setter Property="OverridesDefaultStyle" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+            <Border x:Name="ItemBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#315A91"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#173055"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#191C21"/>
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#2A2E37"/>
+                <Setter Property="Foreground" Value="#8F98A5"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+  </ScrollViewer.Resources>
   <StackPanel>
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
       <StackPanel>
@@ -29,7 +95,7 @@
             <Border Width="4" Height="22" CornerRadius="3" Background="#E58A4E" Margin="0,0,10,0"/>
             <StackPanel>
               <TextBlock Text="衣服资源打包" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="Red40 Clothing Repacker CLI · 分析、生成、应用、恢复、校验、报告与 YMT XML 导出" Foreground="#777B83" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="Red40 Clothing Repacker CLI · 分析、生成、应用、恢复、校验、报告与 YMT XML 导出" Foreground="#AAB2BE" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <TextBlock x:Name="EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
@@ -40,7 +106,7 @@
             <Ellipse x:Name="ComponentDot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/>
             <StackPanel Grid.Column="1">
               <TextBlock Text="Red40 CLI 组件" FontSize="14" FontWeight="SemiBold"/>
-              <TextBlock x:Name="ComponentText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+              <TextBlock x:Name="ComponentText" Text="检测中" Foreground="#AAB2BE" FontSize="11" TextTrimming="CharacterEllipsis"/>
             </StackPanel>
           </Grid>
         </Border>
@@ -63,7 +129,7 @@
             <ComboBoxItem Content="生成打包报告" Tag="report"/>
             <ComboBoxItem Content="导出 YMT XML" Tag="export-xml"/>
           </ComboBox>
-          <TextBlock x:Name="CommandDescription" Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="#9AA3AF" FontSize="12" TextWrapping="Wrap"/>
+          <TextBlock x:Name="CommandDescription" Grid.Column="1" Margin="14,0,0,0" VerticalAlignment="Center" Foreground="#C4CBD5" FontSize="12" TextWrapping="Wrap"/>
         </Grid>
         <CheckBox x:Name="NoVersionCheckCheck" Content="跳过 CLI 自带在线版本检查（推荐；组件更新由工具箱负责）" IsChecked="True" Foreground="#8FC7F3" Margin="0,12,0,0"/>
       </StackPanel>
@@ -74,60 +140,60 @@
         <TextBlock Text="分析参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/>
         <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="210"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="资源选择方式" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><ComboBox x:Name="AnalyzeInputModeBox" Height="36" SelectedIndex="0"><ComboBoxItem Content="扫描父目录下的 resources" Tag="parent"/><ComboBoxItem Content="逐个指定 resource 目录" Tag="list"/></ComboBox></StackPanel>
-          <TextBlock Grid.Column="1" Text="父目录模式适合标准 resources 目录；指定列表模式可跨目录选择，并需要填写生成资源的父目录。" Margin="14,22,0,0" Foreground="#777B83" FontSize="12" TextWrapping="Wrap"/>
+          <StackPanel><TextBlock Text="资源选择方式" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><ComboBox x:Name="AnalyzeInputModeBox" Height="36" SelectedIndex="0"><ComboBoxItem Content="扫描父目录下的 resources" Tag="parent"/><ComboBoxItem Content="逐个指定 resource 目录" Tag="list"/></ComboBox></StackPanel>
+          <TextBlock Grid.Column="1" Text="父目录模式适合标准 resources 目录；指定列表模式可跨目录选择，并需要填写生成资源的父目录。" Margin="14,22,0,0" Foreground="#AAB2BE" FontSize="12" TextWrapping="Wrap"/>
         </Grid>
         <Grid x:Name="AnalyzeParentGrid" Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="资源父目录" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzeParentBox" Height="36"/></StackPanel>
+          <StackPanel><TextBlock Text="资源父目录" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzeParentBox" Height="36"/></StackPanel>
           <Button x:Name="ChooseAnalyzeParentButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/>
         </Grid>
         <Grid x:Name="AnalyzeListGrid" Visibility="Collapsed" Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="指定 resource 目录（每行一个）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
+            <TextBlock Text="指定 resource 目录（每行一个）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/>
             <TextBox x:Name="AnalyzeResourcesBox" MinHeight="76" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/>
-            <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="生成资源父目录（--generated-root）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzeGeneratedRootBox" Height="36"/></StackPanel><Button x:Name="ChooseAnalyzeGeneratedRootButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid>
+            <Grid Margin="0,8,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="生成资源父目录（--generated-root）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzeGeneratedRootBox" Height="36"/></StackPanel><Button x:Name="ChooseAnalyzeGeneratedRootButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid>
           </StackPanel>
           <StackPanel Grid.Column="1" Margin="8,22,0,0"><Button x:Name="AddAnalyzeResourceButton" Content="添加目录" Height="34"/><Button x:Name="ClearAnalyzeResourcesButton" Content="清空列表" Height="34" Margin="0,8,0,0"/></StackPanel>
         </Grid>
         <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions>
-          <StackPanel><TextBlock Text="方案文件（plan.json）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzePlanBox" Height="36"/></StackPanel>
+          <StackPanel><TextBlock Text="方案文件（plan.json）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="AnalyzePlanBox" Height="36"/></StackPanel>
           <Button x:Name="ChooseAnalyzePlanButton" Grid.Column="1" Content="保存位置" Height="36" Margin="8,22,0,0"/>
         </Grid>
-        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="目标 resource 名称" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="TargetResourceBox" Height="36" Text="zz_merged_clothing_meta"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="集合前缀" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="TargetPrefixBox" Height="36" Text="merged"/></StackPanel></Grid>
-        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="女性集合前缀（留空则自动生成）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="FemalePrefixBox" Height="36"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="男性集合前缀（留空则自动生成）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MalePrefixBox" Height="36"/></StackPanel></Grid>
-        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="每个组件最大 drawable 数" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MaxComponentBox" Height="36" Text="256"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="每个 prop 最大 drawable 数" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MaxPropBox" Height="36" Text="256"/></StackPanel></Grid>
+        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="目标 resource 名称" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="TargetResourceBox" Height="36" Text="zz_merged_clothing_meta"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="集合前缀" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="TargetPrefixBox" Height="36" Text="merged"/></StackPanel></Grid>
+        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="女性集合前缀（留空则自动生成）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="FemalePrefixBox" Height="36"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="男性集合前缀（留空则自动生成）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MalePrefixBox" Height="36"/></StackPanel></Grid>
+        <Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><StackPanel Margin="0,0,5,0"><TextBlock Text="每个组件最大 drawable 数" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MaxComponentBox" Height="36" Text="256"/></StackPanel><StackPanel Grid.Column="1" Margin="5,0,0,0"><TextBlock Text="每个 prop 最大 drawable 数" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="MaxPropBox" Height="36" Text="256"/></StackPanel></Grid>
         <CheckBox x:Name="OptimizeCheck" Content="优化 YMT 使用量（允许把同一来源的组件/prop 分配到不同目标集合）" Foreground="#D7C38D"/>
       </StackPanel>
     </Border>
 
     <Border x:Name="BuildPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
-      <StackPanel><TextBlock Text="生成参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="BuildPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseBuildPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="预览输出目录" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="BuildOutputBox" Height="36"/></StackPanel><Button x:Name="ChooseBuildOutputButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><StackPanel Orientation="Horizontal"><CheckBox x:Name="BuildXmlCheck" Content="包含 YMT XML 预览" IsChecked="True" Foreground="#B8C0CC"/><CheckBox x:Name="BuildDebugCheck" Content="包含客户端校验脚本" IsChecked="True" Foreground="#B8C0CC" Margin="26,0,0,0"/></StackPanel></StackPanel>
+      <StackPanel><TextBlock Text="生成参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="BuildPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseBuildPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="预览输出目录" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="BuildOutputBox" Height="36"/></StackPanel><Button x:Name="ChooseBuildOutputButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><StackPanel Orientation="Horizontal"><CheckBox x:Name="BuildXmlCheck" Content="包含 YMT XML 预览" IsChecked="True" Foreground="#B8C0CC"/><CheckBox x:Name="BuildDebugCheck" Content="包含客户端校验脚本" IsChecked="True" Foreground="#B8C0CC" Margin="26,0,0,0"/></StackPanel></StackPanel>
     </Border>
 
     <Border x:Name="ApplyPanel" Visibility="Collapsed" Background="#15110E" BorderBrush="#5D3A24" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
-      <StackPanel><TextBlock Text="应用参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,4"/><TextBlock Text="应用会重命名 stream 文件、备份并移除源 YMT，再生成合并 resource。建议保持“复制后处理”。" Foreground="#F4B860" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ApplyPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseApplyPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="备份根目录（每次自动建立独立子目录）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ApplyBackupBox" Height="36"/></StackPanel><Button x:Name="ChooseApplyBackupButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><CheckBox x:Name="CopyResourcesCheck" Content="先复制资源到方案输出目录，再对副本改名（推荐）" IsChecked="True" Foreground="#54E0A9" Margin="0,0,0,8"/><StackPanel Orientation="Horizontal"><CheckBox x:Name="ApplyXmlCheck" Content="包含 YMT XML 预览" IsChecked="True" Foreground="#B8C0CC"/><CheckBox x:Name="ApplyDebugCheck" Content="包含客户端校验脚本" IsChecked="True" Foreground="#B8C0CC" Margin="26,0,0,0"/></StackPanel></StackPanel>
+      <StackPanel><TextBlock Text="应用参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,4"/><TextBlock Text="应用会重命名 stream 文件、备份并移除源 YMT，再生成合并 resource。建议保持“复制后处理”。" Foreground="#F4B860" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ApplyPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseApplyPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="备份根目录（每次自动建立独立子目录）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ApplyBackupBox" Height="36"/></StackPanel><Button x:Name="ChooseApplyBackupButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><CheckBox x:Name="CopyResourcesCheck" Content="先复制资源到方案输出目录，再对副本改名（推荐）" IsChecked="True" Foreground="#54E0A9" Margin="0,0,0,8"/><StackPanel Orientation="Horizontal"><CheckBox x:Name="ApplyXmlCheck" Content="包含 YMT XML 预览" IsChecked="True" Foreground="#B8C0CC"/><CheckBox x:Name="ApplyDebugCheck" Content="包含客户端校验脚本" IsChecked="True" Foreground="#B8C0CC" Margin="26,0,0,0"/></StackPanel></StackPanel>
     </Border>
 
-    <Border x:Name="RestorePanel" Visibility="Collapsed" Background="#15110E" BorderBrush="#5D3A24" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="恢复参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,4"/><TextBlock Text="恢复会删除该次 apply 生成的合并资源，并按清单还原 YMT 与 stream 文件名。请保留完整时间戳备份目录。" Foreground="#F4B860" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="backup-manifest.json" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="RestoreManifestBox" Height="36"/></StackPanel><Button x:Name="ChooseRestoreManifestButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
+    <Border x:Name="RestorePanel" Visibility="Collapsed" Background="#15110E" BorderBrush="#5D3A24" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="恢复参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,4"/><TextBlock Text="恢复会删除该次 apply 生成的合并资源，并按清单还原 YMT 与 stream 文件名。请保留完整时间戳备份目录。" Foreground="#F4B860" FontSize="12" TextWrapping="Wrap" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="backup-manifest.json" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="RestoreManifestBox" Height="36"/></StackPanel><Button x:Name="ChooseRestoreManifestButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
 
-    <Border x:Name="ValidatePlanPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验方案" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidatePlanBox" Height="36"/></StackPanel><Button x:Name="ChooseValidatePlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
+    <Border x:Name="ValidatePlanPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验方案" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidatePlanBox" Height="36"/></StackPanel><Button x:Name="ChooseValidatePlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
 
-    <Border x:Name="ValidateParentPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验资源父目录" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="资源父目录" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateParentBox" Height="36"/></StackPanel><Button x:Name="ChooseValidateParentButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
+    <Border x:Name="ValidateParentPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验资源父目录" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="资源父目录" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateParentBox" Height="36"/></StackPanel><Button x:Name="ChooseValidateParentButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
 
-    <Border x:Name="ValidateListPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验指定资源" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="指定 resource 目录（每行一个）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateResourcesBox" MinHeight="76" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/></StackPanel><StackPanel Grid.Column="1" Margin="8,22,0,0"><Button x:Name="AddValidateResourceButton" Content="添加目录" Height="34"/><Button x:Name="ClearValidateResourcesButton" Content="清空列表" Height="34" Margin="0,8,0,0"/></StackPanel></Grid><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="生成资源父目录（--generated-root）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateGeneratedRootBox" Height="36"/></StackPanel><Button x:Name="ChooseValidateGeneratedRootButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
+    <Border x:Name="ValidateListPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="校验指定资源" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="指定 resource 目录（每行一个）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateResourcesBox" MinHeight="76" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"/></StackPanel><StackPanel Grid.Column="1" Margin="8,22,0,0"><Button x:Name="AddValidateResourceButton" Content="添加目录" Height="34"/><Button x:Name="ClearValidateResourcesButton" Content="清空列表" Height="34" Margin="0,8,0,0"/></StackPanel></Grid><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="生成资源父目录（--generated-root）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ValidateGeneratedRootBox" Height="36"/></StackPanel><Button x:Name="ChooseValidateGeneratedRootButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
 
-    <Border x:Name="ReportPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="报告参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ReportPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseReportPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="报告文件（可留空，仅输出到日志）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ReportOutputBox" Height="36"/></StackPanel><Button x:Name="ChooseReportOutputButton" Grid.Column="1" Content="保存位置" Height="36" Margin="8,22,0,0"/><Button x:Name="ClearReportOutputButton" Grid.Column="2" Content="仅看日志" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
+    <Border x:Name="ReportPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="报告参数" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="方案文件" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ReportPlanBox" Height="36"/></StackPanel><Button x:Name="ChooseReportPlanButton" Grid.Column="1" Content="选择文件" Height="36" Margin="8,22,0,0"/></Grid><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="报告文件（可留空，仅输出到日志）" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ReportOutputBox" Height="36"/></StackPanel><Button x:Name="ChooseReportOutputButton" Grid.Column="1" Content="保存位置" Height="36" Margin="8,22,0,0"/><Button x:Name="ClearReportOutputButton" Grid.Column="2" Content="仅看日志" Height="36" Margin="8,22,0,0"/></Grid></StackPanel></Border>
 
-    <Border x:Name="ExportPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="YMT XML 导出" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="包含 .ymt 的目录" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ExportFolderBox" Height="36"/></StackPanel><Button x:Name="ChooseExportFolderButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><CheckBox x:Name="ExportOverwriteCheck" Content="覆盖已经存在的同名 .ymt.xml" Foreground="#F4B860"/></StackPanel></Border>
+    <Border x:Name="ExportPanel" Visibility="Collapsed" Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14"><StackPanel><TextBlock Text="YMT XML 导出" FontSize="18" FontWeight="Bold" Margin="0,0,0,12"/><Grid Margin="0,0,0,10"><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="92"/></Grid.ColumnDefinitions><StackPanel><TextBlock Text="包含 .ymt 的目录" Foreground="#C4CBD5" FontSize="12" Margin="0,0,0,5"/><TextBox x:Name="ExportFolderBox" Height="36"/></StackPanel><Button x:Name="ChooseExportFolderButton" Grid.Column="1" Content="选择目录" Height="36" Margin="8,22,0,0"/></Grid><CheckBox x:Name="ExportOverwriteCheck" Content="覆盖已经存在的同名 .ymt.xml" Foreground="#F4B860"/></StackPanel></Border>
 
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
       <StackPanel>
-        <Grid Margin="0,0,0,10"><TextBlock Text="CLI 任务" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="ResultStatus" Text="等待任务" HorizontalAlignment="Right" Foreground="#777B83" FontSize="13" VerticalAlignment="Center"/></Grid>
+        <Grid Margin="0,0,0,10"><TextBlock Text="CLI 任务" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="ResultStatus" Text="等待任务" HorizontalAlignment="Right" Foreground="#AAB2BE" FontSize="13" VerticalAlignment="Center"/></Grid>
         <ProgressBar x:Name="ProgressBar" Height="8" Minimum="0" Maximum="100" Value="0"/>
-        <TextBlock x:Name="StatusLine" Text="选择功能并填写参数后开始。" Foreground="#8B9099" FontSize="13" Margin="0,9,0,12" TextWrapping="Wrap"/>
+        <TextBlock x:Name="StatusLine" Text="选择功能并填写参数后开始。" Foreground="#C4CBD5" FontSize="13" Margin="0,9,0,12" TextWrapping="Wrap"/>
         <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="125"/><ColumnDefinition Width="125"/></Grid.ColumnDefinitions><Button x:Name="StartButton" Content="开始分析" Height="44" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/><Button x:Name="StopButton" Grid.Column="1" Content="停止任务" Height="44" Margin="7,0" Foreground="#F28B94" IsEnabled="False"/><Button x:Name="OpenResultButton" Grid.Column="2" Content="打开结果" Height="44" Margin="7,0,0,0" Foreground="#72B7F2" IsEnabled="False"/></Grid>
       </StackPanel>
     </Border>
