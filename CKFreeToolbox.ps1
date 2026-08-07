@@ -209,6 +209,8 @@ $context = [pscustomobject]@{
         XiaohaCleanerScript = Join-Path $WorkspaceRoot 'xiaoha_cleaner\xiaoha-cleaner.py'
         SnowyMergerDir = Join-Path $WorkspaceRoot 'snowy-merger'
         SnowyMergerExe = Join-Path $WorkspaceRoot 'snowy-merger\YmapMerger.exe'
+        ClothingRepackerDir = Join-Path $WorkspaceRoot 'red40-clothing-packer'
+        ClothingRepackerExe = Join-Path $WorkspaceRoot 'red40-clothing-packer\ClothingRepacker.Cli.exe'
         DefaultWallfixInput = ''
         DefaultRpfInput = ''
         DefaultAntiJohnInput = ''
@@ -216,6 +218,7 @@ $context = [pscustomobject]@{
         DefaultRpfOutput = Join-Path $WorkspaceRoot 'RpfToFivemOutput'
         DefaultServerDumpOutput = Join-Path $WorkspaceRoot 'ServerDumpOutput'
         DefaultSnowyMergerOutput = Join-Path $WorkspaceRoot 'SnowyMergerOutput'
+        DefaultClothingRepackerWork = Join-Path $WorkspaceRoot 'ClothingRepackerWork'
         DefaultInput = Join-Path $WorkspaceRoot 'TestVeh'
         DefaultRenderOut = Join-Path $WorkspaceRoot 'TestVeh\_vehicle_renders'
     }

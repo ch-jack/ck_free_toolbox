@@ -191,6 +191,14 @@ $userGuide = @(
     '4. 结果写入 <输出>\snowy_merger，并保存一份本地任务日志。',
     '5. 在服务器中让 snowy_merger 晚于被替代的地图资源启动，并处理重复冲突文件。',
     '',
+    '衣服资源打包：',
+    '1. 页面只调用 Red40 Clothing Repacker 的 Windows x64 CLI，不启动上游 GUI。',
+    '2. “分析打包方案”支持扫描资源父目录或逐个指定 resource，并可配置集合前缀、drawable 上限和 YMT 优化。',
+    '3. 先校验并生成预览资源；确认 plan、报告和输出无误后，再执行 apply。',
+    '4. apply 默认先复制资源到方案输出目录；关闭该选项会直接修改源 resource，执行前必须停服并保留完整备份。',
+    '5. restore、三种 validate、report 和 export-xml 均可在同一中文页面使用，原始 CLI 输出会保存到本地任务日志。',
+    '6. build/apply 只接受本页面 analyze 生成且方案/规划输入哈希未变化的方案；restore 只接受本页面 apply 记录且清单/独立备份哈希通过的恢复文件。',
+    '',
     '一键清理小哈：',
     '1. 选择 FiveM server-data 或 resources 目录，先执行“只读扫描”。',
     '2. 确认资源、注入和 SQL 清单后再执行清理；文件会移动到目标外的隔离目录。',
@@ -214,8 +222,9 @@ $userGuide = @(
     'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、服务器 Dump 和 FXAP 组件按需安装。',
     'SnowyMerger 地图冲突合并组件同样按需安装，不会预装进工具箱发布包。',
+    'Red40 衣服资源打包 CLI 同样按需安装，不会预装进工具箱发布包。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
-    '运行后安装的 snowy-merger 目录也需要保留。',
+    '运行后安装的 snowy-merger 和 red40-clothing-packer 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -234,6 +243,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\ServerDumpPage.ps1'),
     (Join-Path $packagePath 'app\pages\FxapDecryptorPage.ps1'),
     (Join-Path $packagePath 'app\pages\SnowyMergerPage.ps1'),
+    (Join-Path $packagePath 'app\pages\ClothingRepackerPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
@@ -291,6 +301,7 @@ $manifest = [ordered]@{
         dumpTool = $false
         fxapDecryptor = $false
         snowyMerger = $false
+        clothingRepacker = $false
         alchemist = $true
         componentManager = $true
         selfUpdater = $true

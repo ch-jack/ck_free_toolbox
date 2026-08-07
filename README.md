@@ -4,6 +4,7 @@ CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件�
 
 本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和一键清理小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
 地图冲突合并页面接入 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)，同样通过稳定 Release 按需安装，不在工具箱仓库内复制其引擎源码。
+衣服资源打包页面接入 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的 Windows x64 CLI；组件仍由稳定 Release 按需安装，不打包上游 GUI 或引擎源码。
 
 ## 界面预览
 
@@ -36,6 +37,7 @@ start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/
 - 重新构建 `CK免费工具箱.exe`。
 - 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 和 `xiaoha_cleaner`。
 - SnowyMerger 的 snowy-merger 目录也不预装；页面缺少组件时通过统一组件管理器下载、校验、备份并切换。
+- Red40 Clothing Repacker 的 red40-clothing-packer 目录也不预装，只保留中文 CLI 操作页面。
 - 保留组件检测、GitHub 安装、校验、更新、备份和失败回滚代码。
 - 不复制 Blender、Python、Node.js 或 Java；依赖由用户安装，工具箱只负责真实检测、官网跳转和路径选择。
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
@@ -109,6 +111,17 @@ git push origin v1.0.2
 - 组件从 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger) 的稳定 Release 安装，并校验独立 SHA-256 附件。
 - 运行依赖系统 .NET Framework 4.8 和本机 GTA V；不需要 Python、Node.js、Java 或后台服务。
 
+### 衣服资源打包
+
+- 中文页面只调用 `ClothingRepacker.Cli.exe`，覆盖 CLI 提供的分析、生成、应用、恢复、三种校验、报告和 YMT XML 导出；不启动 GUI。
+- 分析支持扫描一个资源父目录，或逐个添加跨目录 resource；可设置目标 resource、集合前缀、组件/prop drawable 上限和 YMT 使用优化。
+- 生成与报告用于先审查结果；apply 默认启用 `--copy-resources-to-output`，关闭后会直接修改源 resource，并在执行前再次警告。
+- build/apply 的 YMT XML 与客户端校验脚本开关、export-xml 的覆盖开关、以及 CLI 版本检查开关均可在页面配置。
+- restore、原地 apply 和覆盖 XML 都有中文风险提示；每次执行保留原始 CLI 输出，并归档到 `%LOCALAPPDATA%/CKFreeToolbox/clothing-repacker-reports/`。
+- 本页面 analyze 会给 `plan.json` 写入 `.ck-plan.json`，锁定方案 SHA-256、路径范围及规划所依赖的 YMT/XML/meta/manifest 哈希；stream 改名源会复核存在性和目标冲突，但不会在界面线程重复哈希大型 YTD/YDD。build 和 apply 拒绝外部、被改动或规划输入已经变化的方案，避免绝对路径越界和陈旧映射。
+- apply 每次都会在所选备份目录下创建唯一运行子目录，并给新 `backup-manifest.json` 写入 `.ck-restore.json`；复制模式若发现同名输出目录会拒绝执行，避免上游递归替换无法恢复的旧内容。恢复旁车独立采集实际备份文件哈希，不依赖上游清单的哈希字段；restore 在执行前复核清单、备份文件、生成目录和 resource 范围，并显示将删除/覆盖/移动的数量。
+- 组件从 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的稳定 Release 安装，校验独立 SHA-256；发布包只含自包含 Windows x64 CLI、README、GPL-3.0 许可证和 CodeWalker 第三方声明。
+
 ### FXAP 文件夹解密
 
 - 选择直接包含 `.fxap` 的单个 resource，或包含多个 resource 的父目录；输出自动写到相邻的 `<目录名>_decrypted`。
@@ -169,6 +182,7 @@ git push origin v1.0.2
 - 主程序退出后由临时更新器替换 EXE、主脚本、app 和 static，并自动重启。
 - 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
 - 已安装的 snowy-merger 组件及其 vanilla_cache 同样位于工具箱核心更新边界之外，不会被自更新删除。
+- 已安装的 red40-clothing-packer 组件及 ClothingRepackerWork 方案、备份、报告和输出同样不会被自更新删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -183,6 +197,7 @@ git push origin v1.0.2
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
 - Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；Python 页面校验 3.7+；FXAP 页面校验外部 Node.js 18+，并允许选择外部 Java 目录用于 Lua 反编译；.NET 4.8 使用系统安装并只提供官网。
 - 地图冲突合并页面会校验 .NET Framework 4.8、YmapMerger.exe、CodeWalker.Core.dll 和包含 GTA5.exe 的 GTA V 路径。
+- 衣服资源打包页面只校验按需安装的自包含 Windows x64 CLI；运行时不要求另装 .NET、Python、Node.js 或 Java。
 
 ## 已验证
 
@@ -224,8 +239,9 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈、地图冲突合并、衣服资源打包和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
+衣服资源打包以 clothing-repacker 注册为外置 Release 组件，页面工厂为 New-CkClothingRepackerPage。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
@@ -233,6 +249,7 @@ ck_free_toolbox/
 
 工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 开发模式下同级 snowy-merger 目录也会直接被检测；正式轻量包仍只包含页面与统一安装代码。
+开发模式下同级 red40-clothing-packer 目录也会直接检测其中的 `ClothingRepacker.Cli.exe`；正式轻量包不会内置该组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 

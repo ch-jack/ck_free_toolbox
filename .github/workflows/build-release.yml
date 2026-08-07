@@ -143,6 +143,7 @@ jobs:
             'app\pages\ServerDumpPage.ps1',
             'app/pages/FxapDecryptorPage.ps1',
             'app\pages\SnowyMergerPage.ps1',
+            'app\pages\ClothingRepackerPage.ps1',
             'app\pages\AntiJohnPage.ps1',
             'app\pages\XiaohaCleanerPage.ps1',
             'app\pages\EnhancedConverterPage.ps1',
@@ -163,6 +164,9 @@ jobs:
           }
           if ($manifest.bundled.snowyMerger) {
             throw 'SnowyMerger must remain an on-demand external component.'
+          }
+          if ($manifest.bundled.clothingRepacker) {
+            throw 'Red40 Clothing Repacker must remain an on-demand external component.'
           }
           $alchemistCliPath = Join-Path $package 'app\tools\alchemist\AlchemistCli.exe'
           $alchemistWorkerPath = Join-Path $package 'app\tools\alchemist\AlchemistBatchWorker.ps1'
@@ -207,6 +211,9 @@ jobs:
           }
           if (Test-Path -LiteralPath (Join-Path $package 'snowy-merger')) {
             throw 'Unexpected bundled component: snowy-merger'
+          }
+          if (Test-Path -LiteralPath (Join-Path $package 'red40-clothing-packer')) {
+            throw 'Unexpected bundled component: red40-clothing-packer'
           }
 
           foreach ($toolId in @('anti-john', 'xiaoha-cleaner')) {

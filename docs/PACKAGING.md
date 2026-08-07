@@ -17,6 +17,7 @@ dist/
 
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
 SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件工作器按需创建。
+Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-packer，发布包只保留中文 CLI 页面和组件登记。
 
 ## 运行时 Release 组件
 
@@ -28,6 +29,7 @@ SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件�
 - 扫描移除后门对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
 - 一键清理小哈对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
 - 地图冲突合并对应 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)。
+- 衣服资源打包对应 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
@@ -39,6 +41,7 @@ SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件�
 
 模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF、扫描移除后门与一键清理小哈组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
 SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL；工具箱只依赖系统 .NET Framework 4.8 和用户本机 GTA V。
+Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、GPL-3.0 许可证和 CodeWalker 第三方声明；工具箱不启动 GUI，也不要求另装 .NET。
 
 ## 工具箱自更新
 
@@ -51,7 +54,8 @@ SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL�
 5. 关闭当前工具箱后，由临时更新器替换 EXE、主脚本、app、static 和清单，并自动重启。
 6. `config.json`、vehicle_renderer、nui-wallfix、rpf_to_fivem、ck_anti_john、xiaoha_cleaner、TestVeh 和其他用户文件不参与替换。
 7. snowy-merger、其 vanilla_cache 和 SnowyMergerOutput 也不参与工具箱核心替换。
-8. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
+8. red40-clothing-packer 和 ClothingRepackerWork 方案、备份、报告与输出也不参与工具箱核心替换。
+9. 替换失败会恢复旧核心文件，并写入 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## Blender 和 Python 不进入发布包
 
@@ -96,7 +100,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 1. 只检出 `ck_free_toolbox` 仓库。
 2. 检查全部 `.ps1` 和 `.psm1` 的 PowerShell 语法。
 3. 编译轻量 WinExe 并生成便携 ZIP。
-4. 验证核心源码、组件工作器和五个页面存在。
+4. 验证核心源码、组件工作器和全部登记页面存在。
 5. 验证发布包不含功能组件目录和 Blender。
 6. 上传 Actions Artifact。
 7. 正式 Release 同时发布 ZIP 和同名 .sha256，供客户端自更新校验。
@@ -126,6 +130,17 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 客户端直接执行 YmapMerger.exe -g <gta> -i <mods> -o <output>，并实时消费标准输出。
 5. 结果写入 <output>/snowy_merger，完整任务日志写入用户本地 CKFreeToolbox 报告目录。
 
+## 衣服资源打包运行流程
+
+1. 组件缺失时，从 `ch-jack/red40_clothing_packer` 最新稳定 Release 下载 `red40-clothing-packer-cli-win-x64-v*.zip` 和同名 SHA-256。
+2. ZIP 只有一个 `red40-clothing-packer/` 顶层目录，包含自包含 `ClothingRepacker.Cli.exe`、`README.md`、`LICENSE` 和 `CodeWalker-Notice.txt`；统一组件工作器负责安全解压、必需文件校验、备份、切换与回滚。
+3. 中文页面覆盖 CLI 的 analyze、build、apply、restore、validate 三种输入、report 和 export-xml；不加载上游 GUI。
+4. analyze 和 build 用于先生成方案与预览；apply 默认传入 `--copy-resources-to-output`，复制目标必须不存在，避免上游递归替换无法恢复的旧目录；关闭复制模式时必须二次确认直接修改源 resource。
+5. restore 与 `export-xml --overwrite` 同样需要中文确认；原始标准输出按行显示，并归档到用户本地 CKFreeToolbox 报告目录。
+6. 工具箱默认传入 `--no-version-check`，避免 CLI 重复检查上游仓库；用户可以在页面关闭该选项。
+7. analyze 成功后写入 `plan.json.ck-plan.json`，记录方案 SHA-256、resourceRoots、生成根目录、目标 resource 和规划所依赖的 YMT/XML/meta/manifest SHA-256；stream 改名源复核存在性与目标冲突，不同步重复哈希大型 YTD/YDD。build/apply 只接受路径范围与规划输入哈希仍一致的 CK 方案。
+8. apply 每次使用唯一备份子目录，生成清单后写入 `backup-manifest.json.ck-restore.json`，并由工具箱独立记录实际备份文件哈希；restore 会校验清单/备份哈希、允许的生成目录、原始 resource 范围和 stream 路径，再显示删除、复制、移动数量并确认。
+
 ## 扫描移除后门安全流程
 
 1. 组件缺失时，从 `ch-jack/ck_anti_john` 最新稳定 Release 下载 ZIP 和 SHA-256。
@@ -148,14 +163,16 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - ZIP 中存在 EXE、主脚本、`app/`、`static/` 和 `package-manifest.json`。
 - ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
 - ZIP 中不存在 snowy-merger/；SnowyMergerPage.ps1 和 tools.json 注册必须存在。
+- ZIP 中不存在 red40-clothing-packer/；ClothingRepackerPage.ps1 和 tools.json 注册必须存在，清单中的 clothingRepacker 必须为 false。
 - 全新配置首次启动显示免责条款；未勾选时同意按钮不可用，拒绝或关闭后不进入主界面，同意后再次启动不重复弹出同版本条款。条款版本 2 新增“允许二创、禁止收费”，已同意版本 1 的配置必须重新确认。
-- 首次启动时五个页面显示组件缺失，并提供“安装组件”操作。
+- 首次启动时各按需组件页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
 - 扫描移除后门组件安装后可扫描目录/ZIP、预览移除、确认写入并按 Run ID 恢复。
 - 一键清理小哈组件安装后可扫描 server-data/resources、隔离命中文件、按报告恢复，并在备份确认后选择性清理关联 SQL。
 - SnowyMerger 组件安装后可捕获 CLI 日志、识别无冲突输入，并把结果写入 snowy_merger resource。
+- Red40 组件安装后，页面可调用全部公开 CLI 命令；apply/restore/覆盖 XML 的确认与任务日志必须有效。
 - Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
 - Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
 - Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。

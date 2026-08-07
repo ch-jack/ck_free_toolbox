@@ -205,6 +205,28 @@
         "default": false
     },
     {
+        "id": "clothing-repacker",
+        "title": "衣服资源打包",
+        "icon": "♜",
+        "page": "ClothingRepackerPage.ps1",
+        "factory": "New-CkClothingRepackerPage",
+        "sourceUrl": "https://github.com/ch-jack/red40_clothing_packer",
+        "component": {
+            "repo": "ch-jack/red40_clothing_packer",
+            "installDir": "red40-clothing-packer",
+            "bootstrap": "",
+            "releaseAssetPattern": "red40-clothing-packer-cli-win-x64-*.zip",
+            "releaseChecksumAssetPattern": "red40-clothing-packer-cli-win-x64-*.zip.sha256",
+            "requiredFiles": [
+                "ClothingRepacker.Cli.exe",
+                "CodeWalker-Notice.txt",
+                "LICENSE",
+                "README.md"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",
