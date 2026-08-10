@@ -523,8 +523,8 @@
         <Button x:Name="ClearAllButton" Content="清空" Width="64" Height="28"/>
       </StackPanel>
     </Grid>
-    <Border Grid.Row="3" Background="#111316" BorderBrush="#282D36" BorderThickness="1" CornerRadius="6">
-      <ListBox x:Name="ResourceList" Background="Transparent" Foreground="#D9DCE2" BorderThickness="0"
+    <Border Grid.Row="3" Background="#FFFFFF" BorderBrush="#D7DCE3" BorderThickness="1" CornerRadius="6">
+      <ListBox x:Name="ResourceList" Background="#FFFFFF" Foreground="#111827" BorderThickness="0"
                Padding="8" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"/>
     </Border>
@@ -563,6 +563,7 @@
             $box.ToolTip = [string]$resource.name
             $box.Margin = '4,4,4,4'
             $box.Padding = '2'
+            $box.Foreground = '#111827'
             $box.IsChecked = & $resourceSelectorAction -Resource $resource -Expression $pattern
             $handler = { & $updateCountAction }.GetNewClosure()
             $box.Add_Checked($handler)
