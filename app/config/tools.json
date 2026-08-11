@@ -188,18 +188,18 @@
             "releaseChecksumAssetPattern": "SnowyMerger-*.zip.sha256",
             "requiredFiles": [
                 "YmapMerger.exe",
-                "YmapMerger.exe.config",
+                "YmapMerger.dll",
+                "YmapMerger.deps.json",
+                "YmapMerger.runtimeconfig.json",
                 "CodeWalker.Core.dll",
-                "Ookii.Dialogs.WinForms.dll",
+                "Aprillz.MewUI.dll",
+                "Aprillz.MewUI.Platform.Win32.dll",
+                "Aprillz.MewUI.Backend.Direct2D.dll",
+                "Aprillz.MewUI.Backend.Gdi.dll",
                 "ShadersGen9Conversion.xml",
                 "SharpDX.dll",
                 "SharpDX.Mathematics.dll",
-                "strings.txt",
-                "System.Buffers.dll",
-                "System.Memory.dll",
-                "System.Numerics.Vectors.dll",
-                "System.Resources.Extensions.dll",
-                "System.Runtime.CompilerServices.Unsafe.dll"
+                "strings.txt"
             ]
         },
         "default": false

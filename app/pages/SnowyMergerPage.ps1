@@ -36,7 +36,7 @@
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
-            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions><Ellipse x:Name="DotNetDot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/><StackPanel Grid.Column="1"><TextBlock Text=".NET Framework 4.8" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="DotNetText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><Button x:Name="DotNetButton" Grid.Column="2" Content="官网" Height="27" Foreground="#58A6FF"/></Grid>
+            <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions><Ellipse x:Name="DotNetDot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/><StackPanel Grid.Column="1"><TextBlock Text=".NET 8 Runtime" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="DotNetText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><Button x:Name="DotNetButton" Grid.Column="2" Content="官网" Height="27" Foreground="#58A6FF"/></Grid>
           </Border>
           <Border Grid.Column="1" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
             <Grid><Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions><Ellipse x:Name="ComponentDot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/><StackPanel Grid.Column="1"><TextBlock Text="SnowyMerger 组件" FontSize="14" FontWeight="SemiBold"/><TextBlock x:Name="ComponentText" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel></Grid>
@@ -171,18 +171,21 @@
         $environment = Get-CkToolboxEnvironment -Context $Context
         $componentOk = (
             (Test-Path -LiteralPath $Context.Paths.SnowyMergerExe -PathType Leaf) -and
-            (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'CodeWalker.Core.dll') -PathType Leaf)
+            (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'YmapMerger.dll') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'YmapMerger.runtimeconfig.json') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'CodeWalker.Core.dll') -PathType Leaf) -and
+            (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'Aprillz.MewUI.dll') -PathType Leaf)
         )
         $gtaOk = & $testGtaPathAction $ui.GtaBox.Text.Trim()
-        Set-CkStatusDot $ui.DotNetDot $environment.DotNet.Ok
+        Set-CkStatusDot $ui.DotNetDot $environment.DotNet8.Ok
         Set-CkStatusDot $ui.ComponentDot $componentOk
         Set-CkStatusDot $ui.GtaDot $gtaOk
-        $ui.DotNetText.Text = [string]$environment.DotNet.Label
-        $ui.ComponentText.Text = if ($componentOk) { 'YmapMerger.exe 与 CodeWalker 已就绪' } else { '请在顶部安装组件' }
+        $ui.DotNetText.Text = [string]$environment.DotNet8.Label
+        $ui.ComponentText.Text = if ($componentOk) { 'YmapMerger 与 MewUI 已就绪' } else { '请在顶部安装组件' }
         $ui.GtaText.Text = if ($gtaOk) { '已识别 GTA5.exe' } else { '未识别 GTA V 安装目录' }
         $ui.GtaText.ToolTip = $ui.GtaBox.Text.Trim()
 
-        $allOk = $environment.DotNet.Ok -and $componentOk -and $gtaOk
+        $allOk = $environment.DotNet8.Ok -and $componentOk -and $gtaOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
         $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
     }.GetNewClosure()
@@ -253,7 +256,7 @@
         & $chooseFolderAction $ui.OutputBox '选择 snowy_merger 的输出父目录' $true
     }.GetNewClosure()
     $openDotNetAction = {
-        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet-framework/net48'
+        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0'
     }.GetNewClosure()
 
     $openOutputAction = {
@@ -281,13 +284,17 @@
         if ($state.Process -and -not $state.Process.Process.HasExited) {
             throw '已有 SnowyMerger 任务正在运行。'
         }
-        if (-not (Test-Path -LiteralPath $Context.Paths.SnowyMergerExe -PathType Leaf)) {
-            throw 'SnowyMerger 组件未安装，请先点击顶部“安装组件”。'
+        if (
+            -not (Test-Path -LiteralPath $Context.Paths.SnowyMergerExe -PathType Leaf) -or
+            -not (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'YmapMerger.runtimeconfig.json') -PathType Leaf) -or
+            -not (Test-Path -LiteralPath (Join-Path $Context.Paths.SnowyMergerDir 'Aprillz.MewUI.dll') -PathType Leaf)
+        ) {
+            throw 'SnowyMerger 组件未安装或不完整，请先点击顶部“安装组件”。'
         }
 
         $environment = Get-CkToolboxEnvironment -Context $Context
-        if (-not $environment.DotNet.Ok) {
-            throw '运行 SnowyMerger 需要 .NET Framework 4.8。'
+        if (-not $environment.DotNet8.Ok) {
+            throw '运行 SnowyMerger 需要 .NET 8 Runtime。'
         }
 
         $gtaPath = $ui.GtaBox.Text.Trim()

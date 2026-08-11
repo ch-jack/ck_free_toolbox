@@ -222,6 +222,7 @@ $userGuide = @(
     'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、服务器 Dump 和 FXAP 组件按需安装。',
     'SnowyMerger 地图冲突合并组件同样按需安装，不会预装进工具箱发布包。',
+    'SnowyMerger v1.2+ 需要系统安装 .NET 8 Runtime；页面会自动检测并提供官网。',
     'Red40 衣服资源打包 CLI 同样按需安装，不会预装进工具箱发布包。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
     '运行后安装的 snowy-merger 和 red40-clothing-packer 目录也需要保留。',

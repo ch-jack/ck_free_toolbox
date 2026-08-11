@@ -109,7 +109,7 @@ git push origin v1.0.2
 - 页面实时显示冲突数量、已处理文件组、进度与原始日志，长任务可以停止。
 - 输出固定写入 <输出目录>/snowy_merger/，任务日志归档到 %LOCALAPPDATA%/CKFreeToolbox/snowy-merger-reports/。
 - 组件从 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger) 的稳定 Release 安装，并校验独立 SHA-256 附件。
-- 运行依赖系统 .NET Framework 4.8 和本机 GTA V；不需要 Python、Node.js、Java 或后台服务。
+- 运行依赖系统 .NET 8 Runtime 和本机 GTA V；不需要 Python、Node.js、Java 或后台服务。
 
 ### 衣服资源打包
 
@@ -196,7 +196,7 @@ git push origin v1.0.2
 - 滚动条使用窄版深色轨道、圆角滑块以及悬停和拖动高亮。
 - 模型列表启用 WPF 虚拟化，日志限制最大字符数，长任务不会无限占用界面内存。
 - Blender 提供“官网”和“选择”按钮并校验 `blender.exe` 及 4.2 最低版本；Python 页面校验 3.7+；FXAP 页面校验外部 Node.js 18+，并允许选择外部 Java 目录用于 Lua 反编译；.NET 4.8 使用系统安装并只提供官网。
-- 地图冲突合并页面会校验 .NET Framework 4.8、YmapMerger.exe、CodeWalker.Core.dll 和包含 GTA5.exe 的 GTA V 路径。
+- 地图冲突合并页面会校验 .NET 8 Runtime、YmapMerger、MewUI、CodeWalker.Core 和包含 GTA5.exe 的 GTA V 路径。
 - 衣服资源打包页面只校验按需安装的自包含 Windows x64 CLI；运行时不要求另装 .NET、Python、Node.js 或 Java。
 
 ## 已验证

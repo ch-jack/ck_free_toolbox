@@ -441,6 +441,53 @@ function Get-CkDotNetInfo {
     }
 }
 
+function Get-CkDotNet8Info {
+    $candidates = @()
+    $command = Get-Command dotnet.exe -ErrorAction SilentlyContinue
+    if ($command -and $command.Source) { $candidates += [string]$command.Source }
+
+    $programFiles = [Environment]::GetFolderPath('ProgramFiles')
+    $programFilesX86 = [Environment]::GetFolderPath('ProgramFilesX86')
+    if ($programFiles) { $candidates += (Join-Path $programFiles 'dotnet\dotnet.exe') }
+    if ($programFilesX86) { $candidates += (Join-Path $programFilesX86 'dotnet\dotnet.exe') }
+
+    foreach ($candidate in @($candidates | Select-Object -Unique)) {
+        if (-not $candidate -or -not (Test-Path -LiteralPath $candidate -PathType Leaf)) { continue }
+
+        $process = $null
+        try {
+            $info = New-Object Diagnostics.ProcessStartInfo
+            $info.FileName = $candidate
+            $info.Arguments = '--list-runtimes'
+            $info.UseShellExecute = $false
+            $info.RedirectStandardOutput = $true
+            $info.RedirectStandardError = $true
+            $info.CreateNoWindow = $true
+            $process = [Diagnostics.Process]::Start($info)
+            if (-not $process -or -not $process.WaitForExit(5000)) {
+                if ($process -and -not $process.HasExited) { try { $process.Kill() } catch { } }
+                continue
+            }
+
+            $output = $process.StandardOutput.ReadToEnd()
+            if ($process.ExitCode -ne 0) { continue }
+            $matches = [regex]::Matches($output, '(?m)^Microsoft\.NETCore\.App\s+(?<version>8\.[^\s]+)\s+\[')
+            if ($matches.Count -gt 0) {
+                $versions = @($matches | ForEach-Object { $_.Groups['version'].Value } | Sort-Object { [Version]$_ } -Descending)
+                return [pscustomobject]@{
+                    Ok = $true
+                    Label = ".NET 8 Runtime $($versions[0])"
+                    Path = [IO.Path]::GetFullPath($candidate)
+                }
+            }
+        } catch { } finally {
+            if ($process) { $process.Dispose() }
+        }
+    }
+
+    return [pscustomobject]@{ Ok = $false; Label = '需要安装 .NET 8 Runtime'; Path = '' }
+}
+
 function Get-CkCodeWalkerInfo {
     param([string]$RendererDir)
 
@@ -484,6 +531,7 @@ function Get-CkToolboxEnvironment {
     $settings = Get-CkDependencySettings
     $blender = Get-CkBlenderInfo -WorkspaceRoot $Context.Paths.WorkspaceRoot -Settings $settings
     $dotnet = Get-CkDotNetInfo
+    $dotnet8 = Get-CkDotNet8Info
     $codewalker = Get-CkCodeWalkerInfo -RendererDir $rendererDir
     $sollumz = Get-CkSollumzInfo -RendererDir $rendererDir
     $rendererOk = Test-Path -LiteralPath $Context.Paths.RenderScript
@@ -501,6 +549,7 @@ function Get-CkToolboxEnvironment {
     return [pscustomobject]@{
         Blender = $blender
         DotNet = $dotnet
+        DotNet8 = $dotnet8
         CodeWalker = $codewalker
         Sollumz = $sollumz
         Renderer = [pscustomobject]@{ Ok = $rendererOk; Label = $rendererLabel }
@@ -511,4 +560,4 @@ function Get-CkToolboxEnvironment {
     }
 }
 
-Export-ModuleMember -Function Get-CkToolboxEnvironment, Set-CkDependencyPath, Get-CkJavaInfo, Test-CkJavaExecutable, Get-CkNodeInfo, Test-CkNodeExecutable
+Export-ModuleMember -Function Get-CkToolboxEnvironment, Get-CkDotNet8Info, Set-CkDependencyPath, Get-CkJavaInfo, Test-CkJavaExecutable, Get-CkNodeInfo, Test-CkNodeExecutable

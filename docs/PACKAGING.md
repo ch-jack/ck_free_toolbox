@@ -40,7 +40,7 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
 模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF、扫描移除后门与一键清理小哈组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
-SnowyMerger Release 自带 YmapMerger.exe、CodeWalker.Core 及所需 .NET DLL；工具箱只依赖系统 .NET Framework 4.8 和用户本机 GTA V。
+SnowyMerger Release 自带 YmapMerger、MewUI、CodeWalker.Core 及运行清单；工具箱只依赖系统 .NET 8 Runtime 和用户本机 GTA V。
 Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、GPL-3.0 许可证和 CodeWalker 第三方声明；工具箱不启动 GUI，也不要求另装 .NET。
 
 ## 工具箱自更新
@@ -64,6 +64,7 @@ Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、
 - Blender 提供官网和 `blender.exe` 文件选择；Python 缺失时提供官网和 `python.exe` 文件选择。
 - Python 候选必须真实执行版本命令并满足 3.7+，0 字节 WindowsApps 商店别名不会被接受。
 - .NET Framework 4.8 使用 Windows 系统安装，只检测注册表并提供官网，不允许手动指定目录。
+- SnowyMerger v1.2+ 单独检测系统 .NET 8 Runtime，不复用 .NET Framework 4.8 的检测结果。
 - YtdTools.exe 与 RpfTools.exe 由模型组件 Release 自带。
 - Sollumz 由模型组件 Release 自带并通过隔离 Blender 配置加载，用户不需要在 Blender 中单独安装或选择插件目录。
 - Blender 仍使用其自带 Python，最低支持版本为 4.2；选择 4.1 或更早版本会明确标记为不支持。
@@ -126,7 +127,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 
 1. 组件缺失时，从 ch-jack/SnowyMerger 最新稳定 Release 下载 SnowyMerger-vX.Y.Z.zip 和同名 SHA-256。
 2. 统一组件工作器执行下载限制、SHA-256 校验、安全解压、必需 DLL 检查、旧版本备份和失败回滚。
-3. 页面校验 .NET Framework 4.8、YmapMerger.exe、CodeWalker.Core.dll 及包含 GTA5.exe 的 GTA V 目录。
+3. 页面校验 .NET 8 Runtime、YmapMerger、MewUI、CodeWalker.Core 及包含 GTA5.exe 的 GTA V 目录。
 4. 客户端直接执行 YmapMerger.exe -g <gta> -i <mods> -o <output>，并实时消费标准输出。
 5. 结果写入 <output>/snowy_merger，完整任务日志写入用户本地 CKFreeToolbox 报告目录。
 
