@@ -43,6 +43,8 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 SnowyMerger Release 自带 YmapMerger、MewUI、CodeWalker.Core 及运行清单；工具箱只依赖系统 .NET 8 Runtime 和用户本机 GTA V。
 Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、GPL-3.0 许可证和 CodeWalker 第三方声明；工具箱不启动 GUI，也不要求另装 .NET。
 
+FXAP 解密组件保持按需安装；其可选顶点修复由组件 Release 提供最小 CLI 文件，工具箱本体不内置 FXAP 组件或 .NET Runtime。启用后只处理本次完整解密成功资源的完整副本，并默认在完成后打开修复副本（未生成副本则打开原解密目录）。
+
 ## 工具箱自更新
 
 发布版启动后会异步检查 [ch-jack/ck_free_toolbox](https://github.com/ch-jack/ck_free_toolbox) 最新稳定 Release：

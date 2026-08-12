@@ -130,6 +130,8 @@ git push origin v1.0.2
 - 页面实时显示资源、解密、复制、Lua 输出和失败数量，并支持停止任务与打开输出目录。
 - 每次任务结束都会生成 Markdown 和 JSON 报告；页面可直接打开本次报告或报告历史，报告不会写入 CFX key 或 Bearer Token。
 - Node.js 18+ 和 Java 都使用用户外部安装；Java 可选，缺失或反编译失败时保留 `.luac`。
+- 可选顶点修复只复制本次完整解密成功的 FXAP 资源，在原输出目录旁生成完整副本，并仅处理副本内的 `.ydr`、`.yft`、`.ydd`；原解密结果不会被覆盖。
+- “完成后自动打开文件夹”默认勾选；生成修复副本时打开副本，否则打开原解密目录。顶点修复需要系统 .NET 8 Runtime。
 - 组件从 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only) 的稳定 Release 安装并校验 SHA-256，不包含 `decrypt-eup-stream.js` 功能。
 
 ### 服务器 Dump

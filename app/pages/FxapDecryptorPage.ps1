@@ -22,6 +22,13 @@
         NodePath = ''
         JavaPath = ''
         OutputPath = ''
+        VertexFixOutputPath = ''
+        VertexFixRequested = $false
+        VertexFixStatus = 'disabled'
+        VertexFixScanned = 0
+        VertexFixRepaired = 0
+        VertexFixFailed = 0
+        AutoOpenRequested = $true
         ResourceTotal = 0
         CompletedResources = 0
         Decrypted = 0
@@ -64,7 +71,7 @@
           </Grid>
         </Border>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
@@ -93,7 +100,18 @@
               </StackPanel>
             </Grid>
           </Border>
-          <Border Grid.Column="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
+          <Border Grid.Column="2" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text=".NET 8（修复）" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+              <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="FxapDecryptor.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
+            </Grid>
+          </Border>
+          <Border Grid.Column="3" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="ComponentDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
@@ -132,6 +150,13 @@
           </StackPanel>
           <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="FxapDecryptor.OpenOutputButton" Grid.Column="1" Content="打开输出" Height="36" Margin="7,22,0,0" IsEnabled="False"/>
         </Grid>
+        <StackPanel Orientation="Horizontal" Margin="0,11,0,0">
+          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="FxapDecryptor.VertexFixBox" Content="解密后生成副本并自动修复顶点" Foreground="#D7DAE0" ToolTip="只处理完整解密成功的 FXAP 资源；不会覆盖原解密目录"/>
+          <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="FxapDecryptor.AutoOpenBox" Content="完成后自动打开文件夹" Foreground="#D7DAE0" Margin="26,0,0,0" IsChecked="True"/>
+        </StackPanel>
+        <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,8,0,0">
+          <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。修复会生成完整副本，原解密输出不会被覆盖。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
+        </Border>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,11,0,0">
           <TextBlock Text="未填写 CFX key 或当前 resource 密钥不完整时，fxap_only 会按 resource ID 查询 grants API；客户端派生仍由 Cloudflare 完成。工具箱不提供、保存或传递接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
         </Border>
@@ -190,7 +215,7 @@
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','ApiStatusDot','ApiStatusText','ApiImpactNoticePanel','NodeDot','NodeText','NodeDownloadButton','NodeBrowseButton','JavaDot','JavaText',
-        'JavaDownloadButton','JavaBrowseButton','ComponentDot','ComponentText','InputBox','ChooseFolderButton',
+        'JavaDownloadButton','JavaBrowseButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText','InputBox','ChooseFolderButton','VertexFixBox','AutoOpenBox',
         'CfxKeyBox','OutputBox','OpenOutputButton','StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount',
         'DecryptedCount','CopiedCount','LuaCount','FailureCount','ProgressBar','StatusLine','LogBox'
     )
@@ -214,7 +239,10 @@
         $required = @(
             'index.js','package.json','VERSION','component-manifest.json','src\cloudflare-grants.js','src\grants-api.js',
             'src\constants.js','src\crypto.js','src\decryptor.js','src\discover.js',
-            'src\java-decompiler.js','src\keymaster.js','tools\unluac54.jar','tools\unluac54.jar.sha256'
+            'src\java-decompiler.js','src\keymaster.js','tools\unluac54.jar','tools\unluac54.jar.sha256',
+            'src\vertex-fixer.js','tools\vertex-fixer\FivemDecryptFixer.Cli.exe','tools\vertex-fixer\FivemDecryptFixer.Cli.dll',
+            'tools\vertex-fixer\FivemDecryptFixer.Cli.deps.json','tools\vertex-fixer\FivemDecryptFixer.Cli.runtimeconfig.json',
+            'tools\vertex-fixer\FivemDecryptFixer.dll','tools\vertex-fixer\CodeWalker.Core.dll','tools\vertex-fixer\SharpDX.dll','tools\vertex-fixer\SharpDX.Mathematics.dll'
         )
         $missing = @($required | Where-Object {
             -not (Test-Path -LiteralPath (Join-Path $Context.Paths.FxapDecryptorDir $_) -PathType Leaf)
@@ -324,9 +352,11 @@
     function Update-FxapEnvironment {
         $nodeInfo = & $getNodeInfoAction
         $javaInfo = & $getJavaInfoAction
+        $dotNet8Info = Get-CkDotNet8Info
         $componentInfo = & $getComponentInfoAction
         $nodeOk = [bool]$nodeInfo.Ok
         $javaOk = [bool]$javaInfo.Ok
+        $dotNet8Ok = [bool]$dotNet8Info.Ok
         $componentOk = [bool]$componentInfo.Ok
 
         $nextApiHealthUrl = [string]$componentInfo.ApiHealthUrl
@@ -350,6 +380,10 @@
         $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
         $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
+        $ui.DotNet8Dot.Fill = if ($dotNet8Ok) { '#31D69A' } else { '#F4B860' }
+        $ui.DotNet8Text.Text = [string]$dotNet8Info.Label
+        $ui.DotNet8Text.ToolTip = if ($dotNet8Ok) { [string]$dotNet8Info.Path } else { '只有勾选自动修复顶点时才需要 .NET 8 Runtime。' }
+        $ui.DotNet8DownloadButton.Visibility = if ($dotNet8Ok) { 'Collapsed' } else { 'Visible' }
         $ui.ComponentText.Text = if ($componentOk) {
             if ($componentInfo.Version) { "已就绪 · $($componentInfo.Version)" } else { '已就绪' }
         } else {
@@ -373,7 +407,7 @@
 
         foreach ($control in @(
             $ui.InputBox,$ui.ChooseFolderButton,$ui.CfxKeyBox,$ui.NodeDownloadButton,$ui.NodeBrowseButton,
-            $ui.JavaDownloadButton,$ui.JavaBrowseButton
+            $ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.DotNet8DownloadButton,$ui.VertexFixBox,$ui.AutoOpenBox
         )) {
             $control.IsEnabled = -not $Running
         }
@@ -416,6 +450,26 @@
         if ($Line -match '^Output:\s+(?<path>.+?)\s*$') {
             $state.OutputPath = [string]$Matches.path
             $ui.OutputBox.Text = [string]$state.OutputPath
+            return
+        }
+        if ($Line -match '^Vertex fix output:\s+(?<path>.+?)\s*$') {
+            $state.VertexFixOutputPath = [string]$Matches.path
+            $ui.ProgressBar.Value = [Math]::Max(98, [double]$ui.ProgressBar.Value)
+            $ui.StatusLine.Text = "顶点修复副本已生成：$($state.VertexFixOutputPath)"
+            return
+        }
+        if ($Line -match '^Vertex fix:\s+status=(?<status>\S+)\s+resources=(?<resources>\d+)\s+scanned=(?<scanned>\d+)\s+repaired=(?<repaired>\d+)\s+failed=(?<failed>\d+)\s*$') {
+            $state.VertexFixStatus = [string]$Matches.status
+            $state.VertexFixScanned = [int]$Matches.scanned
+            $state.VertexFixRepaired = [int]$Matches.repaired
+            $state.VertexFixFailed = [int]$Matches.failed
+            $ui.ProgressBar.Value = 98
+            $ui.StatusLine.Text = "顶点修复：扫描 $($Matches.scanned)，处理 $($Matches.repaired)，失败 $($Matches.failed)"
+            return
+        }
+        if ($Line -match '^Vertex fix warning:') {
+            $ui.ProgressBar.Value = [Math]::Max(96, [double]$ui.ProgressBar.Value)
+            $ui.StatusLine.Text = '解密完成，正在生成副本并自动修复顶点。'
             return
         }
         if ($Line -match '^\[(?<current>\d+)/(?<total>\d+)\]\s+(?<name>.+)$') {
@@ -481,6 +535,16 @@
             durationSeconds = $durationSeconds
             input = [string]$state.InputPath
             output = [string]$state.OutputPath
+            vertexFixOutput = [string]$state.VertexFixOutputPath
+            vertexFixRequested = [bool]$state.VertexFixRequested
+            vertexFix = [ordered]@{
+                status = [string]$state.VertexFixStatus
+                scanned = [int]$state.VertexFixScanned
+                repaired = [int]$state.VertexFixRepaired
+                failed = [int]$state.VertexFixFailed
+                output = [string]$state.VertexFixOutputPath
+            }
+            autoOpenRequested = [bool]$state.AutoOpenRequested
             cfxKeyProvided = [bool]$state.CfxKeyProvided
             environment = [ordered]@{
                 node = [ordered]@{
@@ -520,6 +584,12 @@
         $markdown.Add("- 用时: $durationSeconds 秒")
         $markdown.Add("- 输入目录: $($state.InputPath)")
         $markdown.Add("- 输出目录: $($state.OutputPath)")
+        $markdown.Add($(if ($state.VertexFixRequested) { "- 顶点修复副本: $($state.VertexFixOutputPath)" } else { '- 顶点修复: 未启用' }))
+        if ($state.VertexFixRequested) {
+            $markdown.Add("- 顶点修复状态: $($state.VertexFixStatus)")
+            $markdown.Add("- 顶点修复统计: 扫描 $($state.VertexFixScanned)，处理 $($state.VertexFixRepaired)，失败 $($state.VertexFixFailed)")
+        }
+        $markdown.Add($(if ($state.AutoOpenRequested) { '- 完成后自动打开: 是' } else { '- 完成后自动打开: 否' }))
         $markdown.Add($(if ($state.CfxKeyProvided) { '- CFX key: 已提供（密钥值未写入报告）' } else { '- CFX key: 未提供' }))
         $markdown.Add("- Node.js: $($state.NodeVersion) | $($state.NodePath)")
         $markdown.Add($(if ($state.JavaPath) { "- Java: $($state.JavaVersion) | $($state.JavaPath)" } else { '- Java: 未使用，Lua 字节码保留为 .luac' }))
@@ -632,6 +702,10 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
+    $openDotNet8DownloadAction = {
+        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0/runtime'
+    }.GetNewClosure()
+
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -715,7 +789,14 @@
 
         & $updateOutputPathAction
         $javaInfo = & $getJavaInfoAction
+        $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
+        $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
+        if ($vertexFixRequested) {
+            $dotNet8Info = Get-CkDotNet8Info
+            if (-not $dotNet8Info.Ok) { throw '自动修复顶点需要 .NET 8 Runtime，请先点击页面顶部 .NET 8 的“官网”按钮安装。' }
+        }
         $arguments = @($Context.Paths.FxapDecryptorScript)
+        if ($vertexFixRequested) { $arguments += '--vertex-fix' }
         if ($cfxKey) { $arguments += $cfxKey }
         $arguments += $inputPath
         if ($javaInfo.Ok) { $arguments += [string]$javaInfo.Path }
@@ -725,6 +806,13 @@
         $state.StartedAt = Get-Date
         $state.InputPath = $inputPath
         $state.CfxKeyProvided = [bool]$cfxKey
+        $state.VertexFixRequested = $vertexFixRequested
+        $state.AutoOpenRequested = $autoOpenRequested
+        $state.VertexFixOutputPath = ''
+        $state.VertexFixStatus = if ($vertexFixRequested) { 'pending' } else { 'disabled' }
+        $state.VertexFixScanned = 0
+        $state.VertexFixRepaired = 0
+        $state.VertexFixFailed = 0
         $state.NodePath = [string]$nodeInfo.Path
         $state.NodeVersion = [string]$nodeInfo.Version
         $state.JavaPath = if ($javaInfo.Ok) { [string]$javaInfo.Path } else { '' }
@@ -748,6 +836,8 @@
         $callbackSetRunning = $setRunningAction
         $callbackUpdateEnvironment = $updateEnvironmentAction
         $callbackSaveReport = $saveReportAction
+        $callbackVertexFixRequested = $vertexFixRequested
+        $callbackAutoOpenRequested = $autoOpenRequested
         $onOutput = {
             param($line)
             & $callbackParse $line
@@ -774,14 +864,33 @@
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.StatusLine.Text = "已完成 $($callbackState.ResourceTotal) 个 resource，输出位于 $($callbackState.OutputPath)"
             } elseif ($exitCode -eq 2) {
-                $callbackUi.ResultStatus.Text = '完成，存在文件失败'
+                $vertexFailed = $callbackState.VertexFixRequested -and $callbackState.VertexFixStatus -in @('failed','partial')
+                $callbackUi.ResultStatus.Text = if ($vertexFailed) { '解密完成，顶点修复存在失败' } else { '完成，存在文件失败' }
                 $callbackUi.ResultStatus.Foreground = '#F4B860'
                 $callbackUi.ProgressBar.Value = 100
-                $callbackUi.StatusLine.Text = "任务完成但有 $($callbackState.Failures) 项失败，请检查日志和 .failed.txt。"
+                $callbackUi.StatusLine.Text = if ($vertexFailed) {
+                    "原解密输出已保留；顶点修复处理 $($callbackState.VertexFixRepaired)，失败 $($callbackState.VertexFixFailed)，请检查日志。"
+                } else {
+                    "任务完成但有 $($callbackState.Failures) 项失败，请检查日志和 .failed.txt。"
+                }
             } else {
                 $callbackUi.ResultStatus.Text = '解密失败'
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "fxap_only 退出码: $exitCode，请查看日志。"
+            }
+            if (-not $cancelled -and $callbackAutoOpenRequested -and $reportStatus -in @('success','partial')) {
+                $openPath = [string]$callbackState.OutputPath
+                if ($callbackVertexFixRequested -and $callbackState.VertexFixOutputPath -and
+                    (Test-Path -LiteralPath $callbackState.VertexFixOutputPath -PathType Container)) {
+                    $openPath = [string]$callbackState.VertexFixOutputPath
+                }
+                if ($openPath -and (Test-Path -LiteralPath $openPath -PathType Container)) {
+                    try {
+                        Start-Process -FilePath explorer.exe -ArgumentList @($openPath) -ErrorAction Stop | Out-Null
+                    } catch {
+                        Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 自动打开输出文件夹失败：$($_.Exception.Message)"
+                    }
+                }
             }
             try {
                 $report = & $callbackSaveReport -Status $reportStatus -ExitCode $exitCode
@@ -835,6 +944,7 @@
     Register-CkButtonAction -Button $ui.NodeDownloadButton -Action $openNodeDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.NodeBrowseButton -Action $selectNodeAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNet8DownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseFolderButton -Action $chooseFolderAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError

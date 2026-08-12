@@ -172,8 +172,17 @@
                 "src/discover.js",
                 "src/java-decompiler.js",
                 "src/keymaster.js",
+                "src/vertex-fixer.js",
                 "tools/unluac54.jar",
-                "tools/unluac54.jar.sha256"
+                "tools/unluac54.jar.sha256",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.exe",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.dll",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.deps.json",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.runtimeconfig.json",
+                "tools/vertex-fixer/FivemDecryptFixer.dll",
+                "tools/vertex-fixer/CodeWalker.Core.dll",
+                "tools/vertex-fixer/SharpDX.dll",
+                "tools/vertex-fixer/SharpDX.Mathematics.dll"
             ]
         },
         "default": false
