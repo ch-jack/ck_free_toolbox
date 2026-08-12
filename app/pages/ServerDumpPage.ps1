@@ -1301,7 +1301,12 @@
             if (-not $wasCancelled -and $callbackAutoOpen -and $payload -and $payload.status -in @('success','partial')) {
                 $openPath = $callbackOriginalOutput
                 if ($callbackVertexFixRequested) {
-                    $openPath = if ($payload.PSObject.Properties['vertex_fix'] -and $payload.vertex_fix.output) { [string]$payload.vertex_fix.output } else { '' }
+                    $vertexOutput = if ($payload.PSObject.Properties['vertex_fix'] -and $payload.vertex_fix.output) { [string]$payload.vertex_fix.output } else { '' }
+                    if ($vertexOutput -and (Test-Path -LiteralPath $vertexOutput -PathType Container)) {
+                        $openPath = $vertexOutput
+                    } else {
+                        Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 本次未生成可用的顶点修复副本，自动打开原解密目录。'
+                    }
                 }
                 if ($openPath -and (Test-Path -LiteralPath $openPath -PathType Container)) {
                     try {
@@ -1309,8 +1314,6 @@
                     } catch {
                         Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 自动打开输出目录失败：$($_.Exception.Message)"
                     }
-                } elseif ($callbackVertexFixRequested) {
-                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 未生成顶点修复副本目录，因此没有自动打开原解密目录。'
                 }
             }
 
