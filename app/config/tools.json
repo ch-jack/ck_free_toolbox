@@ -136,7 +136,12 @@
                 "install.bat",
                 "Bin/Unpacker.exe",
                 "Tools/Decompile/unluac54.jar",
-                "FIXER/FivemDecryptFixer.exe"
+                "FIXER/FivemDecryptFixer.exe",
+                "FIXER/FivemDecryptFixer.dll",
+                "FIXER/FivemDecryptFixer.Cli.exe",
+                "FIXER/FivemDecryptFixer.Cli.dll",
+                "FIXER/FivemDecryptFixer.Cli.deps.json",
+                "FIXER/FivemDecryptFixer.Cli.runtimeconfig.json"
             ]
         },
         "default": false

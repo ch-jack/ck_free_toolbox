@@ -41,13 +41,13 @@
             <Border Width="4" Height="22" CornerRadius="3" Background="#58A6FF" Margin="0,0,10,0"/>
             <StackPanel>
               <TextBlock Text="服务器 Dump" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="支持服务器 Dump 和 FXAP 解密，不含模型修复。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="支持服务器 Dump、FXAP 解密和可选顶点修复副本；不含完整模型修复。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="ServerDump.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
         </Grid>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
           <Border Grid.Column="0" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="0,0,5,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="94"/></Grid.ColumnDefinitions>
@@ -87,7 +87,18 @@
               <Button x:Name="InstallDependenciesButton" AutomationProperties.AutomationId="ServerDump.InstallDependenciesButton" Grid.Column="2" Content="安装依赖" Width="66" Height="27" Foreground="#54E0A9" ToolTip="运行 dump-tool\install.bat 安装 psutil、requests 和 pycryptodome"/>
             </Grid>
           </Border>
-          <Border Grid.Column="3" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
+          <Border Grid.Column="3" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0">
+            <Grid>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
+              <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
+              <StackPanel Grid.Column="1">
+                <TextBlock Text=".NET 8" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+              </StackPanel>
+              <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="ServerDump.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
+            </Grid>
+          </Border>
+          <Border Grid.Column="4" Background="#16181B" BorderBrush="#242833" BorderThickness="1" CornerRadius="6" Padding="11" Margin="5,0,0,0">
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="ComponentDot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
@@ -137,6 +148,13 @@
           </StackPanel>
         </Grid>
         <TextBlock x:Name="ResourceSelectionText" AutomationProperties.AutomationId="ServerDump.ResourceSelectionText" Text="尚未获取资源清单" Foreground="#686E78" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
+        <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行顶点修复" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
+          <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="ServerDump.AutoOpenBox" Content="完成后自动打开输出文件夹" Margin="26,0,0,0" IsChecked="True"/>
+        </StackPanel>
+        <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,8,0,0">
+          <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。如需修复模型，可以进群找群主免费修复。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
+        </Border>
       </StackPanel>
     </Border>
 
@@ -184,7 +202,7 @@
       <StackPanel>
         <Grid Margin="0,0,0,10">
           <TextBlock Text="任务日志" FontSize="18" FontWeight="Bold"/>
-          <TextBlock Text="功能含 Dump、解密 FXAP，不含修复模型。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
+          <TextBlock Text="功能含 Dump、FXAP 解密、可选顶点修复副本；不含完整模型修复。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
         <TextBox x:Name="LogBox" AutomationProperties.AutomationId="ServerDump.LogBox" MinHeight="210" MaxHeight="420" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
@@ -195,8 +213,8 @@
 
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
-        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','ComponentDot','ComponentText',
-        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox',
+        'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
+        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','VertexFixBox','AutoOpenBox',
         'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
@@ -268,14 +286,24 @@
         $pythonOk = [bool]$pythonInfo.Ok
         $javaInfo = & $getJavaInfoAction
         $javaOk = [bool]$javaInfo.Ok
+        $dotNet8Info = Get-CkDotNet8Info
+        $dotNet8Ok = [bool]$dotNet8Info.Ok
         $depsInfo = if ($pythonOk) { & $testPackagesAction ([string]$pythonInfo.Path) } else { [pscustomobject]@{ Ok = $false; Label = '等待 Python'; Reason = [string]$pythonInfo.Reason } }
         $scriptOk = Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf
         $requirementsOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'requirements.txt') -PathType Leaf
         $unpackerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'Bin\Unpacker.exe') -PathType Leaf
         $unluacOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'Tools\Decompile\unluac54.jar') -PathType Leaf
         $fixerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'FIXER\FivemDecryptFixer.exe') -PathType Leaf
+        $fixerCliFiles = @(
+            'FIXER\FivemDecryptFixer.dll',
+            'FIXER\FivemDecryptFixer.Cli.exe',
+            'FIXER\FivemDecryptFixer.Cli.dll',
+            'FIXER\FivemDecryptFixer.Cli.deps.json',
+            'FIXER\FivemDecryptFixer.Cli.runtimeconfig.json'
+        )
+        $fixerCliOk = -not @($fixerCliFiles | Where-Object { -not (Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir $_) -PathType Leaf) }).Count
         $installerOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'install.bat') -PathType Leaf
-        $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk -and $installerOk
+        $componentOk = $scriptOk -and $requirementsOk -and $unpackerOk -and $unluacOk -and $fixerOk -and $fixerCliOk -and $installerOk
         $dependencyInstallActive = $false
         if ($state.DependencyInstallProcess) {
             try { $dependencyInstallActive = -not $state.DependencyInstallProcess.HasExited } catch { }
@@ -290,6 +318,7 @@
         Set-CkStatusDot $ui.PythonDot $pythonOk
         Set-CkStatusDot $ui.JavaDot $javaOk
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
+        Set-CkStatusDot $ui.DotNet8Dot $dotNet8Ok
         Set-CkStatusDot $ui.ComponentDot $componentOk
 
         $ui.PythonText.Text = [string]$pythonInfo.Label
@@ -311,6 +340,9 @@
         } else {
             "使用 $($pythonInfo.Path) 运行 dump-tool\install.bat，只安装 Dump 所需 Python 依赖。"
         }
+        $ui.DotNet8Text.Text = [string]$dotNet8Info.Label
+        $ui.DotNet8Text.ToolTip = if ($dotNet8Ok) { [string]$dotNet8Info.Path } else { '顶点修复 CLI 需要 .NET 8 Runtime。' }
+        $ui.DotNet8DownloadButton.Visibility = if ($dotNet8Ok) { 'Collapsed' } else { 'Visible' }
 
         if ($componentOk) {
             $ui.ComponentText.Text = 'Dump 与 FXAP 解密组件已就绪'
@@ -322,6 +354,8 @@
             $ui.ComponentText.Text = '缺少 RPF 解包器'
         } elseif (-not $unluacOk) {
             $ui.ComponentText.Text = '缺少 unluac54.jar'
+        } elseif (-not $fixerCliOk) {
+            $ui.ComponentText.Text = '缺少顶点修复 CLI，请更新组件'
         } elseif (-not $installerOk) {
             $ui.ComponentText.Text = '缺少 install.bat'
         } else {
@@ -336,7 +370,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         $ui.StopButton.IsEnabled = $Running
@@ -345,7 +379,7 @@
             $ui.ProgressBar.Value = 2
             $ui.ResultStatus.Text = '正在运行'
             $ui.ResultStatus.Foreground = '#72B7F2'
-            $ui.StatusLine.Text = '正在执行服务器 Dump 与 FXAP 解密，可随时停止。'
+            $ui.StatusLine.Text = '正在执行服务器 Dump、FXAP 解密及已选择的后处理，可随时停止。'
         }
     }
 
@@ -414,7 +448,16 @@
             if ($null -ne $storage.output_final_free_gb -and "$($storage.output_final_free_gb)") { $spaceParts.Add("输出盘结束 $($storage.output_final_free_gb) GB") }
             if ($spaceParts.Count) { $lines.Add("磁盘剩余: $($spaceParts -join ' | ')") }
         }
-        $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；不含模型修复")
+        $vertexFix = if ($Payload.PSObject.Properties['vertex_fix']) { $Payload.vertex_fix } else { $null }
+        $vertexFixEnabled = [bool]($vertexFix -and $vertexFix.enabled)
+        $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；顶点修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })；不含完整模型修复")
+        if ($vertexFixEnabled) {
+            $lines.Add("顶点修复状态: $($vertexFix.status)")
+            if ($vertexFix.output) { $lines.Add("顶点修复副本: $($vertexFix.output)") }
+            $lines.Add("顶点修复文件: 扫描 $($vertexFix.scanned_files) | 成功处理 $($vertexFix.repaired_files) | 失败 $($vertexFix.failed_files)")
+            $lines.Add("顶点修复提示: $($vertexFix.disclaimer)")
+            foreach ($warning in @($vertexFix.warnings)) { $lines.Add("顶点修复警告: $warning") }
+        }
         if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
         foreach ($errorItem in @($Payload.errors)) { $lines.Add("错误: $errorItem") }
         $lines.Add('')
@@ -454,7 +497,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -783,6 +826,10 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
+    $openDotNet8DownloadAction = {
+        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0'
+    }.GetNewClosure()
+
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -865,7 +912,7 @@
         $ui.ResultStatus.Text = if ($useIpExample) { '已填入 IP 示例' } else { '已填入 cfx 示例' }
         $ui.ResultStatus.Foreground = '#72B7F2'
         $ui.StatusLine.Text = "cfx 示例：$cfxExample；IP 示例：$ipExample"
-        $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`n功能含 Dump、解密 FXAP，不含修复模型。"
+        $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`n功能含 Dump、FXAP 解密、可选顶点修复副本；不含完整模型修复。"
     }.GetNewClosure()
 
     $pendingLog = New-Object Text.StringBuilder
@@ -1076,7 +1123,11 @@
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
         & $assertResourceSelectionSupportAction
-        foreach ($relative in @('requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe')) {
+        foreach ($relative in @(
+            'requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe',
+            'FIXER\FivemDecryptFixer.dll','FIXER\FivemDecryptFixer.Cli.exe','FIXER\FivemDecryptFixer.Cli.dll',
+            'FIXER\FivemDecryptFixer.Cli.deps.json','FIXER\FivemDecryptFixer.Cli.runtimeconfig.json'
+        )) {
             $required = Join-Path $Context.Paths.DumpToolDir $relative
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "服务器 Dump 组件不完整，缺少: $relative" }
         }
@@ -1091,6 +1142,12 @@
             throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
         }
         $selectedResources = @($state.SelectedResources)
+        $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
+        $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
+        if ($vertexFixRequested) {
+            $dotNet8Info = Get-CkDotNet8Info
+            if (-not $dotNet8Info.Ok) { throw '顶点修复需要 .NET 8 Runtime，请先点击页面顶部 .NET 8 的“官网”按钮安装。' }
+        }
 
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
@@ -1152,6 +1209,7 @@
             '--non-interactive'
         )
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
+        if ($vertexFixRequested) { $args += '--vertex-fix' }
 
         $state.CancelRequested = $false
         $state.Operation = 'dump'
@@ -1162,7 +1220,8 @@
         $ui.OpenReportButton.IsEnabled = $false
         foreach ($counter in @($ui.ResourceCount,$ui.DownloadedCount,$ui.RpfCount,$ui.DecryptedCount,$ui.OutputFileCount,$ui.WarningErrorCount)) { $counter.Text = '0' }
         $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源解密后立即清理临时文件' }
-        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n功能: Dump + FXAP 解密，不含模型修复。"
+        $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
+        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n顶点修复: $vertexPolicy。`r`n不含完整模型修复。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
@@ -1174,6 +1233,9 @@
         $callbackPendingLog = $pendingLog
         $callbackLogTimer = $logFlushTimer
         $callbackFlushLog = $flushLogAction
+        $callbackAutoOpen = $autoOpenRequested
+        $callbackVertexFixRequested = $vertexFixRequested
+        $callbackOriginalOutput = $outputPath
 
         $onOutput = {
             param($line)
@@ -1234,6 +1296,22 @@
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode；dump-tool 没有返回有效 JSON。"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { 'dump-tool 没有返回输出。' }
+            }
+
+            if (-not $wasCancelled -and $callbackAutoOpen -and $payload -and $payload.status -in @('success','partial')) {
+                $openPath = $callbackOriginalOutput
+                if ($callbackVertexFixRequested) {
+                    $openPath = if ($payload.PSObject.Properties['vertex_fix'] -and $payload.vertex_fix.output) { [string]$payload.vertex_fix.output } else { '' }
+                }
+                if ($openPath -and (Test-Path -LiteralPath $openPath -PathType Container)) {
+                    try {
+                        Start-Process -FilePath explorer.exe -ArgumentList @($openPath) -ErrorAction Stop | Out-Null
+                    } catch {
+                        Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 自动打开输出目录失败：$($_.Exception.Message)"
+                    }
+                } elseif ($callbackVertexFixRequested) {
+                    Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 未生成顶点修复副本目录，因此没有自动打开原解密目录。'
+                }
             }
 
             if ($wasCancelled) {
@@ -1310,6 +1388,7 @@
     Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNet8DownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PasteExampleButton -Action $showExampleAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError

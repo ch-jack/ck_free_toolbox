@@ -132,6 +132,13 @@ git push origin v1.0.2
 - Node.js 18+ 和 Java 都使用用户外部安装；Java 可选，缺失或反编译失败时保留 `.luac`。
 - 组件从 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only) 的稳定 Release 安装并校验 SHA-256，不包含 `decrypt-eup-stream.js` 功能。
 
+### 服务器 Dump
+
+- 支持输入 `https://cfx.re/join/xxxx` 或 `IP:端口`，默认自动扫描 FiveM 进程 token；需先进入目标服务器的加载界面，再获取资源清单并开始 Dump。
+- 包含服务器 Dump 和 FXAP 解密；可选的顶点修复只对本次成功解密的 FXAP 资源生效，会在原输出目录旁复制完整资源目录，仅处理副本中的 `.ydr`、`.yft`、`.ydd`，不覆盖原解密输出。
+- “完成后自动打开输出文件夹”默认勾选；启用顶点修复时打开修复副本，否则打开原解密目录。
+- 顶点修复依赖系统 .NET 8 Runtime，页面会检测并提供官网下载按钮。顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。如需修复模型，可以进群找群主免费修复。
+
 ### 扫描移除后门
 
 - 支持选择单个 FiveM resource、整个 `resources` 目录或 ZIP。
