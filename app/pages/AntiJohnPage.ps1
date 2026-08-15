@@ -7,6 +7,7 @@
         LastOperation = ''
         CancelRequested = $false
         ReportPath = ''
+        Findings = @()
     }
 
     $xaml = @"
@@ -118,7 +119,27 @@
           <TextBlock Text="报告明细" FontSize="20" FontWeight="Bold"/>
           <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="AntiJohn.OpenReportButton" Content="打开本次报告" Height="30" HorizontalAlignment="Right" IsEnabled="False"/>
         </Grid>
-        <TextBox x:Name="LogBox" AutomationProperties.AutomationId="AntiJohn.LogBox" MinHeight="230" MaxHeight="460" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
+        <Grid Margin="0,0,0,10">
+          <Grid.ColumnDefinitions><ColumnDefinition Width="115"/><ColumnDefinition Width="145"/><ColumnDefinition Width="*"/><ColumnDefinition Width="96"/></Grid.ColumnDefinitions>
+          <ComboBox x:Name="FindingSeverityBox" AutomationProperties.AutomationId="AntiJohn.FindingSeverityBox" Height="34" SelectedIndex="0">
+            <ComboBoxItem Content="全部级别"/><ComboBoxItem Content="严重"/><ComboBoxItem Content="高危"/><ComboBoxItem Content="中危"/><ComboBoxItem Content="低危"/><ComboBoxItem Content="提示"/>
+          </ComboBox>
+          <ComboBox x:Name="FindingCategoryBox" AutomationProperties.AutomationId="AntiJohn.FindingCategoryBox" Grid.Column="1" Height="34" Margin="8,0,0,0"/>
+          <TextBox x:Name="FindingSearchBox" AutomationProperties.AutomationId="AntiJohn.FindingSearchBox" Grid.Column="2" Height="34" Margin="8,0,0,0" ToolTip="搜索规则、文件、说明或证据"/>
+          <Button x:Name="LocateFindingButton" AutomationProperties.AutomationId="AntiJohn.LocateFindingButton" Grid.Column="3" Content="定位文件" Height="34" Margin="8,0,0,0"/>
+        </Grid>
+        <DataGrid x:Name="FindingsGrid" AutomationProperties.AutomationId="AntiJohn.FindingsGrid" MinHeight="160" MaxHeight="310" Margin="0,0,0,12" AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single" SelectionUnit="FullRow" HeadersVisibility="Column" GridLinesVisibility="Horizontal" CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False" EnableRowVirtualization="True" EnableColumnVirtualization="True" ScrollViewer.CanContentScroll="True">
+          <DataGrid.Columns>
+            <DataGridTextColumn Header="级别" Binding="{Binding SeverityText}" Width="62"/>
+            <DataGridTextColumn Header="分类" Binding="{Binding Category}" Width="96"/>
+            <DataGridTextColumn Header="文件" Binding="{Binding Path}" Width="2*"/>
+            <DataGridTextColumn Header="行" Binding="{Binding LineText}" Width="52"/>
+            <DataGridTextColumn Header="说明" Binding="{Binding Message}" Width="2.2*"/>
+            <DataGridTextColumn Header="分析来源" Binding="{Binding AnalysisSource}" Width="145"/>
+          </DataGrid.Columns>
+        </DataGrid>
+        <TextBlock Text="任务与动作明细" Foreground="#8B9099" FontSize="13" Margin="0,0,0,7"/>
+        <TextBox x:Name="LogBox" AutomationProperties.AutomationId="AntiJohn.LogBox" MinHeight="150" MaxHeight="320" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
     </Border>
   </StackPanel>
@@ -130,8 +151,11 @@
         'EnvironmentDot','EnvironmentText','PythonDownloadButton','PythonBrowseButton','TargetBox','ChooseFolderButton',
         'ChooseZipButton','OpenTargetButton','MaxMbBox','StateDirBox','ChooseStateDirButton','ForceRestoreBox',
         'ScanButton','PreviewButton','ApplyButton','CancelButton','RunIdBox','RestoreButton','OpenBackupsButton',
-        'ResultStatus','FileCount','ResourceCount','FindingCount','CriticalCount','RepairableCount','ProgressBar','StatusLine','OpenReportButton','LogBox'
+        'ResultStatus','FileCount','ResourceCount','FindingCount','CriticalCount','RepairableCount','ProgressBar','StatusLine','OpenReportButton',
+        'FindingSeverityBox','FindingCategoryBox','FindingSearchBox','LocateFindingButton','FindingsGrid','LogBox'
     )
+    [void]$ui.FindingCategoryBox.Items.Add('全部分类')
+    $ui.FindingCategoryBox.SelectedIndex = 0
 
     function Get-AntiJohnPythonInfo {
         $environment = Get-CkToolboxEnvironment -Context $Context
@@ -192,6 +216,99 @@
         return [int]$value
     }
 
+    function Get-AntiJohnFindingCategory {
+        param($Item)
+
+        $category = if ($Item -and $Item.PSObject.Properties['category']) { [string]$Item.category } else { '' }
+        if ($category) { return $category }
+        $ruleId = if ($Item -and $Item.PSObject.Properties['rule_id']) { ([string]$Item.rule_id).ToUpperInvariant() } else { '' }
+        if ($ruleId.StartsWith('ZIP_')) { return '归档安全' }
+        if ($ruleId -match 'FXAP|ESCROW') { return '审计盲区' }
+        if ($ruleId -match 'EXFIL|CREDENTIAL') { return '数据外传' }
+        if ($ruleId -match 'DOWNLOADER|PROCESS|COMMAND') { return '系统命令' }
+        if ($ruleId -match 'WRITE|PERSIST') { return '文件持久化' }
+        if ($ruleId -match 'TXADMIN') { return 'txAdmin' }
+        if ($ruleId -match 'MANIFEST') { return 'Manifest' }
+        if ($ruleId -match 'C2|DOMAIN|REMOTE') { return '远程载荷' }
+        if ($ruleId -match 'LUA|JS|ENCODED') { return '动态执行' }
+        if ($ruleId.StartsWith('JOHN_')) { return '约翰叔叔' }
+        return '其他'
+    }
+
+    function Update-AntiJohnFindingView {
+        $severityMap = @{
+            '严重' = 'critical'
+            '高危' = 'high'
+            '中危' = 'medium'
+            '低危' = 'low'
+            '提示' = 'info'
+        }
+        $severityItem = $ui.FindingSeverityBox.SelectedItem
+        $severityChoice = if ($severityItem -and $severityItem.PSObject.Properties['Content']) {
+            [string]$severityItem.Content
+        } else {
+            [string]$severityItem
+        }
+        $wantedSeverity = if ($severityMap.ContainsKey($severityChoice)) { [string]$severityMap[$severityChoice] } else { '' }
+        $wantedCategory = [string]$ui.FindingCategoryBox.SelectedItem
+        if ($wantedCategory -eq '全部分类') { $wantedCategory = '' }
+        $search = $ui.FindingSearchBox.Text.Trim().ToLowerInvariant()
+        $filtered = @(
+            $state.Findings | Where-Object {
+                (-not $wantedSeverity -or $_.Severity -eq $wantedSeverity) -and
+                (-not $wantedCategory -or $_.Category -eq $wantedCategory) -and
+                (-not $search -or $_.SearchText.Contains($search))
+            }
+        )
+        $ui.FindingsGrid.ItemsSource = $filtered
+    }
+
+    function Set-AntiJohnFindings {
+        param([object[]]$Items)
+
+        $converted = foreach ($item in @($Items)) {
+            if (-not $item) { continue }
+            $severity = [string](& $getPropertyAction $item 'severity' '')
+            $severityText = switch ($severity) {
+                'critical' { '严重' }
+                'high' { '高危' }
+                'medium' { '中危' }
+                'low' { '低危' }
+                'info' { '提示' }
+                default { if ($severity) { $severity } else { '未知' } }
+            }
+            $ruleId = [string](& $getPropertyAction $item 'rule_id' '')
+            $path = [string](& $getPropertyAction $item 'path' '')
+            $message = [string](& $getPropertyAction $item 'message' '')
+            $evidence = [string](& $getPropertyAction $item 'evidence' '')
+            $source = [string](& $getPropertyAction $item 'analysis_source' '原始代码')
+            $line = [int](& $getPropertyAction $item 'line_number' 0)
+            $category = & $getFindingCategoryAction $item
+            $searchText = "$severity $severityText $category $ruleId $path $message $evidence $source".ToLowerInvariant()
+            [pscustomobject]@{
+                Severity = $severity
+                SeverityText = $severityText
+                Category = $category
+                RuleId = $ruleId
+                Path = $path
+                Line = $line
+                LineText = if ($line -gt 0) { [string]$line } else { '-' }
+                Message = $message
+                Evidence = $evidence
+                AnalysisSource = $source
+                SearchText = $searchText
+            }
+        }
+        $state.Findings = @($converted)
+        $ui.FindingCategoryBox.Items.Clear()
+        [void]$ui.FindingCategoryBox.Items.Add('全部分类')
+        foreach ($category in @($state.Findings | ForEach-Object Category | Sort-Object -Unique)) {
+            if ($category) { [void]$ui.FindingCategoryBox.Items.Add([string]$category) }
+        }
+        $ui.FindingCategoryBox.SelectedIndex = 0
+        & $updateFindingViewAction
+    }
+
     function Save-AntiJohnPayloadReport {
         param($Payload, [string]$Operation)
 
@@ -212,6 +329,8 @@
         $summary = & $getPropertyAction $Payload 'summary' $null
         $result = & $getPropertyAction $Payload 'result' $null
         $beforeScan = & $getPropertyAction $result 'before_scan' $null
+        $afterScan = & $getPropertyAction $result 'after_scan' $null
+        $displayScan = if ($afterScan) { $afterScan } else { $beforeScan }
         $beforeStats = & $getPropertyAction $beforeScan 'stats' $null
         $files = & $getIntAction $summary 'files_scanned'
         $resources = & $getIntAction $summary 'resources'
@@ -219,8 +338,21 @@
         if (-not $resources) { $resources = & $getIntAction $beforeStats 'resources' }
         $findings = & $getIntAction $summary 'findings'
         $critical = & $getIntAction $summary 'critical'
+        if (-not $findings -and $displayScan) {
+            $findings = @(& $getPropertyAction $displayScan 'findings' @()).Count
+        }
+        if (-not $critical -and $displayScan) {
+            $critical = @(
+                @(& $getPropertyAction $displayScan 'findings' @()) |
+                Where-Object { [string](& $getPropertyAction $_ 'severity' '') -eq 'critical' }
+            ).Count
+        }
         $repairable = & $getIntAction $summary 'repairable'
         $planned = & $getIntAction $summary 'planned'
+        $decodedPayloads = & $getIntAction $summary 'decoded_payloads'
+        $encryptedFiles = & $getIntAction $summary 'encrypted_files'
+        if (-not $decodedPayloads) { $decodedPayloads = & $getIntAction $beforeStats 'decoded_payloads' }
+        if (-not $encryptedFiles) { $encryptedFiles = & $getIntAction $beforeStats 'encrypted_files' }
         if ($planned) { $repairable = $planned }
 
         $ui.FileCount.Text = [string]$files
@@ -241,6 +373,8 @@
         $lines.Add("操作: $operation")
         if ($status) { $lines.Add("状态: $status") }
         if ($verdict) { $lines.Add("结论: $verdict") }
+        if ($decodedPayloads) { $lines.Add("静态解码内容: $decodedPayloads") }
+        if ($encryptedFiles) { $lines.Add("Asset Escrow 审计盲区: $encryptedFiles 个文件") }
         $outputPath = [string](& $getPropertyAction $summary 'output_path' '')
         $backupPath = [string](& $getPropertyAction $summary 'backup_path' '')
         $reportPath = [string](& $getPropertyAction $summary 'report_path' '')
@@ -271,16 +405,20 @@
         $lines.Add('')
 
         $findingItems = @(& $getPropertyAction $result 'findings' @())
-        if (-not $findingItems.Count -and $beforeScan) {
-            $findingItems = @(& $getPropertyAction $beforeScan 'findings' @())
+        if (-not $findingItems.Count -and $displayScan) {
+            $findingItems = @(& $getPropertyAction $displayScan 'findings' @())
         }
+        & $setFindingsAction $findingItems
         foreach ($item in @($findingItems | Select-Object -First 120)) {
             $severity = [string](& $getPropertyAction $item 'severity' '')
             $ruleId = [string](& $getPropertyAction $item 'rule_id' '')
             $path = [string](& $getPropertyAction $item 'path' '')
             $message = [string](& $getPropertyAction $item 'message' '')
             $evidence = [string](& $getPropertyAction $item 'evidence' '')
-            $lines.Add("[$severity] $ruleId · $path")
+            $line = [int](& $getPropertyAction $item 'line_number' 0)
+            $source = [string](& $getPropertyAction $item 'analysis_source' '原始代码')
+            $location = if ($line -gt 0) { "$path`:$line" } else { $path }
+            $lines.Add("[$severity] $ruleId · $location · $source")
             if ($message) { $lines.Add("  $message") }
             if ($evidence) { $lines.Add("  证据: $evidence") }
         }
@@ -309,7 +447,13 @@
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($operation -eq 'restore') { '恢复完成' } else { '处理完成' }
             $ui.ResultStatus.Foreground = '#31D69A'
-            $ui.StatusLine.Text = if ($verdict -eq 'clean') { '未发现后门，或移除后复检为 clean。' } else { '任务已完成；请查看剩余人工项。' }
+            $ui.StatusLine.Text = if ($verdict -eq 'clean' -and $findings -gt 0) {
+                "未发现高风险后门；仍有 $findings 条审计提示，请查看结果表。"
+            } elseif ($verdict -eq 'clean') {
+                '未发现后门，或移除后复检为 clean。'
+            } else {
+                '任务已完成；请查看剩余人工项。'
+            }
         } elseif ($ExitCode -eq 10) {
             $ui.ResultStatus.Text = if ($state.LastOperation -eq 'scan') { '发现风险' } else { '预览完成，等待确认' }
             $ui.ResultStatus.Foreground = '#F4B860'
@@ -331,6 +475,9 @@
     $setRunningAction = (Get-Command Set-AntiJohnRunning).ScriptBlock.GetNewClosure()
     $getPropertyAction = (Get-Command Get-AntiJohnProperty).ScriptBlock.GetNewClosure()
     $getIntAction = (Get-Command Get-AntiJohnInt).ScriptBlock.GetNewClosure()
+    $getFindingCategoryAction = (Get-Command Get-AntiJohnFindingCategory).ScriptBlock.GetNewClosure()
+    $updateFindingViewAction = (Get-Command Update-AntiJohnFindingView).ScriptBlock.GetNewClosure()
+    $setFindingsAction = (Get-Command Set-AntiJohnFindings).ScriptBlock.GetNewClosure()
     $savePayloadReportAction = (Get-Command Save-AntiJohnPayloadReport).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-AntiJohnResult).ScriptBlock.GetNewClosure()
 
@@ -441,6 +588,35 @@
         Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
     }.GetNewClosure()
 
+    $locateFindingAction = {
+        $selected = $ui.FindingsGrid.SelectedItem
+        if (-not $selected) { throw '请先在检测结果表中选择一项。' }
+        $relative = ([string]$selected.Path).Trim()
+        if (-not $relative -or $relative.StartsWith('<')) { throw '该汇总项没有可定位的具体文件。' }
+        $target = [IO.Path]::GetFullPath($state.TargetPath)
+        if (Test-Path -LiteralPath $target -PathType Leaf) {
+            Start-Process -FilePath explorer.exe -ArgumentList @('/select,', "`"$target`"")
+            $ui.StatusLine.Text = "已定位 ZIP；内部条目：$relative"
+            return
+        }
+        if ([IO.Path]::IsPathRooted($relative)) { throw '检测结果返回了不安全的绝对路径。' }
+        $rootPath = $target.TrimEnd('\').TrimEnd('/')
+        $candidate = [IO.Path]::GetFullPath((Join-Path $rootPath ($relative -replace '/', '\')))
+        $prefix = $rootPath + [IO.Path]::DirectorySeparatorChar
+        if (-not $candidate.Equals($rootPath, [StringComparison]::OrdinalIgnoreCase) -and
+            -not $candidate.StartsWith($prefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw '检测结果路径超出扫描目标，已拒绝定位。'
+        }
+        if (-not (Test-Path -LiteralPath $candidate)) { throw "文件已不存在：$candidate" }
+        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+            Start-Process -FilePath explorer.exe -ArgumentList @('/select,', "`"$candidate`"")
+        } else {
+            Start-Process -FilePath explorer.exe -ArgumentList @($candidate)
+        }
+        $lineText = if ([int]$selected.Line -gt 0) { "，报告行号 $($selected.Line)" } else { '' }
+        $ui.StatusLine.Text = "已定位：$candidate$lineText"
+    }.GetNewClosure()
+
     function Start-AntiJohnOperation {
         param([ValidateSet('scan','preview','apply','restore')][string]$Operation)
 
@@ -516,6 +692,7 @@
         $state.ReportPath = ''
         $ui.OpenReportButton.IsEnabled = $false
         $ui.LogBox.Text = ''
+        & $setFindingsAction @()
         $ui.ProgressBar.Value = 0
         & $setRunningAction $true $label
 
@@ -653,6 +830,11 @@
         $ui.StatusLine.Text = '正在停止当前任务...'
         try { $state.Process.Process.Kill() } catch { $state.CancelRequested = $false; throw "停止任务失败: $($_.Exception.Message)" }
     }.GetNewClosure()
+    $findingFilterChangedAction = { & $updateFindingViewAction }.GetNewClosure()
+
+    $ui.FindingSeverityBox.Add_SelectionChanged($findingFilterChangedAction)
+    $ui.FindingCategoryBox.Add_SelectionChanged($findingFilterChangedAction)
+    $ui.FindingSearchBox.Add_TextChanged($findingFilterChangedAction)
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
@@ -662,6 +844,7 @@
     Register-CkButtonAction -Button $ui.ChooseStateDirButton -Action $chooseStateDirAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenBackupsButton -Action $openBackupsAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.LocateFindingButton -Action $locateFindingAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ScanButton -Action $scanAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PreviewButton -Action $previewAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ApplyButton -Action $applyAction -OnError $showPageError

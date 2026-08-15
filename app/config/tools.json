@@ -87,7 +87,11 @@
             "requiredFiles": [
                 "ck-anti-john.py",
                 "src/ck_anti_john/cli.py",
+                "src/ck_anti_john/models.py",
                 "src/ck_anti_john/repair.py",
+                "src/ck_anti_john/rules.py",
+                "src/ck_anti_john/scanner.py",
+                "src/ck_anti_john/signatures.py",
                 "src/ck_anti_john/data/john_uncle_v1.json"
             ]
         },
