@@ -180,6 +180,7 @@ jobs:
             'app\pages\ModelRenderPage.ps1',
             'app\pages\NuiWallfixPage.ps1',
             'app\pages\RpfToFivemPage.ps1',
+            'app\pages\ModelToolsPage.ps1',
             'app\pages\ServerDumpPage.ps1',
             'app/pages/FxapDecryptorPage.ps1',
             'app\pages\SnowyMergerPage.ps1',
@@ -207,6 +208,9 @@ jobs:
           }
           if ($manifest.bundled.clothingRepacker) {
             throw 'Red40 Clothing Repacker must remain an on-demand external component.'
+          }
+          if ($manifest.bundled.fivemModelTools) {
+            throw 'FiveM Model Tools must remain an on-demand external component.'
           }
           $alchemistCliPath = Join-Path $package 'app\tools\alchemist\AlchemistCli.exe'
           $alchemistWorkerPath = Join-Path $package 'app\tools\alchemist\AlchemistBatchWorker.ps1'
@@ -244,7 +248,7 @@ jobs:
           if (Test-Path -LiteralPath (Join-Path $package 'config.json') -PathType Leaf) {
             throw 'User config.json must not be bundled in the release.'
           }
-          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem', 'dump-tool', 'fxap-decryptor')) {
+          foreach ($componentDirectory in @('vehicle_renderer', 'nui-wallfix', 'rpf_to_fivem', 'fivem_model_tools', 'dump-tool', 'fxap-decryptor')) {
             if (Test-Path -LiteralPath (Join-Path $package $componentDirectory)) {
               throw "Unexpected bundled component: $componentDirectory"
             }

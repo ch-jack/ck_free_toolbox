@@ -153,7 +153,7 @@ $userGuide = @(
     '3. 首次启动需阅读并同意使用及免责条款；同意状态只记录在工具箱根目录 config.json。',
     '4. “扫描移除后门”和“一键清理小哈”已内置；其他页面显示“组件缺失”时，可点击“安装组件”下载并校验最新稳定 GitHub Release。',
     '5. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
-    '6. NUI/RPF/扫描移除后门/一键清理小哈页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
+    '6. NUI/RPF/载具武器提取/扫描移除后门/一键清理小哈页面缺少 Python 时，点击“官网”自行安装 Python 3.7+，再点击“选择”指定 python.exe。',
     '7. Blender、Python 等依赖路径和条款同意状态统一保存在工具箱根目录 config.json，自更新不会删除。',
     '8. 选择模型所在目录，点击“扫描模型”。',
     '9. 勾选需要处理的模型，点击“开始渲染”。',
@@ -189,6 +189,14 @@ $userGuide = @(
     '2. 选择输出目录，按需调整覆盖、临时目录与安全限制。',
     '3. 点击开始转换，每个 RPF 会生成一个独立 FiveM resource。',
     '4. 转换后可直接打开输出目录，并查看资源明细和 JSON 报告。',
+    '',
+    '载具武器提取：',
+    '1. 选择 FiveM resources 根目录或单个 resource 目录，并选择完整资源输出目录。',
+    '2. 先点击“列出资源清单”；清单只做静态识别，不复制、不拆分资源。',
+    '3. 确认载具、武器、混合与疑似项目后，点击“复制完整资源文件夹”。',
+    '4. 默认不覆盖同名目标；启用覆盖后会先在输出目录之外备份旧目录。',
+    '5. 每次清单和复制都生成 JSON 报告；复制成功后可按页面勾选项自动打开输出目录。',
+    '',
     '地图冲突合并：',
     '1. 选择包含 GTA5.exe 的 GTA V 安装目录。工具会读取原版 RPF 作为合并基线。',
     '2. 选择包含两个或更多地图 resources 的 Mods 目录，以及 snowy_merger 的输出父目录。',
@@ -224,12 +232,12 @@ $userGuide = @(
     '3. 自更新只替换工具箱核心文件，不删除 config.json、已安装组件、TestVeh、模型或渲染输出。',
     '',
     '发布包不包含 Blender、Python、Node.js 或 Java。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+，FXAP 页面需要 Node.js 18+；Java 8+ 仅用于 Lua 反编译。',
-    'Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
-    '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、服务器 Dump 和 FXAP 组件按需安装。',
+    'Python 缺失时 NUI/RPF/载具武器提取/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
+    '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、载具武器提取、服务器 Dump 和 FXAP 组件按需安装。',
     'SnowyMerger 地图冲突合并组件同样按需安装，不会预装进工具箱发布包。',
     'SnowyMerger v1.2+ 需要系统安装 .NET 8 Runtime；页面会自动检测并提供官网。',
     'Red40 衣服资源打包 CLI 同样按需安装，不会预装进工具箱发布包。',
-    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
+    '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、fivem_model_tools、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
     '运行后安装的 snowy-merger 和 red40-clothing-packer 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
@@ -246,6 +254,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\ModelRenderPage.ps1'),
     (Join-Path $packagePath 'app\pages\NuiWallfixPage.ps1'),
     (Join-Path $packagePath 'app\pages\RpfToFivemPage.ps1'),
+    (Join-Path $packagePath 'app\pages\ModelToolsPage.ps1'),
     (Join-Path $packagePath 'app\pages\ServerDumpPage.ps1'),
     (Join-Path $packagePath 'app\pages\FxapDecryptorPage.ps1'),
     (Join-Path $packagePath 'app\pages\SnowyMergerPage.ps1'),
@@ -302,6 +311,7 @@ $manifest = [ordered]@{
         sevenZip = $false
         nuiWallfix = $false
         rpfToFivem = $false
+        fivemModelTools = $false
         antiJohn = $false
         xiaohaCleaner = $false
         dumpTool = $false

@@ -72,6 +72,31 @@
         "default": false
     },
     {
+        "id": "fivem-model-tools",
+        "title": "载具武器提取",
+        "icon": "▣",
+        "page": "ModelToolsPage.ps1",
+        "factory": "New-CkModelToolsPage",
+        "sourceUrl": "https://github.com/ch-jack/fivem_model_tools",
+        "component": {
+            "repo": "ch-jack/fivem_model_tools",
+            "installDir": "fivem_model_tools",
+            "bootstrap": "",
+            "releaseAssetPattern": "fivem-model-tools-*-windows.zip",
+            "releaseChecksumAssetPattern": "fivem-model-tools-*-windows.zip.sha256",
+            "requiredFiles": [
+                "fivem-model-tools.py",
+                "src/fivem_model_tools/cli.py",
+                "src/fivem_model_tools/scanner.py",
+                "src/fivem_model_tools/copier.py",
+                "src/fivem_model_tools/models.py",
+                "component-manifest.json",
+                "VERSION"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "anti-john",
         "title": "扫描移除后门",
         "icon": "⊘",
