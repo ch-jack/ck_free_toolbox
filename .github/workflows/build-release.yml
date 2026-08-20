@@ -114,14 +114,16 @@ jobs:
             }, $true)
             if (-not $functionAst) { throw "$workerPath is missing Test-CkHttpSuccessStatus" }
 
-            $compatibilityTest = [scriptblock]::Create($functionAst.Extent.Text + @'
-$success = [pscustomobject]@{ StatusCode = 200 }
-$redirect = [pscustomobject]@{ StatusCode = 302 }
-$missing = [pscustomobject]@{}
-if (-not (Test-CkHttpSuccessStatus -Response $success)) { throw 'HTTP 200 was rejected' }
-if (Test-CkHttpSuccessStatus -Response $redirect) { throw 'HTTP 302 was accepted' }
-if (Test-CkHttpSuccessStatus -Response $missing) { throw 'Missing StatusCode was accepted' }
-'@)
+            $compatibilityLines = @(
+              $functionAst.Extent.Text,
+              '$success = [pscustomobject]@{ StatusCode = 200 }',
+              '$redirect = [pscustomobject]@{ StatusCode = 302 }',
+              '$missing = [pscustomobject]@{}',
+              "if (-not (Test-CkHttpSuccessStatus -Response `$success)) { throw 'HTTP 200 was rejected' }",
+              "if (Test-CkHttpSuccessStatus -Response `$redirect) { throw 'HTTP 302 was accepted' }",
+              "if (Test-CkHttpSuccessStatus -Response `$missing) { throw 'Missing StatusCode was accepted' }"
+            )
+            $compatibilityTest = [scriptblock]::Create($compatibilityLines -join [Environment]::NewLine)
             & $compatibilityTest
           }
           Write-Host 'Windows PowerShell HTTP compatibility passed.'
