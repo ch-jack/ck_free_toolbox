@@ -84,7 +84,7 @@
           <StackPanel Grid.Column="1" Margin="6,0"><TextBlock Text="PNG 调色板颜色 2-256" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="PngColorsBox" Text="256" Height="36" Margin="0,5,0,0"/></StackPanel>
           <StackPanel Grid.Column="2" Margin="6,0"><TextBlock Text="GIF 颜色 2-256" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="GifColorsBox" Text="256" Height="36" Margin="0,5,0,0"/></StackPanel>
           <StackPanel Grid.Column="3" Margin="6,0"><TextBlock Text="WebP 压缩级别 0-6" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="WebpCompressionBox" Text="6" Height="36" Margin="0,5,0,0"/></StackPanel>
-          <StackPanel Grid.Column="4" Margin="6,0"><TextBlock Text="动画帧率（0保留）" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="FpsBox" Text="0" Height="36" Margin="0,5,0,0"/></StackPanel>
+          <StackPanel Grid.Column="4" Margin="6,0"><TextBlock Text="动画最高帧率（0保留）" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="FpsBox" Text="0" Height="36" Margin="0,5,0,0" ToolTip="只在源 GIF/WebP 帧率更高时降帧；不会给低帧率动画补帧"/></StackPanel>
           <StackPanel Grid.Column="5" Margin="6,0,0,0"><TextBlock Text="单文件超时（秒）" Foreground="#AAB2BE" FontSize="12"/><TextBox x:Name="TimeoutBox" Text="600" Height="36" Margin="0,5,0,0"/></StackPanel>
         </Grid>
         <WrapPanel Margin="0,13,0,0"><CheckBox x:Name="PngPaletteCheck" Content="PNG 调色板有损模式" Margin="0,0,20,0"/><CheckBox x:Name="WebpLosslessCheck" Content="WebP 无损" Margin="0,0,20,0"/><CheckBox x:Name="OnlySmallerCheck" Content="只采用体积更小的结果" IsChecked="True" Margin="0,0,20,0"/><CheckBox x:Name="StripMetadataCheck" Content="移除元数据" Margin="0,0,20,0"/><CheckBox x:Name="AllowUpscaleCheck" Content="允许放大小图" Margin="0,0,20,0"/><CheckBox x:Name="DryRunCheck" Content="仅扫描预览"/></WrapPanel>
@@ -416,7 +416,7 @@
         $pngColors = & $getIntAction $ui.PngColorsBox 'PNG 颜色数' 2 256
         $gifColors = & $getIntAction $ui.GifColorsBox 'GIF 颜色数' 2 256
         $webpCompression = & $getIntAction $ui.WebpCompressionBox 'WebP 压缩级别' 0 6
-        $fps = & $getFloatAction $ui.FpsBox '动画帧率' 0 1000
+        $fps = & $getFloatAction $ui.FpsBox '动画最高帧率' 0 1000
         $timeout = & $getIntAction $ui.TimeoutBox '单文件超时' 1 86400
         $reportDir = & $newReportDirectoryAction
         $args = @('-u', $Context.Paths.ImageCompressorScript, $inputPath, '--json', '--progress', '--report-dir', $reportDir, '--formats') + @($formats)
