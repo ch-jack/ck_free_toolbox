@@ -93,8 +93,8 @@
           <StackPanel Orientation="Horizontal">
             <Border Width="4" Height="22" CornerRadius="3" Background="#A99CFF" Margin="0,0,10,0"/>
             <StackPanel>
-              <TextBlock Text="载具 / 武器资源提取" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="递归识别 FiveM resource，并按完整资源文件夹列清单或复制" Foreground="#777B83" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="载具 / 武器 / 声浪资源提取" FontSize="21" FontWeight="Bold"/>
+              <TextBlock Text="递归识别 FiveM resource 中的模型和声浪，并按完整资源文件夹列清单或复制" Foreground="#777B83" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="ModelTools.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
@@ -145,9 +145,10 @@
           <StackPanel Grid.Column="0" Margin="0,0,10,0">
             <TextBlock Text="资源类型" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
             <ComboBox x:Name="TypeBox" AutomationProperties.AutomationId="ModelTools.TypeBox" Height="35" SelectedIndex="0">
-              <ComboBoxItem Content="载具 + 武器" Tag="all"/>
+              <ComboBoxItem Content="全部类型" Tag="all"/>
               <ComboBoxItem Content="仅载具" Tag="vehicle"/>
               <ComboBoxItem Content="仅武器" Tag="weapon"/>
+              <ComboBoxItem Content="仅声浪" Tag="sound"/>
             </ComboBox>
           </StackPanel>
           <CheckBox x:Name="IncludePossibleBox" AutomationProperties.AutomationId="ModelTools.IncludePossibleBox" Grid.Column="1" Content="复制疑似纯替换资源" Margin="10,22,10,0" ToolTip="清单始终显示疑似资源；勾选后复制操作也会包含它们。"/>
@@ -169,10 +170,11 @@
           <TextBlock Text="任务结果" FontSize="18" FontWeight="Bold"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><TextBlock x:Name="ResultStatus" AutomationProperties.AutomationId="ModelTools.ResultStatus" Text="等待任务" Foreground="#777B83" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/><Button x:Name="OpenReportButton" AutomationProperties.AutomationId="ModelTools.OpenReportButton" Content="打开本次报告" Height="28" IsEnabled="False"/></StackPanel>
         </Grid>
-        <UniformGrid Columns="6" Margin="0,0,0,12">
+        <UniformGrid Columns="7" Margin="0,0,0,12">
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="0,0,4,0"><StackPanel><TextBlock Text="扫描资源" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="ScannedCount" Text="0" FontSize="19" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="载具" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="VehicleCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#72B7F2"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="武器" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="WeaponCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#A99CFF"/></StackPanel></Border>
+          <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="声浪" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="SoundCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#76D7C4"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="混合" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="MixedCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#F4B860"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="疑似" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="PossibleCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#F4B860"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0,0,0"><StackPanel><TextBlock Text="已复制" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="CopiedCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#31D69A"/></StackPanel></Border>
@@ -194,7 +196,7 @@
               <Setter Property="Padding" Value="0"/>
             </Style>
           </ListView.ItemContainerStyle>
-          <ListView.ItemTemplate><DataTemplate><Border BorderBrush="#20242C" BorderThickness="0,0,0,1" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="78"/><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/><ColumnDefinition Width="105"/></Grid.ColumnDefinitions><TextBlock Text="{Binding TypeText}" Foreground="{Binding TypeColor}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding ConfidenceText}" Foreground="{Binding ConfidenceColor}"/><StackPanel Grid.Column="2"><TextBlock Text="{Binding Path}" Foreground="#F4F7FB" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="#AAB2BE" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{Binding StatusColor}" VerticalAlignment="Center" TextAlignment="Right"/></Grid></Border></DataTemplate></ListView.ItemTemplate>
+          <ListView.ItemTemplate><DataTemplate><Border BorderBrush="#20242C" BorderThickness="0,0,0,1" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="118"/><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/><ColumnDefinition Width="105"/></Grid.ColumnDefinitions><TextBlock Text="{Binding TypeText}" Foreground="{Binding TypeColor}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding ConfidenceText}" Foreground="{Binding ConfidenceColor}"/><StackPanel Grid.Column="2"><TextBlock Text="{Binding Path}" Foreground="#F4F7FB" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="#AAB2BE" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{Binding StatusColor}" VerticalAlignment="Center" TextAlignment="Right"/></Grid></Border></DataTemplate></ListView.ItemTemplate>
         </ListView>
       </StackPanel>
     </Border>
@@ -211,7 +213,7 @@
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','ComponentDot','ComponentText',
         'InputBox','ChooseInputButton','OutputBox','ChooseOutputButton','OpenOutputButton','AutoOpenBox',
         'TypeBox','IncludePossibleBox','OverwriteBox','ListButton','CopyButton','StopButton',
-        'ResultStatus','OpenReportButton','ScannedCount','VehicleCount','WeaponCount','MixedCount','PossibleCount','CopiedCount',
+        'ResultStatus','OpenReportButton','ScannedCount','VehicleCount','WeaponCount','SoundCount','MixedCount','PossibleCount','CopiedCount',
         'ProgressBar','StatusLine','ResourceCounter','ResourceList','LogBox'
     )
     $ui.InputBox.Text = [string]$Context.Paths.DefaultModelToolsInput
@@ -315,6 +317,7 @@
         $ui.ScannedCount.Text = [string](& $getIntAction $summary 'resources_scanned')
         $ui.VehicleCount.Text = [string](& $getIntAction $summary 'vehicle')
         $ui.WeaponCount.Text = [string](& $getIntAction $summary 'weapon')
+        $ui.SoundCount.Text = [string](& $getIntAction $summary 'sound')
         $ui.MixedCount.Text = [string](& $getIntAction $summary 'mixed')
         $ui.PossibleCount.Text = [string](& $getIntAction $summary 'possible')
         $ui.CopiedCount.Text = [string](& $getIntAction $summary 'copied')
@@ -342,8 +345,21 @@
             $kind = [string](& $getPropertyAction $item 'classification' 'unknown')
             $confidence = [string](& $getPropertyAction $item 'confidence' 'unknown')
             $status = [string](& $getPropertyAction $item 'status' 'listed')
-            $typeText = switch ($kind) { 'vehicle' { '载具' } 'weapon' { '武器' } 'mixed' { '混合' } default { '未知' } }
-            $typeColor = switch ($kind) { 'vehicle' { '#72B7F2' } 'weapon' { '#A99CFF' } 'mixed' { '#F4B860' } default { '#777B83' } }
+            $typeValues = @(& $getPropertyAction $item 'types' @())
+            $typeText = switch ($kind) {
+                'vehicle' { '载具' }
+                'weapon' { '武器' }
+                'sound' { '声浪' }
+                'mixed' {
+                    $parts = @()
+                    if ($typeValues -contains 'vehicle') { $parts += '载具' }
+                    if ($typeValues -contains 'weapon') { $parts += '武器' }
+                    if ($typeValues -contains 'sound') { $parts += '声浪' }
+                    if ($parts.Count) { $parts -join '+' } else { '混合' }
+                }
+                default { '未知' }
+            }
+            $typeColor = switch ($kind) { 'vehicle' { '#72B7F2' } 'weapon' { '#A99CFF' } 'sound' { '#76D7C4' } 'mixed' { '#F4B860' } default { '#777B83' } }
             $confidenceText = switch ($confidence) { 'confirmed' { '已确认' } 'possible' { '疑似' } 'partial' { '部分确认' } default { '未知' } }
             $confidenceColor = if ($confidence -eq 'confirmed') { '#31D69A' } else { '#F4B860' }
             $statusText = switch ($status) {
@@ -391,7 +407,7 @@
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($state.Operation -eq 'copy') { '复制任务完成' } else { '清单已生成' }
             $ui.ResultStatus.Foreground = '#31D69A'
-            $ui.StatusLine.Text = if ($matched -eq 0) { '没有识别到符合筛选条件的载具或武器资源。' } elseif ($state.Operation -eq 'copy') { "已复制 $copied 个资源；请检查跳过项和报告。" } else { "已列出 $matched 个资源；清单没有复制文件。" }
+            $ui.StatusLine.Text = if ($matched -eq 0) { '没有识别到符合筛选条件的载具、武器或声浪资源。' } elseif ($state.Operation -eq 'copy') { "已复制 $copied 个资源；请检查跳过项和报告。" } else { "已列出 $matched 个资源；清单没有复制文件。" }
             $ui.ProgressBar.Value = 100
         } else {
             $ui.ResultStatus.Text = '任务存在错误'
@@ -418,7 +434,7 @@
         $ui.ResultStatus.Foreground = '#EF7C86'
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
-        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 载具武器提取') | Out-Null
+        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 载具武器声浪提取') | Out-Null
     }.GetNewClosure()
 
     $openPythonDownloadAction = { Start-Process -FilePath 'https://www.python.org/downloads/windows/' }.GetNewClosure()
@@ -467,7 +483,7 @@
 
     function Start-ModelToolsOperation {
         param([ValidateSet('list','copy')][string]$Operation)
-        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有载具武器任务正在运行。' }
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有载具武器声浪任务正在运行。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.ModelToolsScript -PathType Leaf)) { throw '组件未安装，请先点击顶部“安装组件”。' }
         $python = & $getPythonAction
         $inputPath = $ui.InputBox.Text.Trim()
@@ -480,7 +496,7 @@
             $detail = if ($ui.OverwriteBox.IsChecked) { '同名目标会先备份到输出目录之外，再替换。' } else { '同名目标会跳过，不会覆盖。' }
             $answer = [System.Windows.MessageBox]::Show(
                 "即将把识别到的完整 resource 文件夹复制到：`n$outputPath`n`n$detail`n不会拆分或修改资源内部文件。是否继续？",
-                '确认复制载具和武器资源',
+                '确认复制载具、武器和声浪资源',
                 [System.Windows.MessageBoxButton]::YesNo,
                 [System.Windows.MessageBoxImage]::Information
             )
@@ -505,7 +521,7 @@
         $ui.LogBox.Text = ''
         $rows.Clear()
         $ui.ResourceCounter.Text = '0 项'
-        foreach ($counter in @($ui.ScannedCount,$ui.VehicleCount,$ui.WeaponCount,$ui.MixedCount,$ui.PossibleCount,$ui.CopiedCount)) { $counter.Text = '0' }
+        foreach ($counter in @($ui.ScannedCount,$ui.VehicleCount,$ui.WeaponCount,$ui.SoundCount,$ui.MixedCount,$ui.PossibleCount,$ui.CopiedCount)) { $counter.Text = '0' }
         & $setRunningAction $true $(if ($Operation -eq 'copy') { '正在扫描并复制' } else { '正在生成清单' })
 
         $output = New-Object Text.StringBuilder
@@ -634,7 +650,7 @@
     & $updateEnvironmentAction
     return [pscustomobject]@{
         Id = 'fivem-model-tools'
-        Title = '载具武器提取'
+        Title = '载具武器声浪'
         Icon = '▣'
         Root = $root
         Activate = $updateEnvironmentAction

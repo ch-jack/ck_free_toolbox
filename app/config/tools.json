@@ -73,7 +73,7 @@
     },
     {
         "id": "fivem-model-tools",
-        "title": "载具武器提取",
+        "title": "载具武器声浪",
         "icon": "▣",
         "page": "ModelToolsPage.ps1",
         "factory": "New-CkModelToolsPage",
