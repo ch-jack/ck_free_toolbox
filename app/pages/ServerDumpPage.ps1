@@ -451,6 +451,11 @@
         $vertexFix = if ($Payload.PSObject.Properties['vertex_fix']) { $Payload.vertex_fix } else { $null }
         $vertexFixEnabled = [bool]($vertexFix -and $vertexFix.enabled)
         $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；顶点修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })；不含完整模型修复")
+        $downloadRetriedFiles = & $getSummaryValueAction $summary 'download_retried_files'
+        $downloadRetryAttempts = & $getSummaryValueAction $summary 'download_retry_attempts'
+        $downloadRetryRecovered = & $getSummaryValueAction $summary 'download_retry_recovered'
+        $failedDownloads = & $getSummaryValueAction $summary 'failed_downloads'
+        $lines.Add("下载重试: 涉及 $downloadRetriedFiles 个文件 | 额外尝试 $downloadRetryAttempts 次 | 重试成功 $downloadRetryRecovered | 最终未下载 $failedDownloads")
         if ($vertexFixEnabled) {
             $lines.Add("顶点修复状态: $($vertexFix.status)")
             if ($vertexFix.output) { $lines.Add("顶点修复副本: $($vertexFix.output)") }
@@ -463,9 +468,24 @@
         $lines.Add('')
 
         foreach ($item in @($Payload.dump_resources | Select-Object -First 120)) {
-            $lines.Add("[Dump/$($item.status)] $($item.name) | 下载 $($item.downloaded_files)/$($item.files_total) | RPF $($item.rpf_unpacked)")
+            $itemFailedDownloads = if ($item.PSObject.Properties['failed_downloads']) { @($item.failed_downloads).Count } else { 0 }
+            $lines.Add("[Dump/$($item.status)] $($item.name) | 下载 $($item.downloaded_files)/$($item.files_total) | 最终未下载 $itemFailedDownloads | RPF $($item.rpf_unpacked)")
             foreach ($warning in @($item.warnings | Select-Object -First 3)) { $lines.Add("  警告: $warning") }
             foreach ($errorText in @($item.errors | Select-Object -First 3)) { $lines.Add("  错误: $errorText") }
+        }
+        $failedDownloadDetails = New-Object System.Collections.Generic.List[string]
+        foreach ($item in @($Payload.dump_resources)) {
+            if (-not $item.PSObject.Properties['failed_downloads']) { continue }
+            foreach ($failure in @($item.failed_downloads)) {
+                $statusText = if ($null -ne $failure.status_code -and "$($failure.status_code)") { "HTTP $($failure.status_code)" } else { '无 HTTP 状态码' }
+                $failedDownloadDetails.Add("  $($item.name)/$($failure.file) | $statusText | 尝试 $($failure.attempts) 次 | $($failure.error)")
+            }
+        }
+        if ($failedDownloadDetails.Count) {
+            $lines.Add('')
+            $lines.Add("最终未下载成功文件（显示 $([Math]::Min(50, $failedDownloadDetails.Count))/$($failedDownloadDetails.Count)）：")
+            foreach ($detail in @($failedDownloadDetails | Select-Object -First 50)) { $lines.Add($detail) }
+            if ($failedDownloadDetails.Count -gt 50) { $lines.Add('  其余明细请打开本次 Markdown/JSON 报告。') }
         }
         foreach ($item in @($Payload.decrypt_resources | Select-Object -First 120)) {
             $lines.Add("[FXAP/$($item.status)] $($item.name) | 解密 $($item.decrypted_files) | 复制 $($item.copied_files) | 失败 $($item.failed_files)")
