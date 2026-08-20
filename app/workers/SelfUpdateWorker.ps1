@@ -35,6 +35,20 @@ function Format-CkDownloadSpeed {
     return ('{0:N0} B/s' -f $BytesPerSecond)
 }
 
+function Test-CkHttpSuccessStatus {
+    param($Response)
+
+    if ($null -eq $Response) { return $false }
+    $statusProperty = $Response.PSObject.Properties['StatusCode']
+    if (-not $statusProperty) { return $false }
+    try {
+        $statusCode = [int]$statusProperty.Value
+        return ($statusCode -ge 200 -and $statusCode -lt 300)
+    } catch {
+        return $false
+    }
+}
+
 function Assert-CkChildPath {
     param([string]$Path, [string]$Parent)
 
@@ -61,7 +75,7 @@ function Test-CkHttpAsset {
     $response = $null
     try {
         $response = $Client.SendAsync($request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
-        return $response.IsSuccessStatusCode
+        return (Test-CkHttpSuccessStatus -Response $response)
     } finally {
         if ($response) { $response.Dispose() }
         $request.Dispose()
@@ -77,7 +91,7 @@ function Get-CkLatestRelease {
     try {
         $latestUrl = "https://github.com/$Repository/releases/latest"
         $response = $client.GetAsync($latestUrl, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
-        if (-not $response.IsSuccessStatusCode) {
+        if (-not (Test-CkHttpSuccessStatus -Response $response)) {
             throw '工具箱尚未发布稳定 Release。'
         }
 

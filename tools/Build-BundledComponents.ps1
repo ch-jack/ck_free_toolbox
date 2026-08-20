@@ -113,7 +113,8 @@ function Get-CkLatestStableRelease {
             "https://github.com/$repo/releases/latest",
             [Net.Http.HttpCompletionOption]::ResponseHeadersRead
         ).Result
-        if (-not $response.IsSuccessStatusCode) {
+        $statusCode = [int]$response.StatusCode
+        if ($statusCode -lt 200 -or $statusCode -ge 300) {
             throw "GitHub 仓库没有可用的正式 Release: $repo"
         }
         $releaseUri = $response.RequestMessage.RequestUri

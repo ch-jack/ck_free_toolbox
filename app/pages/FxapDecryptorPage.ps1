@@ -646,7 +646,7 @@
             $response = $task.GetAwaiter().GetResult()
             try {
                 $statusCode = [int]$response.StatusCode
-                if ($response.IsSuccessStatusCode) {
+                if ($statusCode -ge 200 -and $statusCode -lt 300) {
                     & $setApiHealthStatusAction -Status available -Detail "HTTP $statusCode"
                 } else {
                     & $setApiHealthStatusAction -Status unavailable -Detail "HTTP $statusCode"

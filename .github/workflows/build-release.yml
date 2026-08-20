@@ -88,6 +88,44 @@ jobs:
           }
           Write-Host "PowerShell syntax passed: $($files.Count) files"
 
+      - name: Validate Windows PowerShell HTTP compatibility
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $legacyReferences = @(Get-ChildItem -LiteralPath .\app, .\tools -Recurse -File -Include *.ps1,*.psm1 |
+            Select-String -Pattern '\.IsSuccessStatusCode\b')
+          if ($legacyReferences.Count) {
+            throw ("Windows PowerShell-incompatible IsSuccessStatusCode references remain:`n" +
+              (($legacyReferences | ForEach-Object { "$($_.Path):$($_.LineNumber)" }) -join "`n"))
+          }
+
+          foreach ($workerPath in @('.\app\workers\ComponentWorker.ps1', '.\app\workers\SelfUpdateWorker.ps1')) {
+            $tokens = $null
+            $parseErrors = $null
+            $ast = [Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $workerPath),
+              [ref]$tokens,
+              [ref]$parseErrors
+            )
+            $functionAst = $ast.Find({
+              param($node)
+              $node -is [Management.Automation.Language.FunctionDefinitionAst] -and
+                $node.Name -eq 'Test-CkHttpSuccessStatus'
+            }, $true)
+            if (-not $functionAst) { throw "$workerPath is missing Test-CkHttpSuccessStatus" }
+
+            $compatibilityTest = [scriptblock]::Create($functionAst.Extent.Text + @'
+$success = [pscustomobject]@{ StatusCode = 200 }
+$redirect = [pscustomobject]@{ StatusCode = 302 }
+$missing = [pscustomobject]@{}
+if (-not (Test-CkHttpSuccessStatus -Response $success)) { throw 'HTTP 200 was rejected' }
+if (Test-CkHttpSuccessStatus -Response $redirect) { throw 'HTTP 302 was accepted' }
+if (Test-CkHttpSuccessStatus -Response $missing) { throw 'Missing StatusCode was accepted' }
+'@)
+            & $compatibilityTest
+          }
+          Write-Host 'Windows PowerShell HTTP compatibility passed.'
+
       - name: Build lightweight client
         shell: powershell
         run: |

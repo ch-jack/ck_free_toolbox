@@ -181,6 +181,7 @@ git push origin v1.0.2
 - 检查、下载、校验、解压、依赖配置和版本切换均通过顶部进度条显示；下载阶段显示实际字节进度和实时下载速度。
 - 下载先进入隔离 staging，限制大小并防止 ZIP 路径穿越；模型包校验随 Release 发布的 SHA-256，所有组件记录实际下载哈希。
 - 更新前保留 .ck-component-backups 备份，安装失败会回滚，避免破坏当前可用版本。
+- 如果 v1.0.77 显示“找不到属性 IsSuccessStatusCode”，该版更新器无法自行修复：关闭工具箱，从 GitHub Release 下载更新后的完整 ZIP，解压覆盖当前工具箱目录后再启动；发布包不包含 `config.json` 和已安装组件目录，但覆盖前仍建议备份 `config.json`。
 - 模型 Release 已内置 Sollumz v2.8.3；工具箱只使用 Blender Python 配置带哈希校验的运行依赖。
 - 旧版 commit 清单不会继续拉取源码，首次检查会提示更新，安装后迁移为 Release 版本清单。
 

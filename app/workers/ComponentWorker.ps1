@@ -34,6 +34,20 @@ function Format-CkDownloadSpeed {
     return ('{0:N0} B/s' -f $BytesPerSecond)
 }
 
+function Test-CkHttpSuccessStatus {
+    param($Response)
+
+    if ($null -eq $Response) { return $false }
+    $statusProperty = $Response.PSObject.Properties['StatusCode']
+    if (-not $statusProperty) { return $false }
+    try {
+        $statusCode = [int]$statusProperty.Value
+        return ($statusCode -ge 200 -and $statusCode -lt 300)
+    } catch {
+        return $false
+    }
+}
+
 function Assert-CkChildPath {
     param([string]$Path, [string]$Parent)
 
@@ -133,7 +147,7 @@ function Get-CkRemoteRelease {
     try {
         $latestUrl = "https://github.com/$repo/releases/latest"
         $response = $client.GetAsync($latestUrl, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
-        if (-not $response.IsSuccessStatusCode) {
+        if (-not (Test-CkHttpSuccessStatus -Response $response)) {
             throw "GitHub 仓库尚未发布稳定 Release: $repo"
         }
         $releaseUri = $response.RequestMessage.RequestUri
@@ -164,7 +178,7 @@ function Get-CkRemoteRelease {
         $assetRequest = New-Object Net.Http.HttpRequestMessage([Net.Http.HttpMethod]::Head, $assetUrl)
         $assetResponse = $client.SendAsync($assetRequest, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
         try {
-            if (-not $assetResponse.IsSuccessStatusCode) {
+            if (-not (Test-CkHttpSuccessStatus -Response $assetResponse)) {
                 throw "GitHub Release 缺少附件: $assetName"
             }
         } finally {
@@ -187,7 +201,7 @@ function Get-CkRemoteRelease {
             $checksumRequest = New-Object Net.Http.HttpRequestMessage([Net.Http.HttpMethod]::Head, $checksumUrl)
             $checksumResponse = $client.SendAsync($checksumRequest, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).Result
             try {
-                if (-not $checksumResponse.IsSuccessStatusCode) {
+                if (-not (Test-CkHttpSuccessStatus -Response $checksumResponse)) {
                     throw "GitHub Release 缺少校验附件: $checksumName"
                 }
             } finally {
