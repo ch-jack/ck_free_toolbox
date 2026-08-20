@@ -231,14 +231,15 @@ $userGuide = @(
     '2. 发现新版后点击顶部“立即更新”，工具箱会下载、校验、退出替换并自动重启。',
     '3. 自更新只替换工具箱核心文件，不删除 config.json、已安装组件、TestVeh、模型或渲染输出。',
     '',
-    '发布包不包含 Blender、Python、Node.js 或 Java。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+，FXAP 页面需要 Node.js 18+；Java 8+ 仅用于 Lua 反编译。',
+    '发布包不包含 Blender、Python、Node.js、Java 或 FFmpeg。Blender 需要 4.2+（推荐 5.1），Python 需要 3.7+，图片压缩需要 FFmpeg/ffprobe，FXAP 页面需要 Node.js 18+；Java 8+ 仅用于 Lua 反编译。',
     'Python 缺失时 NUI/RPF/载具武器提取/扫描移除后门/一键清理小哈页面会打开 Python 官网，安装后可选择安装目录中的 python.exe。',
     '正式发布包内置“扫描移除后门”和“一键清理小哈”；模型、NUI、RPF、载具武器提取、服务器 Dump 和 FXAP 组件按需安装。',
     'SnowyMerger 地图冲突合并组件同样按需安装，不会预装进工具箱发布包。',
     'SnowyMerger v1.2+ 需要系统安装 .NET 8 Runtime；页面会自动检测并提供官网。',
     'Red40 衣服资源打包 CLI 同样按需安装，不会预装进工具箱发布包。',
+    '图片批量压缩 CLI 同样按需安装；FFmpeg/ffprobe 由用户单独安装或选择，不会打包。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、fivem_model_tools、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
-    '运行后安装的 snowy-merger 和 red40-clothing-packer 目录也需要保留。',
+    '运行后安装的 snowy-merger、red40-clothing-packer 和 fivem-compression-img 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -259,6 +260,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\FxapDecryptorPage.ps1'),
     (Join-Path $packagePath 'app\pages\SnowyMergerPage.ps1'),
     (Join-Path $packagePath 'app\pages\ClothingRepackerPage.ps1'),
+    (Join-Path $packagePath 'app\pages\ImageCompressorPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
@@ -288,6 +290,10 @@ if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'node.exe')
 if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'java.exe').Count -gt 0) {
     throw '发布包不应包含 Java 运行时。'
 }
+if (@(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'ffmpeg.exe').Count -gt 0 -or
+    @(Get-ChildItem -LiteralPath $packagePath -Recurse -File -Filter 'ffprobe.exe').Count -gt 0) {
+    throw '发布包不应包含 FFmpeg 运行时。'
+}
 
 $manifest = [ordered]@{
     product = 'CK免费工具箱'
@@ -301,6 +307,7 @@ $manifest = [ordered]@{
         python = 'Validated Python 3.7+ selected by the user, system Python, py.exe, or Blender Python'
         node = 'Node.js 18 or later, installed separately'
         java = 'Optional Java 8 or later for Lua decompilation, installed separately'
+        ffmpeg = 'FFmpeg and ffprobe, installed separately'
         dotNetFramework = '4.8'
     }
     bundled = [ordered]@{
@@ -318,6 +325,7 @@ $manifest = [ordered]@{
         fxapDecryptor = $false
         snowyMerger = $false
         clothingRepacker = $false
+        imageCompressor = $false
         alchemist = $true
         componentManager = $true
         selfUpdater = $true

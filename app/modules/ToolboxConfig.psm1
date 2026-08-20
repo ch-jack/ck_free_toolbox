@@ -27,6 +27,9 @@
             if ($legacy.PSObject.Properties['NodePath']) {
                 $config.dependencies.nodePath = [string]$legacy.NodePath
             }
+            if ($legacy.PSObject.Properties['FFmpegPath']) {
+                $config.dependencies.ffmpegPath = [string]$legacy.FFmpegPath
+            }
         } catch { }
     }
     Save-CkToolboxConfig -Config $config
@@ -41,6 +44,7 @@ function New-CkToolboxConfig {
             pythonPath = ''
             javaPath = ''
             nodePath = ''
+            ffmpegPath = ''
         }
         agreements = [pscustomobject][ordered]@{
             disclaimerAccepted = $false
@@ -82,6 +86,9 @@ function ConvertTo-CkToolboxConfig {
     if (-not $config.dependencies.PSObject.Properties['nodePath']) {
         $config.dependencies | Add-Member -NotePropertyName nodePath -NotePropertyValue ''
     }
+    if (-not $config.dependencies.PSObject.Properties['ffmpegPath']) {
+        $config.dependencies | Add-Member -NotePropertyName ffmpegPath -NotePropertyValue ''
+    }
     if (-not $config.PSObject.Properties['agreements'] -or -not $config.agreements) {
         $config | Add-Member -NotePropertyName agreements -NotePropertyValue ([pscustomobject][ordered]@{}) -Force
     }
@@ -114,10 +121,14 @@ function ConvertTo-CkToolboxConfig {
     if ($config.PSObject.Properties['NodePath'] -and -not $config.dependencies.nodePath) {
         $config.dependencies.nodePath = [string]$config.NodePath
     }
+    if ($config.PSObject.Properties['FFmpegPath'] -and -not $config.dependencies.ffmpegPath) {
+        $config.dependencies.ffmpegPath = [string]$config.FFmpegPath
+    }
     if ($config.PSObject.Properties['BlenderPath']) { $config.PSObject.Properties.Remove('BlenderPath') }
     if ($config.PSObject.Properties['PythonPath']) { $config.PSObject.Properties.Remove('PythonPath') }
     if ($config.PSObject.Properties['JavaPath']) { $config.PSObject.Properties.Remove('JavaPath') }
     if ($config.PSObject.Properties['NodePath']) { $config.PSObject.Properties.Remove('NodePath') }
+    if ($config.PSObject.Properties['FFmpegPath']) { $config.PSObject.Properties.Remove('FFmpegPath') }
     return $config
 }
 
@@ -163,12 +174,13 @@ function Get-CkDependencySettings {
         PythonPath = [string]$config.dependencies.pythonPath
         JavaPath = [string]$config.dependencies.javaPath
         NodePath = [string]$config.dependencies.nodePath
+        FFmpegPath = [string]$config.dependencies.ffmpegPath
     }
 }
 
 function Set-CkToolboxDependencyPath {
     param(
-        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node')][string]$Dependency,
+        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node', 'FFmpeg')][string]$Dependency,
         [Parameter(Mandatory)][string]$Path
     )
 
@@ -180,8 +192,10 @@ function Set-CkToolboxDependencyPath {
         $config.dependencies.pythonPath = $fullPath
     } elseif ($Dependency -eq 'Java') {
         $config.dependencies.javaPath = $fullPath
-    } else {
+    } elseif ($Dependency -eq 'Node') {
         $config.dependencies.nodePath = $fullPath
+    } else {
+        $config.dependencies.ffmpegPath = $fullPath
     }
     Save-CkToolboxConfig -Config $config
     return $fullPath

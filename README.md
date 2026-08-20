@@ -5,6 +5,7 @@ CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件�
 本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和一键清理小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
 地图冲突合并页面接入 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)，同样通过稳定 Release 按需安装，不在工具箱仓库内复制其引擎源码。
 衣服资源打包页面接入 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的 Windows x64 CLI；组件仍由稳定 Release 按需安装，不打包上游 GUI 或引擎源码。
+图片批量压缩页面接入 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img)，通过 FFmpeg 处理 JPG、PNG、GIF 和 WebP；CLI 按需安装，FFmpeg/ffprobe 由用户单独配置。
 
 ## 界面预览
 
@@ -122,6 +123,14 @@ git push origin v1.0.2
 - apply 每次都会在所选备份目录下创建唯一运行子目录，并给新 `backup-manifest.json` 写入 `.ck-restore.json`；复制模式若发现同名输出目录会拒绝执行，避免上游递归替换无法恢复的旧内容。恢复旁车独立采集实际备份文件哈希，不依赖上游清单的哈希字段；restore 在执行前复核清单、备份文件、生成目录和 resource 范围，并显示将删除/覆盖/移动的数量。
 - 组件从 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的稳定 Release 安装，校验独立 SHA-256；发布包只含自包含 Windows x64 CLI、README、GPL-3.0 许可证和 CodeWalker 第三方声明。
 
+### 图片批量压缩
+
+- 支持单文件和目录递归压缩 JPG/JPEG、PNG、GIF、WebP，参数包括画质、最大尺寸、并行数、PNG 压缩/调色板、GIF 颜色数、WebP 压缩/无损模式和动画帧率。
+- 默认写入独立输出目录且只采用体积更小的结果；原地压缩需要明确勾选、再次确认，并在输入路径外建立备份。
+- 动态 GIF/WebP 压缩后会再次解码并检查动画没有变成单帧；长任务可停止 Python 与 FFmpeg 整个进程树。
+- 每次运行生成 UTF-8 CSV 和 JSON，逐文件记录文件名、格式、原大小、新大小、节省空间、压缩率、耗时和错误。
+- 组件从 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img) 的稳定 Release 按需安装并校验 SHA-256；FFmpeg 与 ffprobe 不打包进组件或工具箱。
+
 ### FXAP 文件夹解密
 
 - 选择直接包含 `.fxap` 的单个 resource，或包含多个 resource 的父目录；输出自动写到相邻的 `<目录名>_decrypted`。
@@ -194,6 +203,7 @@ git push origin v1.0.2
 - 已安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner、TestVeh、模型和输出不会被删除。
 - 已安装的 snowy-merger 组件及其 vanilla_cache 同样位于工具箱核心更新边界之外，不会被自更新删除。
 - 已安装的 red40-clothing-packer 组件及 ClothingRepackerWork 方案、备份、报告和输出同样不会被自更新删除。
+- 已安装的 fivem-compression-img 组件、图片输出和 `%LOCALAPPDATA%\CKFreeToolbox\image-compressor-reports` 报告不会被自更新删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -250,9 +260,10 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈、地图冲突合并、衣服资源打包和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈、地图冲突合并、衣服资源打包、图片批量压缩和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
 衣服资源打包以 clothing-repacker 注册为外置 Release 组件，页面工厂为 New-CkClothingRepackerPage。
+图片批量压缩以 image-compressor 注册为外置 Release 组件，页面工厂为 New-CkImageCompressorPage。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
@@ -261,6 +272,7 @@ ck_free_toolbox/
 工具箱源码仓库可以独立构建，不再要求同级存在功能组件仓库。开发模式下如果同级已有 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 或 `xiaoha_cleaner`，页面会直接检测并使用；轻量发布包则在自身目录内按需安装组件。
 开发模式下同级 snowy-merger 目录也会直接被检测；正式轻量包仍只包含页面与统一安装代码。
 开发模式下同级 red40-clothing-packer 目录也会直接检测其中的 `ClothingRepacker.Cli.exe`；正式轻量包不会内置该组件。
+开发模式下同级 fivem-compression-img 目录也会直接检测；正式轻量包不会内置该组件或 FFmpeg 二进制。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 

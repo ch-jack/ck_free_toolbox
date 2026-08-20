@@ -271,6 +271,34 @@
         "default": false
     },
     {
+        "id": "image-compressor",
+        "title": "图片批量压缩",
+        "icon": "▤",
+        "page": "ImageCompressorPage.ps1",
+        "factory": "New-CkImageCompressorPage",
+        "sourceUrl": "https://github.com/ch-jack/fivem_compression_img",
+        "component": {
+            "repo": "ch-jack/fivem_compression_img",
+            "installDir": "fivem-compression-img",
+            "bootstrap": "",
+            "releaseAssetPattern": "fivem-compression-img-*-windows.zip",
+            "releaseChecksumAssetPattern": "fivem-compression-img-*-windows.zip.sha256",
+            "requiredFiles": [
+                "fivem-compression-img.py",
+                "src/fivem_compression_img/__init__.py",
+                "src/fivem_compression_img/cli.py",
+                "src/fivem_compression_img/compressor.py",
+                "src/fivem_compression_img/models.py",
+                "src/fivem_compression_img/reporting.py",
+                "VERSION",
+                "component-manifest.json",
+                "README.md",
+                "LICENSE"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",

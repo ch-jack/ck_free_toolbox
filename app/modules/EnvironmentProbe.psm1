@@ -1,6 +1,6 @@
 ﻿function Set-CkDependencyPath {
     param(
-        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node')][string]$Dependency,
+        [Parameter(Mandatory)][ValidateSet('Blender', 'Python', 'Java', 'Node', 'FFmpeg')][string]$Dependency,
         [Parameter(Mandatory)][string]$Path
     )
 
@@ -12,8 +12,10 @@
         'python.exe'
     } elseif ($Dependency -eq 'Java') {
         'java.exe'
-    } else {
+    } elseif ($Dependency -eq 'Node') {
         'node.exe'
+    } else {
+        'ffmpeg.exe'
     }
     $resolved = Find-CkDependencyFile -Root $fullPath -FileName $fileName
     if (-not $resolved) { throw ("选择的位置没有找到 {0}: {1}" -f $fileName, $fullPath) }

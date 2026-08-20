@@ -213,6 +213,8 @@ $context = [pscustomobject]@{
         SnowyMergerExe = Join-Path $WorkspaceRoot 'snowy-merger\YmapMerger.exe'
         ClothingRepackerDir = Join-Path $WorkspaceRoot 'red40-clothing-packer'
         ClothingRepackerExe = Join-Path $WorkspaceRoot 'red40-clothing-packer\ClothingRepacker.Cli.exe'
+        ImageCompressorDir = Join-Path $WorkspaceRoot 'fivem-compression-img'
+        ImageCompressorScript = Join-Path $WorkspaceRoot 'fivem-compression-img\fivem-compression-img.py'
         DefaultWallfixInput = ''
         DefaultRpfInput = ''
         DefaultAntiJohnInput = ''
@@ -223,6 +225,8 @@ $context = [pscustomobject]@{
         DefaultServerDumpOutput = Join-Path $WorkspaceRoot 'ServerDumpOutput'
         DefaultSnowyMergerOutput = Join-Path $WorkspaceRoot 'SnowyMergerOutput'
         DefaultClothingRepackerWork = Join-Path $WorkspaceRoot 'ClothingRepackerWork'
+        DefaultImageCompressorInput = ''
+        DefaultImageCompressorOutput = Join-Path $WorkspaceRoot 'ImageCompressionOutput'
         DefaultInput = Join-Path $WorkspaceRoot 'TestVeh'
         DefaultRenderOut = Join-Path $WorkspaceRoot 'TestVeh\_vehicle_renders'
     }
