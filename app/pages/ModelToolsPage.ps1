@@ -21,6 +21,70 @@
       <Setter Property="FontSize" Value="13"/>
       <Setter Property="VerticalAlignment" Value="Center"/>
     </Style>
+    <Style TargetType="{x:Type ComboBox}">
+      <Setter Property="Foreground" Value="#111827"/>
+      <Setter Property="Background" Value="#F4F7FB"/>
+      <Setter Property="BorderBrush" Value="#596273"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="9,6"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Style.Triggers>
+        <Trigger Property="IsKeyboardFocusWithin" Value="True">
+          <Setter Property="BorderBrush" Value="#58A6FF"/>
+        </Trigger>
+        <Trigger Property="IsEnabled" Value="False">
+          <Setter Property="Foreground" Value="#4B5563"/>
+          <Setter Property="Background" Value="#D7DCE3"/>
+          <Setter Property="BorderBrush" Value="#8B95A3"/>
+        </Trigger>
+      </Style.Triggers>
+    </Style>
+    <Style TargetType="{x:Type ComboBoxItem}">
+      <Setter Property="Foreground" Value="#F4F7FB"/>
+      <Setter Property="Background" Value="#20242B"/>
+      <Setter Property="BorderBrush" Value="#343A46"/>
+      <Setter Property="BorderThickness" Value="0,0,0,1"/>
+      <Setter Property="Padding" Value="10,8"/>
+      <Setter Property="FontSize" Value="14"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+      <Setter Property="SnapsToDevicePixels" Value="True"/>
+      <Setter Property="OverridesDefaultStyle" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+            <Border x:Name="ItemBorder"
+                    Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}"
+                    Padding="{TemplateBinding Padding}"
+                    SnapsToDevicePixels="True">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                SnapsToDevicePixels="{TemplateBinding SnapsToDevicePixels}"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsHighlighted" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#315A91"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#173055"/>
+                <Setter Property="Foreground" Value="#FFFFFF"/>
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter TargetName="ItemBorder" Property="Background" Value="#191C21"/>
+                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#2A2E37"/>
+                <Setter Property="Foreground" Value="#8F98A5"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
   </ScrollViewer.Resources>
   <StackPanel>
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
@@ -121,8 +185,16 @@
     <Border Background="#101214" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="16" Margin="0,0,0,14">
       <StackPanel>
         <Grid Margin="0,0,0,10"><TextBlock Text="资源清单" FontSize="18" FontWeight="Bold"/><TextBlock x:Name="ResourceCounter" Text="0 项" HorizontalAlignment="Right" Foreground="#777B83" FontSize="12"/></Grid>
-        <ListView x:Name="ResourceList" AutomationProperties.AutomationId="ModelTools.ResourceList" MinHeight="150" MaxHeight="330" Background="#0D0F11" BorderBrush="#242833" BorderThickness="1" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True">
-          <ListView.ItemTemplate><DataTemplate><Border BorderBrush="#20242C" BorderThickness="0,0,0,1" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="78"/><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/><ColumnDefinition Width="105"/></Grid.ColumnDefinitions><TextBlock Text="{Binding TypeText}" Foreground="{Binding TypeColor}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding ConfidenceText}" Foreground="{Binding ConfidenceColor}"/><StackPanel Grid.Column="2"><TextBlock Text="{Binding Path}" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="#6F7580" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{Binding StatusColor}" VerticalAlignment="Center" TextAlignment="Right"/></Grid></Border></DataTemplate></ListView.ItemTemplate>
+        <ListView x:Name="ResourceList" AutomationProperties.AutomationId="ModelTools.ResourceList" MinHeight="150" MaxHeight="330" Background="#0D0F11" Foreground="#F4F7FB" BorderBrush="#242833" BorderThickness="1" HorizontalContentAlignment="Stretch" VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling" ScrollViewer.CanContentScroll="True" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+          <ListView.ItemContainerStyle>
+            <Style TargetType="{x:Type ListViewItem}">
+              <Setter Property="Foreground" Value="#F4F7FB"/>
+              <Setter Property="Background" Value="Transparent"/>
+              <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+              <Setter Property="Padding" Value="0"/>
+            </Style>
+          </ListView.ItemContainerStyle>
+          <ListView.ItemTemplate><DataTemplate><Border BorderBrush="#20242C" BorderThickness="0,0,0,1" Padding="9"><Grid><Grid.ColumnDefinitions><ColumnDefinition Width="78"/><ColumnDefinition Width="82"/><ColumnDefinition Width="*"/><ColumnDefinition Width="105"/></Grid.ColumnDefinitions><TextBlock Text="{Binding TypeText}" Foreground="{Binding TypeColor}" FontWeight="SemiBold"/><TextBlock Grid.Column="1" Text="{Binding ConfidenceText}" Foreground="{Binding ConfidenceColor}"/><StackPanel Grid.Column="2"><TextBlock Text="{Binding Path}" Foreground="#F4F7FB" FontSize="13" FontWeight="SemiBold"/><TextBlock Text="{Binding Detail}" Foreground="#AAB2BE" FontSize="11" TextTrimming="CharacterEllipsis"/></StackPanel><TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{Binding StatusColor}" VerticalAlignment="Center" TextAlignment="Right"/></Grid></Border></DataTemplate></ListView.ItemTemplate>
         </ListView>
       </StackPanel>
     </Border>
@@ -168,6 +240,22 @@
     function Get-ModelToolsInt {
         param($Object, [string]$Name)
         return [int](& $getPropertyAction $Object $Name 0)
+    }
+
+    function Get-ModelToolsScrollViewer {
+        param([Parameter(Mandatory)][System.Windows.DependencyObject]$Element)
+
+        $queue = New-Object System.Collections.Queue
+        $queue.Enqueue($Element)
+        while ($queue.Count -gt 0) {
+            $current = [System.Windows.DependencyObject]$queue.Dequeue()
+            if ($current -is [System.Windows.Controls.ScrollViewer]) { return $current }
+            $childCount = [System.Windows.Media.VisualTreeHelper]::GetChildrenCount($current)
+            for ($index = 0; $index -lt $childCount; $index++) {
+                $queue.Enqueue([System.Windows.Media.VisualTreeHelper]::GetChild($current, $index))
+            }
+        }
+        return $null
     }
 
     function Update-ModelToolsEnvironment {
@@ -311,6 +399,7 @@
     $getPythonAction = (Get-Command Get-ModelToolsPython).ScriptBlock.GetNewClosure()
     $getPropertyAction = (Get-Command Get-ModelToolsProperty).ScriptBlock.GetNewClosure()
     $getIntAction = (Get-Command Get-ModelToolsInt).ScriptBlock.GetNewClosure()
+    $getScrollViewerAction = (Get-Command Get-ModelToolsScrollViewer).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-ModelToolsEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-ModelToolsRunning).ScriptBlock.GetNewClosure()
     $getTypeAction = (Get-Command Get-ModelToolsTypeSelection).ScriptBlock.GetNewClosure()
@@ -511,6 +600,19 @@
             if (-not $state.Process.Process.HasExited) { $state.Process.Process.Kill() }
         } catch { $state.CancelRequested = $false; throw "停止任务失败: $($_.Exception.Message)" }
     }.GetNewClosure()
+
+    $resourceListMouseWheelAction = {
+        param($sender, $eventArgs)
+        $viewer = & $getScrollViewerAction $sender
+        if (-not $viewer -or $viewer.ScrollableHeight -le 0) { return }
+        $direction = if ($eventArgs.Delta -lt 0) { 1 } else { -1 }
+        $targetOffset = [Math]::Max(0, [Math]::Min($viewer.ScrollableHeight, $viewer.VerticalOffset + (3 * $direction)))
+        if ($targetOffset -ne $viewer.VerticalOffset) {
+            $viewer.ScrollToVerticalOffset($targetOffset)
+            $eventArgs.Handled = $true
+        }
+    }.GetNewClosure()
+    $ui.ResourceList.Add_PreviewMouseWheel($resourceListMouseWheelAction)
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
