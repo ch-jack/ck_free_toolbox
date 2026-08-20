@@ -41,7 +41,7 @@
             <Border Width="4" Height="22" CornerRadius="3" Background="#58A6FF" Margin="0,0,10,0"/>
             <StackPanel>
               <TextBlock Text="服务器 Dump" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="支持服务器 Dump、FXAP 解密和可选顶点修复副本；不含完整模型修复。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="支持服务器 Dump、可选 FXAP 解密或原始完整保留、可选顶点修复副本；不含完整模型修复。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="ServerDump.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
@@ -134,7 +134,7 @@
           <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="ServerDump.OpenOutputButton" Grid.Column="2" Content="打开输出" Height="36" Margin="7,22,0,0"/>
         </Grid>
         <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,-2,0,10">
-          <TextBlock Text="存储说明：临时文件默认跟随输出盘，并在每个资源解密后立即清理；请至少保留 5 GB 可用空间。勾选“保留临时目录”会持续占用空间。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
+          <TextBlock Text="存储说明：临时文件默认跟随输出盘，并在每个资源完成所选处理后立即清理；请至少保留 5 GB 可用空间。勾选“保留临时目录”会持续占用空间。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
         </Border>
         <Grid>
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="116"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
@@ -149,9 +149,11 @@
         </Grid>
         <TextBlock x:Name="ResourceSelectionText" AutomationProperties.AutomationId="ServerDump.ResourceSelectionText" Text="尚未获取资源清单" Foreground="#686E78" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
-          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行顶点修复" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
+          <CheckBox x:Name="DecryptFxapBox" AutomationProperties.AutomationId="ServerDump.DecryptFxapBox" Content="解密 FXAP" IsChecked="True" ToolTip="默认解密；取消后不解密，并将包含 .fxap、加密文件、脚本和子目录的原始资源完整复制到输出"/>
+          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行顶点修复" Margin="26,0,0,0" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
           <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="ServerDump.AutoOpenBox" Content="完成后自动打开输出文件夹" Margin="26,0,0,0" IsChecked="True"/>
         </StackPanel>
+        <TextBlock Text="取消“解密 FXAP”后不会执行解密或顶点修复；输出会完整保留原始 .fxap、加密文件及目录结构。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11" Margin="0,7,0,0"/>
         <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,8,0,0">
           <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。如需修复模型，可以进群找群主免费修复。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
         </Border>
@@ -189,7 +191,7 @@
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="0,0,4,0"><StackPanel><TextBlock Text="资源" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="ResourceCount" Text="0" FontSize="19" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="下载文件" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="DownloadedCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#58A6FF"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="RPF 解包" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="RpfCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#72B7F2"/></StackPanel></Border>
-          <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="FXAP 解密" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="DecryptedCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#31D69A"/></StackPanel></Border>
+          <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="FXAP 处理" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="DecryptedCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#31D69A"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0"><StackPanel><TextBlock Text="输出文件" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="OutputFileCount" Text="0" FontSize="19" FontWeight="Bold"/></StackPanel></Border>
           <Border Background="#15181C" CornerRadius="6" Padding="9" Margin="4,0,0,0"><StackPanel><TextBlock Text="警告/错误" Foreground="#777B83" FontSize="11"/><TextBlock x:Name="WarningErrorCount" Text="0" FontSize="19" FontWeight="Bold" Foreground="#F4B860"/></StackPanel></Border>
         </UniformGrid>
@@ -202,7 +204,7 @@
       <StackPanel>
         <Grid Margin="0,0,0,10">
           <TextBlock Text="任务日志" FontSize="18" FontWeight="Bold"/>
-          <TextBlock Text="功能含 Dump、FXAP 解密、可选顶点修复副本；不含完整模型修复。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
+          <TextBlock Text="功能含 Dump、可选 FXAP 解密或原始完整保留、可选顶点修复副本；不含完整模型修复。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
         <TextBox x:Name="LogBox" AutomationProperties.AutomationId="ServerDump.LogBox" MinHeight="210" MaxHeight="420" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
@@ -214,7 +216,7 @@
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
-        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','VertexFixBox','AutoOpenBox',
+        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
         'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
@@ -286,6 +288,7 @@
         $pythonOk = [bool]$pythonInfo.Ok
         $javaInfo = & $getJavaInfoAction
         $javaOk = [bool]$javaInfo.Ok
+        $javaRequired = [bool]$ui.DecryptFxapBox.IsChecked
         $dotNet8Info = Get-CkDotNet8Info
         $dotNet8Ok = [bool]$dotNet8Info.Ok
         $depsInfo = if ($pythonOk) { & $testPackagesAction ([string]$pythonInfo.Path) } else { [pscustomobject]@{ Ok = $false; Label = '等待 Python'; Reason = [string]$pythonInfo.Reason } }
@@ -316,7 +319,7 @@
         $state.EnvironmentChecked = $true
 
         Set-CkStatusDot $ui.PythonDot $pythonOk
-        Set-CkStatusDot $ui.JavaDot $javaOk
+        Set-CkStatusDot $ui.JavaDot ($javaOk -or -not $javaRequired)
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
         Set-CkStatusDot $ui.DotNet8Dot $dotNet8Ok
         Set-CkStatusDot $ui.ComponentDot $componentOk
@@ -325,9 +328,9 @@
         $ui.PythonText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
         $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
-        $ui.JavaText.Text = [string]$javaInfo.Label
-        $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
-        $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
+        $ui.JavaText.Text = if (-not $javaRequired) { '原始保留模式无需 Java' } else { [string]$javaInfo.Label }
+        $ui.JavaText.ToolTip = if (-not $javaRequired) { '仅在解密 FXAP 和 Lua 反编译时需要 Java。' } elseif ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
+        $ui.JavaDownloadButton.Visibility = if ($javaOk -or -not $javaRequired) { 'Collapsed' } else { 'Visible' }
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
         $ui.DepsText.Text = [string]$depsInfo.Label
         $ui.DepsText.ToolTip = [string]$depsInfo.Reason
@@ -362,7 +365,7 @@
             $ui.ComponentText.Text = '组件不完整，请重新安装'
         }
 
-        $allOk = $pythonOk -and $javaOk -and $depsInfo.Ok -and $componentOk
+        $allOk = $pythonOk -and ($javaOk -or -not $javaRequired) -and $depsInfo.Ok -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
         $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
     }
@@ -370,16 +373,17 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
+        if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
         $ui.StopButton.IsEnabled = $Running
         $ui.ProgressBar.IsIndeterminate = $false
         if ($Running) {
             $ui.ProgressBar.Value = 2
             $ui.ResultStatus.Text = '正在运行'
             $ui.ResultStatus.Foreground = '#72B7F2'
-            $ui.StatusLine.Text = '正在执行服务器 Dump、FXAP 解密及已选择的后处理，可随时停止。'
+            $ui.StatusLine.Text = '正在执行服务器 Dump 及已选择的 FXAP 处理，可随时停止。'
         }
     }
 
@@ -397,7 +401,7 @@
         if (-not $resourceCount) { $resourceCount = & $getSummaryValueAction $summary 'server_resources_total' }
         $downloaded = & $getSummaryValueAction $summary 'downloaded_files'
         $rpf = & $getSummaryValueAction $summary 'rpf_unpacked'
-        $decrypted = & $getSummaryValueAction $summary 'resources_decrypted'
+        $decrypted = (& $getSummaryValueAction $summary 'resources_decrypted') + (& $getSummaryValueAction $summary 'resources_raw_preserved')
         $outputFiles = & $getSummaryValueAction $summary 'output_files'
         $warnings = & $getSummaryValueAction $summary 'warnings'
         $errors = & $getSummaryValueAction $summary 'errors'
@@ -438,7 +442,7 @@
         if ($Payload.PSObject.Properties['storage'] -and $Payload.storage) {
             $storage = $Payload.storage
             if ($storage.temp_dir) { $lines.Add("临时工作区: $($storage.temp_dir)") }
-            $tempPolicy = if ([bool]$storage.temp_kept) { '保留本次临时工作区' } else { '逐资源解密后立即清理' }
+            $tempPolicy = if ([bool]$storage.temp_kept) { '保留本次临时工作区' } else { '逐资源完成所选处理后立即清理' }
             $lines.Add("临时策略: $tempPolicy")
             $minimumFree = if ($null -ne $storage.minimum_free_gb -and "$($storage.minimum_free_gb)") { $storage.minimum_free_gb } else { 5 }
             $lines.Add("空间要求: 至少保留 $minimumFree GB")
@@ -450,7 +454,11 @@
         }
         $vertexFix = if ($Payload.PSObject.Properties['vertex_fix']) { $Payload.vertex_fix } else { $null }
         $vertexFixEnabled = [bool]($vertexFix -and $vertexFix.enabled)
-        $lines.Add("功能范围: 包含服务器 Dump、FXAP 解密；顶点修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })；不含完整模型修复")
+        $scope = if ($Payload.PSObject.Properties['scope']) { $Payload.scope } else { $null }
+        $fxapDecryptEnabled = if ($scope -and $scope.PSObject.Properties['fxapDecrypt']) { [bool]$scope.fxapDecrypt } else { $true }
+        $rawPreservationEnabled = [bool]($scope -and $scope.PSObject.Properties['rawResourcePreservation'] -and $scope.rawResourcePreservation)
+        $fxapModeText = if ($rawPreservationEnabled) { '不解密，完整保留原始资源' } elseif ($fxapDecryptEnabled) { '解密 FXAP' } else { '未执行' }
+        $lines.Add("功能范围: 包含服务器 Dump；FXAP 处理: $fxapModeText；顶点修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })")
         $downloadRetriedFiles = & $getSummaryValueAction $summary 'download_retried_files'
         $downloadRetryAttempts = & $getSummaryValueAction $summary 'download_retry_attempts'
         $downloadRetryRecovered = & $getSummaryValueAction $summary 'download_retry_recovered'
@@ -492,7 +500,15 @@
             foreach ($warning in @($item.warnings | Select-Object -First 3)) { $lines.Add("  警告: $warning") }
             foreach ($errorText in @($item.errors | Select-Object -First 3)) { $lines.Add("  错误: $errorText") }
         }
-        if (@($Payload.dump_resources).Count -gt 120 -or @($Payload.decrypt_resources).Count -gt 120) {
+        $rawResources = if ($Payload.PSObject.Properties['raw_resources']) { @($Payload.raw_resources) } else { @() }
+        foreach ($item in @($rawResources | Select-Object -First 120)) {
+            $sourceComplete = if ($item.PSObject.Properties['source_complete']) { [bool]$item.source_complete } else { $true }
+            $lines.Add("[原始保留/$($item.status)] $($item.name) | FXAP $(if ($item.is_fxap) { '是' } else { '否' }) | 下载源 $(if ($sourceComplete) { '完整' } else { '不完整' }) | 目录 $($item.copied_files)/$($item.files_total) | 失败 $($item.failed_files)")
+            if ($item.output_dir) { $lines.Add("  输出: $($item.output_dir)") }
+            foreach ($warning in @($item.warnings | Select-Object -First 3)) { $lines.Add("  警告: $warning") }
+            foreach ($errorText in @($item.errors | Select-Object -First 3)) { $lines.Add("  错误: $errorText") }
+        }
+        if (@($Payload.dump_resources).Count -gt 120 -or @($Payload.decrypt_resources).Count -gt 120 -or $rawResources.Count -gt 120) {
             $lines.Add('')
             $lines.Add('仅显示前 120 项，完整明细请打开本次报告。')
         }
@@ -517,7 +533,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -932,7 +948,7 @@
         $ui.ResultStatus.Text = if ($useIpExample) { '已填入 IP 示例' } else { '已填入 cfx 示例' }
         $ui.ResultStatus.Foreground = '#72B7F2'
         $ui.StatusLine.Text = "cfx 示例：$cfxExample；IP 示例：$ipExample"
-        $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`n功能含 Dump、FXAP 解密、可选顶点修复副本；不含完整模型修复。"
+        $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`nFXAP 可选择解密，或不解密并完整保留原始资源目录。"
     }.GetNewClosure()
 
     $pendingLog = New-Object Text.StringBuilder
@@ -1162,8 +1178,12 @@
             throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
         }
         $selectedResources = @($state.SelectedResources)
+        $decryptFxapRequested = [bool]$ui.DecryptFxapBox.IsChecked
         $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
+        if (-not $decryptFxapRequested -and $vertexFixRequested) {
+            throw '不解密 FXAP 时不能启用顶点修复；请勾选“解密 FXAP”或取消顶点修复。'
+        }
         if ($vertexFixRequested) {
             $dotNet8Info = Get-CkDotNet8Info
             if (-not $dotNet8Info.Ok) { throw '顶点修复需要 .NET 8 Runtime，请先点击页面顶部 .NET 8 的“官网”按钮安装。' }
@@ -1201,7 +1221,7 @@
             throw $reason
         }
         $java = [string]$state.JavaPath
-        if (-not $java -or -not (Test-Path -LiteralPath $java -PathType Leaf)) {
+        if ($decryptFxapRequested -and (-not $java -or -not (Test-Path -LiteralPath $java -PathType Leaf))) {
             throw 'Java 不可用，请先在页面顶部选择 Java 目录；最低 Java 8，推荐 Java 17。'
         }
 
@@ -1224,10 +1244,10 @@
             '--resources-file', $selectionPath,
             '--output', $outputPath,
             '--report', $reportPath,
-            '--java', $java,
             '--min-free-gb', '5',
             '--non-interactive'
         )
+        if ($decryptFxapRequested) { $args += @('--java', $java) } else { $args += '--no-fxap-decrypt' }
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
         if ($vertexFixRequested) { $args += '--vertex-fix' }
 
@@ -1239,9 +1259,10 @@
         [void]$pendingLog.Clear()
         $ui.OpenReportButton.IsEnabled = $false
         foreach ($counter in @($ui.ResourceCount,$ui.DownloadedCount,$ui.RpfCount,$ui.DecryptedCount,$ui.OutputFileCount,$ui.WarningErrorCount)) { $counter.Text = '0' }
-        $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源解密后立即清理临时文件' }
+        $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源完成所选处理后立即清理临时文件' }
+        $fxapPolicy = if ($decryptFxapRequested) { '解密 FXAP' } else { '不解密；完整保留 .fxap、加密文件、脚本及目录结构' }
         $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
-        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n顶点修复: $vertexPolicy。`r`n不含完整模型修复。"
+        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n顶点修复: $vertexPolicy。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
@@ -1393,6 +1414,18 @@
         }
     }.GetNewClosure()
 
+    $decryptModeChangedAction = {
+        $decryptEnabled = [bool]$ui.DecryptFxapBox.IsChecked
+        if (-not $decryptEnabled) { $ui.VertexFixBox.IsChecked = $false }
+        $ui.VertexFixBox.IsEnabled = $decryptEnabled -and -not ($state.Process -and -not $state.Process.Process.HasExited)
+        & $updateEnvironmentAction
+        $ui.StatusLine.Text = if ($decryptEnabled) {
+            '已选择 FXAP 解密；需要可用 Java。'
+        } else {
+            '已选择不解密；将完整保留原始 .fxap、加密文件和目录结构，不需要 Java。'
+        }
+    }.GetNewClosure()
+
     $targetChangedAction = {
         if (@($state.SelectedResources).Count -and $ui.TargetBox.Text.Trim() -ne $state.ResourceTarget) {
             & $clearResourceSelectionAction '目标地址已修改，请重新获取资源清单'
@@ -1405,6 +1438,8 @@
     }.GetNewClosure()
     $ui.TargetBox.Add_TextChanged($targetChangedAction)
     $ui.ResourcesBox.Add_TextChanged($resourcePatternChangedAction)
+    $ui.DecryptFxapBox.Add_Checked($decryptModeChangedAction)
+    $ui.DecryptFxapBox.Add_Unchecked($decryptModeChangedAction)
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
