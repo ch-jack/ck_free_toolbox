@@ -297,13 +297,16 @@
         return 'all'
     }
 
-    function New-ModelToolsReportPath {
+    function New-ModelToolsReportPaths {
         param([string]$Operation)
         $base = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'fivem-model-tools-reports'
         $run = (Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + $Operation + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6)
         $directory = Join-Path $base $run
         New-Item -ItemType Directory -Path $directory -Force | Out-Null
-        return Join-Path $directory 'report.json'
+        return [pscustomobject]@{
+            Json = Join-Path $directory 'report.json'
+            Html = Join-Path $directory 'report.html'
+        }
     }
 
     function Show-ModelToolsResult {
@@ -315,7 +318,8 @@
         $ui.MixedCount.Text = [string](& $getIntAction $summary 'mixed')
         $ui.PossibleCount.Text = [string](& $getIntAction $summary 'possible')
         $ui.CopiedCount.Text = [string](& $getIntAction $summary 'copied')
-        $reportPath = [string](& $getPropertyAction $Payload 'report' '')
+        $reportPath = [string](& $getPropertyAction $Payload 'html_report' '')
+        if (-not $reportPath) { $reportPath = [string](& $getPropertyAction $Payload 'report' '') }
         if (-not $reportPath) { $reportPath = [string]$state.ReportPath }
         $state.ReportPath = if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) { [IO.Path]::GetFullPath($reportPath) } else { '' }
         $ui.OpenReportButton.IsEnabled = [bool]$state.ReportPath
@@ -326,7 +330,9 @@
         $logLines.Add("输入: $([string](& $getPropertyAction $Payload 'source' ''))")
         $destination = [string](& $getPropertyAction $Payload 'destination' '')
         if ($destination) { $logLines.Add("输出: $destination") }
-        if ($state.ReportPath) { $logLines.Add("报告: $($state.ReportPath)") }
+        if ($state.ReportPath) { $logLines.Add("HTML 报告: $($state.ReportPath)") }
+        $jsonReportPath = [string](& $getPropertyAction $Payload 'json_report' '')
+        if ($jsonReportPath) { $logLines.Add("JSON 数据: $jsonReportPath") }
         $copyInfo = & $getPropertyAction $Payload 'copy' $null
         $backupRoot = [string](& $getPropertyAction $copyInfo 'backup_root' '')
         if ($backupRoot) { $logLines.Add("备份: $backupRoot") }
@@ -403,7 +409,7 @@
     $updateEnvironmentAction = (Get-Command Update-ModelToolsEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-ModelToolsRunning).ScriptBlock.GetNewClosure()
     $getTypeAction = (Get-Command Get-ModelToolsTypeSelection).ScriptBlock.GetNewClosure()
-    $newReportPathAction = (Get-Command New-ModelToolsReportPath).ScriptBlock.GetNewClosure()
+    $newReportPathsAction = (Get-Command New-ModelToolsReportPaths).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-ModelToolsResult).ScriptBlock.GetNewClosure()
 
     $showPageError = {
@@ -456,7 +462,7 @@
     }.GetNewClosure()
     $openReportAction = {
         if (-not $state.ReportPath -or -not (Test-Path -LiteralPath $state.ReportPath -PathType Leaf)) { throw '本次报告不存在。' }
-        Start-Process -FilePath 'explorer.exe' -ArgumentList @('/select,', $state.ReportPath)
+        Start-Process -FilePath $state.ReportPath
     }.GetNewClosure()
 
     function Start-ModelToolsOperation {
@@ -481,9 +487,9 @@
             if ($answer -ne [System.Windows.MessageBoxResult]::Yes) { return }
         }
 
-        $reportPath = & $newReportPathAction $Operation
+        $reportPaths = & $newReportPathsAction $Operation
         $resourceType = & $getTypeAction
-        $args = @('-u', $Context.Paths.ModelToolsScript, $Operation, $inputPath, '--type', $resourceType, '--json', '--progress', '--report', $reportPath)
+        $args = @('-u', $Context.Paths.ModelToolsScript, $Operation, $inputPath, '--type', $resourceType, '--json', '--progress', '--report', $reportPaths.Json, '--html-report', $reportPaths.Html)
         if ($Operation -eq 'copy') {
             $args += $outputPath
             if ($ui.IncludePossibleBox.IsChecked) { $args += '--include-possible' }
@@ -492,7 +498,7 @@
 
         $state.Operation = $Operation
         $state.CancelRequested = $false
-        $state.ReportPath = $reportPath
+        $state.ReportPath = $reportPaths.Html
         $state.OutputPath = $outputPath
         $ui.OpenReportButton.IsEnabled = $false
         $ui.ProgressBar.Value = 0
@@ -612,7 +618,8 @@
             $eventArgs.Handled = $true
         }
     }.GetNewClosure()
-    $ui.ResourceList.Add_PreviewMouseWheel($resourceListMouseWheelAction)
+    $resourceListMouseWheelHandler = [System.Windows.Input.MouseWheelEventHandler]$resourceListMouseWheelAction
+    $ui.ResourceList.AddHandler([System.Windows.UIElement]::MouseWheelEvent, $resourceListMouseWheelHandler, $true)
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError

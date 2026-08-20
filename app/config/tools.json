@@ -89,6 +89,7 @@
                 "src/fivem_model_tools/cli.py",
                 "src/fivem_model_tools/scanner.py",
                 "src/fivem_model_tools/copier.py",
+                "src/fivem_model_tools/reports.py",
                 "src/fivem_model_tools/models.py",
                 "component-manifest.json",
                 "VERSION"
