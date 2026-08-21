@@ -53,4 +53,26 @@ if ($lengthError -notmatch '启动参数过长') {
     throw "共享进程启动器没有返回明确的参数长度错误: $lengthError"
 }
 
+$scopedCleanupAction = & {
+    . (Join-Path $repoRoot 'app\pages\ModelRenderPage.ps1')
+    $newSelectionAction = (Get-Command New-CkModelSelectionFile).ScriptBlock.GetNewClosure()
+    $removeSelectionAction = (Get-Command Remove-CkModelSelectionFile).ScriptBlock.GetNewClosure()
+    return {
+        $path = & $newSelectionAction -Models @('scope_model')
+        & $removeSelectionAction -Path $path
+        return $path
+    }.GetNewClosure()
+}
+$scopedPath = & $scopedCleanupAction
+if (Test-Path -LiteralPath $scopedPath -PathType Leaf) {
+    throw '页面辅助函数离开脚本作用域后无法通过已捕获回调清理清单。'
+}
+
+$pageSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'app\pages\ModelRenderPage.ps1'))
+foreach ($actionName in @('getModelSelectionPlanAction', 'newModelSelectionFileAction', 'removeModelSelectionFileAction')) {
+    if ($pageSource -notmatch [regex]::Escape("`$$actionName")) {
+        throw "模型截图页面未捕获辅助回调: $actionName"
+    }
+}
+
 Write-Host 'Model render selection and command-line guard tests passed.'

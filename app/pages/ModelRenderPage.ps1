@@ -14,6 +14,9 @@
         ReportHistoryPath = ''
         SelectionFile = ''
     }
+    $getModelSelectionPlanAction = (Get-Command Get-CkModelSelectionPlan).ScriptBlock.GetNewClosure()
+    $newModelSelectionFileAction = (Get-Command New-CkModelSelectionFile).ScriptBlock.GetNewClosure()
+    $removeModelSelectionFileAction = (Get-Command Remove-CkModelSelectionFile).ScriptBlock.GetNewClosure()
 
     $xaml = @"
 <ScrollViewer xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -460,7 +463,7 @@
         }
         $angleItem = $ui.AngleBox.SelectedItem
         $yaw = if ($angleItem -and $angleItem.Tag) { [string]$angleItem.Tag } else { '135' }
-        Remove-CkModelSelectionFile -Path $state.SelectionFile
+        & $removeModelSelectionFileAction -Path $state.SelectionFile
         $state.SelectionFile = ''
         $args = @(
             '-u',
@@ -479,9 +482,9 @@
             '--ytd-tool', $env.CodeWalker.YtdTool,
             '--rpf-tool', $env.CodeWalker.RpfTool
         )
-        $selectionPlan = Get-CkModelSelectionPlan -SelectedRows $selected -AvailableCount $rows.Count
+        $selectionPlan = & $getModelSelectionPlanAction -SelectedRows $selected -AvailableCount $rows.Count
         if ($selectionPlan.UseModelFile) {
-            $state.SelectionFile = New-CkModelSelectionFile -Models $selectionPlan.Models
+            $state.SelectionFile = & $newModelSelectionFileAction -Models $selectionPlan.Models
             $args += @('--model-file', $state.SelectionFile)
         }
 
@@ -543,7 +546,7 @@
         $onExit = {
             param($exitCode)
             $callbackState.Process = $null
-            Remove-CkModelSelectionFile -Path $callbackState.SelectionFile
+            & $removeModelSelectionFileAction -Path $callbackState.SelectionFile
             $callbackState.SelectionFile = ''
             $callbackUi.RenderProgress.Value = if ($exitCode -eq 0) { 100 } else { [Math]::Max($callbackUi.RenderProgress.Value, 95) }
             $callbackUi.RenderPercent.Text = '{0}%' -f [int]$callbackUi.RenderProgress.Value
@@ -582,7 +585,7 @@
         try {
             $state.Process = Start-CkLoggedProcess -FileName $pythonExe -Arguments $args -WorkingDirectory $Context.Paths.RendererDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
         } catch {
-            Remove-CkModelSelectionFile -Path $state.SelectionFile
+            & $removeModelSelectionFileAction -Path $state.SelectionFile
             $state.SelectionFile = ''
             $ui.RunButton.IsEnabled = $true
             $ui.RunButton.Content = '开始渲染'
