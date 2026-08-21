@@ -137,6 +137,17 @@ jobs:
             throw "Image compressor page test exited with code $LASTEXITCODE"
           }
 
+      - name: Validate model render scanning and progress
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($testPath in @('.\tests\Test-AssetScanner.ps1', '.\tests\Test-ModelRenderSelection.ps1')) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $testPath
+            if ($LASTEXITCODE -ne 0) {
+              throw "Model render test failed: $testPath (exit $LASTEXITCODE)"
+            }
+          }
+
       - name: Build lightweight client
         shell: powershell
         run: |

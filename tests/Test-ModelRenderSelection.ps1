@@ -74,5 +74,10 @@ foreach ($actionName in @('getModelSelectionPlanAction', 'newModelSelectionFileA
         throw "模型截图页面未捕获辅助回调: $actionName"
     }
 }
+foreach ($progressToken in @('^\[scan\]', '^\[jobs\]', '^\[start\]', '^\[ok\]|^\[skip\]', "'等待中'")) {
+    if (-not $pageSource.Contains($progressToken)) {
+        throw "模型截图页面缺少大批量进度处理: $progressToken"
+    }
+}
 
 Write-Host 'Model render selection and command-line guard tests passed.'

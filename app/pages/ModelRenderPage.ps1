@@ -275,6 +275,12 @@
             $state.Total = [int]$Matches[1]
             $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 12)
             Set-CkStepState -Panel $ui.StepPanel -Step 2 -Label '导入模型' -LabelControl $ui.RenderStepText
+        } elseif ($Line -match '^\[scan\]') {
+            $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 5)
+            Set-CkStepState -Panel $ui.StepPanel -Step 1 -Label '扫描资源' -LabelControl $ui.RenderStepText
+        } elseif ($Line -match '^\[jobs\]') {
+            $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 12)
+            Set-CkStepState -Panel $ui.StepPanel -Step 2 -Label '准备任务' -LabelControl $ui.RenderStepText
         } elseif ($Line -match '^\[archive\]|^\[rpf\]') {
             $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 8)
             Set-CkStepState -Panel $ui.StepPanel -Step 1 -Label '导出模型' -LabelControl $ui.RenderStepText
@@ -284,7 +290,10 @@
         } elseif ($Line -match '^\[textures\].*report=') {
             $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 68)
             Set-CkStepState -Panel $ui.StepPanel -Step 4 -Label '绑定材质' -LabelControl $ui.RenderStepText
-        } elseif ($Line -match '^\[ok\]') {
+        } elseif ($Line -match '^\[start\]') {
+            $ui.RenderProgress.Value = [Math]::Max($ui.RenderProgress.Value, 18)
+            Set-CkStepState -Panel $ui.StepPanel -Step 5 -Label 'Blender渲染' -LabelControl $ui.RenderStepText
+        } elseif ($Line -match '^\[ok\]|^\[skip\]') {
             $state.Done++
             Set-CkStepState -Panel $ui.StepPanel -Step 5 -Label 'Blender渲染' -LabelControl $ui.RenderStepText
         } elseif ($Line -match '^\[fail\]') {
@@ -315,12 +324,18 @@
             $progressText = '输出目录已准备完成。'
         } elseif ($Line -match '^Assets:\s*(\d+)') {
             $progressText = "发现 $($Matches[1]) 个待处理模型。"
+        } elseif ($Line -match '^\[scan\].*scanned=(\d+).*(?:found|candidates)=(\d+)') {
+            $progressText = "正在扫描资源：已检查 $($Matches[1]) 个文件，发现 $($Matches[2]) 个候选项。"
+        } elseif ($Line -match '^\[scan\].*phase=([^\s]+).*status=start') {
+            $progressText = "开始扫描资源阶段：$($Matches[1])。"
+        } elseif ($Line -match '^\[jobs\]\s+prepared=(\d+)/(\d+)') {
+            $progressText = "正在准备渲染任务：$($Matches[1])/$($Matches[2])。"
         } elseif ($Line -match '^Requested asset types:|^Scanned asset groups:') {
             $progressText = '模型类型筛选完成。'
         } elseif ($Line -match '^Model tone:') {
             $progressText = '正在准备模型材质。'
         } elseif ($Line -match '^Workers:\s*(\d+)') {
-            $progressText = "已启动 $($Matches[1]) 个渲染任务。"
+            $progressText = "并行渲染任务数：$($Matches[1])。"
         } elseif ($Line -match '^Shared YTD:') {
             $progressText = '正在加载共享贴图。'
         } elseif ($Line -match '^Cutout:') {
@@ -333,8 +348,12 @@
             $progressText = '贴图与材质处理完成，详情已写入日志。'
         } elseif ($Line -match '^\[textures\]') {
             $progressText = '正在转换贴图并绑定材质。'
+        } elseif ($Line -match '^\[start\]\s+(\S+)\s+(\d+)/(\d+)') {
+            $progressText = "正在渲染模型 $($Matches[1])（$($Matches[2])/$($Matches[3])）。"
         } elseif ($Line -match '^\[ok\]\s+(\S+)') {
             $progressText = "模型 $($Matches[1]) 渲染完成。"
+        } elseif ($Line -match '^\[skip\]\s+(\S+)') {
+            $progressText = "模型 $($Matches[1]) 已有结果，已跳过。"
         } elseif ($Line -match '^\[fail\]\s+(\S+)') {
             $progressText = "模型 $($Matches[1]) 渲染失败。"
         } elseif ($Line -match '^Done\.\s+OK=(\d+)\s+FAIL=(\d+)') {
@@ -494,7 +513,7 @@
         }
         foreach ($row in $rows) {
             $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
-            $row.Status = if ($selectedKeys.ContainsKey($key)) { '渲染中' } else { '跳过' }
+            $row.Status = if ($selectedKeys.ContainsKey($key)) { '等待中' } else { '跳过' }
         }
         $ui.AssetList.Items.Refresh()
         $ui.LogBox.Text = ''
@@ -520,6 +539,11 @@
         $callbackUi = $ui
         $callbackRows = $rows
         $callbackSelectedKeys = $selectedKeys
+        $callbackRowsByModel = @{}
+        foreach ($row in $selected) {
+            $modelKey = ([string]$row.Model).ToLowerInvariant()
+            if (-not $callbackRowsByModel.ContainsKey($modelKey)) { $callbackRowsByModel[$modelKey] = $row }
+        }
         $callbackProgress = $updateProgressAction
         $callbackOutputPath = $state.OutputPath
         $onOutput = {
@@ -535,6 +559,19 @@
                 $callbackState.ReportPath = $callbackState.ReportHistoryPath
             } elseif (-not $callbackState.ReportPath -and $line -match '^\[report\]\s+markdown=(.+)$') {
                 $callbackState.ReportPath = $Matches[1].Trim()
+            }
+            if ($line -match '^\[(start|ok|skip|fail)\]\s+(\S+)') {
+                $statusName = $Matches[1]
+                $modelKey = $Matches[2].ToLowerInvariant()
+                if ($callbackRowsByModel.ContainsKey($modelKey)) {
+                    $callbackRowsByModel[$modelKey].Status = switch ($statusName) {
+                        'start' { '渲染中' }
+                        'ok' { '完成' }
+                        'skip' { '已跳过' }
+                        'fail' { '失败' }
+                    }
+                    $callbackUi.AssetList.Items.Refresh()
+                }
             }
             & $callbackProgress $line
         }.GetNewClosure()
@@ -555,7 +592,9 @@
             $callbackUi.RunButton.Content = '开始渲染'
             foreach ($row in $callbackRows) {
                 $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
-                if ($callbackSelectedKeys.ContainsKey($key)) { $row.Status = if ($exitCode -eq 0) { '完成' } else { '失败' } }
+                if ($callbackSelectedKeys.ContainsKey($key) -and @('等待中', '渲染中') -contains [string]$row.Status) {
+                    $row.Status = if ($exitCode -eq 0) { '未处理' } else { '未完成' }
+                }
             }
             $callbackUi.AssetList.Items.Refresh()
             $reportPath = [string]$callbackState.ReportPath

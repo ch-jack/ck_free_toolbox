@@ -11,11 +11,71 @@
 function Test-CkGeneratedPath {
     param([Parameter(Mandatory)][string]$PathText)
     foreach ($part in ($PathText -split '[\\/]')) {
-        if (@('_vehicle_renders', '_work', '_archive_unpacked', '_rpf_unpacked') -contains $part.ToLowerInvariant()) {
+        if (@('_vehicle_renders', '_temp', '_work', '_archive_unpacked', '_rpf_unpacked') -contains $part.ToLowerInvariant()) {
             return $true
         }
     }
     return $false
+}
+
+function Get-CkScannableFiles {
+    param([Parameter(Mandatory)][string]$Root)
+
+    $pending = New-Object 'System.Collections.Generic.Stack[string]'
+    $pending.Push([IO.Path]::GetFullPath($Root))
+    while ($pending.Count -gt 0) {
+        $current = $pending.Pop()
+        foreach ($file in [IO.Directory]::EnumerateFiles($current)) { $file }
+        foreach ($directory in [IO.Directory]::EnumerateDirectories($current)) {
+            $name = [IO.Path]::GetFileName($directory).ToLowerInvariant()
+            if (@('_vehicle_renders', '_temp', '_work', '_archive_unpacked', '_rpf_unpacked') -contains $name) { continue }
+            $attributes = [IO.File]::GetAttributes($directory)
+            if (($attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+            $pending.Push($directory)
+        }
+    }
+}
+
+function Get-CkAssetSourceKey {
+    param([Parameter(Mandatory)][string]$PathText)
+
+    $normalized = $PathText.Replace('\', '/').TrimStart('/')
+    $separator = $normalized.LastIndexOf('/')
+    if ($separator -lt 0) { return '.' }
+    return $normalized.Substring(0, $separator).TrimEnd('/')
+}
+
+function Add-CkVehicleMetadataModels {
+    param(
+        [Parameter(Mandatory)][hashtable]$Index,
+        [Parameter(Mandatory)][string]$MetadataPath,
+        [Parameter(Mandatory)][string]$XmlText
+    )
+
+    $name = [IO.Path]::GetFileName($MetadataPath).ToLowerInvariant()
+    if (@('vehicles.meta', 'carvariations.meta') -notcontains $name) { return }
+
+    try {
+        $document = New-Object Xml.XmlDocument
+        $document.PreserveWhitespace = $false
+        $document.LoadXml($XmlText)
+    } catch {
+        throw "车辆元数据 XML 无效: $MetadataPath。$($_.Exception.Message)"
+    }
+
+    $models = @(
+        $document.SelectNodes('//InitDatas/Item/modelName | //variationData/Item/modelName') |
+            ForEach-Object { ([string]$_.InnerText).Trim() } |
+            Where-Object { $_ }
+    )
+    if (-not $models.Count) { return }
+
+    $resourceKey = Get-CkAssetSourceKey -PathText $MetadataPath
+    $streamKey = if ($resourceKey -eq '.') { 'stream' } else { "$resourceKey/stream" }
+    foreach ($sourceKey in @($resourceKey, $streamKey)) {
+        if (-not $Index.ContainsKey($sourceKey)) { $Index[$sourceKey] = @{} }
+        foreach ($model in $models) { $Index[$sourceKey][$model] = $true }
+    }
 }
 
 function Get-CkAssetInfo {
@@ -69,7 +129,8 @@ function New-CkAssetRow {
 function Add-CkAssetByName {
     param(
         [Parameter(Mandatory)]$Map,
-        [Parameter(Mandatory)][string]$PathText
+        [Parameter(Mandatory)][string]$PathText,
+        [hashtable]$VehicleBaseModelsBySource
     )
 
     if (Test-CkGeneratedPath $PathText) { return }
@@ -80,6 +141,13 @@ function Add-CkAssetByName {
     if (-not $info) { return }
 
     $model = Get-CkCleanModelName $PathText
+    if ($ext -eq '.yft' -and $VehicleBaseModelsBySource) {
+        $sourceKey = Get-CkAssetSourceKey -PathText $PathText
+        if ($VehicleBaseModelsBySource.ContainsKey($sourceKey)) {
+            $baseModels = $VehicleBaseModelsBySource[$sourceKey]
+            if ($baseModels.Count -gt 0 -and -not $baseModels.ContainsKey($model)) { return }
+        }
+    }
     $key = "$($info.Kind)|$($model.ToLowerInvariant())"
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($PathText).ToLowerInvariant()
     $score = if ($stem.EndsWith('_hi') -or $stem.EndsWith('+hi')) { 2 } else { 1 }
@@ -102,15 +170,32 @@ function Get-CkRenderableAssets {
     $map = @{}
     $item = Get-Item -LiteralPath $Path
     if ($item.PSIsContainer) {
-        [System.IO.Directory]::EnumerateFiles($item.FullName, '*.*', [System.IO.SearchOption]::AllDirectories) | ForEach-Object {
-            $relative = $_.Substring($item.FullName.TrimEnd('\').Length).TrimStart('\')
-            Add-CkAssetByName -Map $map -PathText $relative
+        $files = @(Get-CkScannableFiles -Root $item.FullName)
+        $rootLength = $item.FullName.TrimEnd('\').Length
+        $vehicleBaseModelsBySource = @{}
+        foreach ($file in $files) {
+            $name = [IO.Path]::GetFileName($file).ToLowerInvariant()
+            if (@('vehicles.meta', 'carvariations.meta') -notcontains $name) { continue }
+            $relative = $file.Substring($rootLength).TrimStart('\')
+            Add-CkVehicleMetadataModels -Index $vehicleBaseModelsBySource -MetadataPath $relative -XmlText ([IO.File]::ReadAllText($file))
+        }
+        foreach ($file in $files) {
+            $relative = $file.Substring($rootLength).TrimStart('\')
+            Add-CkAssetByName -Map $map -PathText $relative -VehicleBaseModelsBySource $vehicleBaseModelsBySource
         }
     } elseif ($item.Extension.ToLowerInvariant() -eq '.zip') {
         $zip = [System.IO.Compression.ZipFile]::OpenRead($item.FullName)
         try {
+            $vehicleBaseModelsBySource = @{}
             foreach ($entry in $zip.Entries) {
-                Add-CkAssetByName -Map $map -PathText $entry.FullName
+                $name = [IO.Path]::GetFileName($entry.FullName).ToLowerInvariant()
+                if (@('vehicles.meta', 'carvariations.meta') -notcontains $name) { continue }
+                $reader = New-Object IO.StreamReader($entry.Open(), [Text.Encoding]::UTF8, $true)
+                try { $xmlText = $reader.ReadToEnd() } finally { $reader.Dispose() }
+                Add-CkVehicleMetadataModels -Index $vehicleBaseModelsBySource -MetadataPath $entry.FullName -XmlText $xmlText
+            }
+            foreach ($entry in $zip.Entries) {
+                Add-CkAssetByName -Map $map -PathText $entry.FullName -VehicleBaseModelsBySource $vehicleBaseModelsBySource
             }
         } finally {
             $zip.Dispose()
