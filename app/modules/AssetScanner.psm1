@@ -158,33 +158,18 @@ function Add-CkVehicleMetadataModels {
 function Get-CkVehicleClassificationIndexes {
     param(
         [Parameter(Mandatory)][hashtable]$VehicleModelsBySource,
-        [Parameter(Mandatory)][hashtable]$HandlingNamesBySource,
-        [Parameter(Mandatory)][hashtable]$VariationModelsBySource
+        [Parameter(Mandatory)][hashtable]$HandlingNamesBySource
     )
 
-    $baseModelsBySource = @{}
-    $partModelsBySource = @{}
-    $sourceKeys = @((@($VehicleModelsBySource.Keys) + @($HandlingNamesBySource.Keys) + @($VariationModelsBySource.Keys)) | Select-Object -Unique)
-    foreach ($sourceKey in $sourceKeys) {
-        $vehicles = if ($VehicleModelsBySource.ContainsKey($sourceKey)) { $VehicleModelsBySource[$sourceKey] } else { @{} }
-        $handling = if ($HandlingNamesBySource.ContainsKey($sourceKey)) { $HandlingNamesBySource[$sourceKey] } else { @{} }
-        $variations = if ($VariationModelsBySource.ContainsKey($sourceKey)) { $VariationModelsBySource[$sourceKey] } else { @{} }
-        if ($vehicles.Count -gt 0) {
-            $baseModelsBySource[$sourceKey] = @{}
-            foreach ($model in $vehicles.Keys) {
-                if ($handling.Count -eq 0 -or $handling.ContainsKey($model)) { $baseModelsBySource[$sourceKey][$model] = $true }
-            }
-        }
-        if ($variations.Count -gt 0) {
-            $partModelsBySource[$sourceKey] = @{}
-            foreach ($model in $variations.Keys) {
-                if (-not $baseModelsBySource.ContainsKey($sourceKey) -or -not $baseModelsBySource[$sourceKey].ContainsKey($model)) {
-                    $partModelsBySource[$sourceKey][$model] = $true
-                }
-            }
-        }
+    $allVehicleModels = @{}
+    $allHandlingNames = @{}
+    foreach ($models in $VehicleModelsBySource.Values) { foreach ($model in $models.Keys) { $allVehicleModels[$model] = $true } }
+    foreach ($models in $HandlingNamesBySource.Values) { foreach ($model in $models.Keys) { $allHandlingNames[$model] = $true } }
+    $allBaseModels = @{}
+    foreach ($model in $allVehicleModels.Keys) {
+        if ($allHandlingNames.ContainsKey($model)) { $allBaseModels[$model] = $true }
     }
-    return [pscustomobject]@{ BaseModels = $baseModelsBySource; PartModels = $partModelsBySource }
+    return [pscustomobject]@{ AllBaseModels = $allBaseModels }
 }
 
 function Get-CkAssetInfo {
@@ -239,8 +224,7 @@ function Add-CkAssetByName {
     param(
         [Parameter(Mandatory)]$Map,
         [Parameter(Mandatory)][string]$PathText,
-        [hashtable]$VehicleBaseModelsBySource,
-        [hashtable]$VehiclePartModelsBySource
+        [hashtable]$AllVehicleBaseModels
     )
 
     if (Test-CkGeneratedPath $PathText) { return }
@@ -252,14 +236,7 @@ function Add-CkAssetByName {
 
     $model = Get-CkCleanModelName $PathText
     if ($ext -eq '.yft') {
-        $sourceKey = Get-CkAssetSourceKey -PathText $PathText
-        if ($VehiclePartModelsBySource -and $VehiclePartModelsBySource.ContainsKey($sourceKey) -and $VehiclePartModelsBySource[$sourceKey].ContainsKey($model)) {
-            return
-        }
-        if ($VehicleBaseModelsBySource -and $VehicleBaseModelsBySource.ContainsKey($sourceKey)) {
-            $baseModels = $VehicleBaseModelsBySource[$sourceKey]
-            if ($baseModels.Count -gt 0 -and -not $baseModels.ContainsKey($model)) { return }
-        }
+        if (-not $AllVehicleBaseModels -or -not $AllVehicleBaseModels.ContainsKey($model)) { return }
     }
     $key = "$($info.Kind)|$($model.ToLowerInvariant())"
     $stem = [System.IO.Path]::GetFileNameWithoutExtension($PathText).ToLowerInvariant()
@@ -287,45 +264,41 @@ function Get-CkRenderableAssets {
         $rootLength = $item.FullName.TrimEnd('\').Length
         $vehicleModelsBySource = @{}
         $handlingNamesBySource = @{}
-        $variationModelsBySource = @{}
         foreach ($file in $files) {
             $name = [IO.Path]::GetFileName($file).ToLowerInvariant()
-            if (@('vehicles.meta', 'handling.meta', 'carvariations.meta') -notcontains $name) { continue }
+            if (@('vehicles.meta', 'handling.meta') -notcontains $name) { continue }
             $relative = $file.Substring($rootLength).TrimStart('\')
             $xmlText = [IO.File]::ReadAllText($file)
             $targetIndex = switch ($name) {
                 'vehicles.meta' { $vehicleModelsBySource }
                 'handling.meta' { $handlingNamesBySource }
-                'carvariations.meta' { $variationModelsBySource }
             }
             Add-CkVehicleMetadataModels -Index $targetIndex -MetadataPath $relative -XmlText $xmlText
         }
-        $classification = Get-CkVehicleClassificationIndexes -VehicleModelsBySource $vehicleModelsBySource -HandlingNamesBySource $handlingNamesBySource -VariationModelsBySource $variationModelsBySource
+        $classification = Get-CkVehicleClassificationIndexes -VehicleModelsBySource $vehicleModelsBySource -HandlingNamesBySource $handlingNamesBySource
         foreach ($file in $files) {
             $relative = $file.Substring($rootLength).TrimStart('\')
-            Add-CkAssetByName -Map $map -PathText $relative -VehicleBaseModelsBySource $classification.BaseModels -VehiclePartModelsBySource $classification.PartModels
+            Add-CkAssetByName -Map $map -PathText $relative -AllVehicleBaseModels $classification.AllBaseModels
         }
     } elseif ($item.Extension.ToLowerInvariant() -eq '.zip') {
         $zip = [System.IO.Compression.ZipFile]::OpenRead($item.FullName)
         try {
             $vehicleModelsBySource = @{}
             $handlingNamesBySource = @{}
-            $variationModelsBySource = @{}
             foreach ($entry in $zip.Entries) {
                 $name = [IO.Path]::GetFileName($entry.FullName).ToLowerInvariant()
-                if (@('vehicles.meta', 'handling.meta', 'carvariations.meta') -notcontains $name) { continue }
+                if (@('vehicles.meta', 'handling.meta') -notcontains $name) { continue }
                 $reader = New-Object IO.StreamReader($entry.Open(), [Text.Encoding]::UTF8, $true)
                 try { $xmlText = $reader.ReadToEnd() } finally { $reader.Dispose() }
                 $targetIndex = switch ($name) {
                     'vehicles.meta' { $vehicleModelsBySource }
                     'handling.meta' { $handlingNamesBySource }
-                    'carvariations.meta' { $variationModelsBySource }
                 }
                 Add-CkVehicleMetadataModels -Index $targetIndex -MetadataPath $entry.FullName -XmlText $xmlText
             }
-            $classification = Get-CkVehicleClassificationIndexes -VehicleModelsBySource $vehicleModelsBySource -HandlingNamesBySource $handlingNamesBySource -VariationModelsBySource $variationModelsBySource
+            $classification = Get-CkVehicleClassificationIndexes -VehicleModelsBySource $vehicleModelsBySource -HandlingNamesBySource $handlingNamesBySource
             foreach ($entry in $zip.Entries) {
-                Add-CkAssetByName -Map $map -PathText $entry.FullName -VehicleBaseModelsBySource $classification.BaseModels -VehiclePartModelsBySource $classification.PartModels
+                Add-CkAssetByName -Map $map -PathText $entry.FullName -AllVehicleBaseModels $classification.AllBaseModels
             }
         } finally {
             $zip.Dispose()

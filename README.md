@@ -78,7 +78,8 @@ git push origin v1.0.2
 - 支持载具、武器、饰品、道具、普通 Drawable、Drawable Dictionary 和地图。
 - 支持按载具、武器、饰品分类筛选，并保留实时搜索、全选、取消、打开输出目录和批量渲染。
 - 载具目录会读取资源根目录或 `data/子包/` 中的 `vehicles.meta/carvariations.meta`，列表只显示基础车型；轮拱、离合器、保险杠等分离 `.yft` 改装件由组件组装到整车，不再作为独立截图任务。第三方 XML 含非法注释、重复声明或拼接文档时只在内存中修复；仍损坏则从 `modelName` 恢复基础车型，不修改源文件。
-- 使用 `vehicles.meta/modelName` 与 `handling.meta/handlingName` 的交集确认基车，并把 `carvariations.meta` 中不属于该交集的 `modelName` 作为组件隐藏，避免 `grill`、`roof`、`skirts`、`tips` 等改装件单独出现。
+- 严格使用本次输入目录内 `vehicles.meta/modelName` 与 `handling.meta/handlingName` 的全局交集确认基车；只有交集中的同名 `.yft` 会显示和渲染，`carvariations.meta` 组件及其他未确认 YFT 全部忽略，避免 `grill`、`roof`、`skirts`、`tips`、`livery` 单独出现。
+- 组件不会单独占用列表和任务，但渲染确认基车时仍由模型组件读取 `carvariations.meta + carcols.meta`，自动拼装组件后输出整车截图。
 - 一万文件级目录会持续显示扫描数量、候选数量、任务准备进度及当前开始渲染的模型；渲染队列按并发数有界调度，日志和列表状态逐车更新。
 - 分类筛选会传给 `--asset-types`；角度预设提供当前左侧、标准正面和反向正面，兼容本地前向轴相反的模型。
 - 使用已安装 Blender 自带 Python；玩家只需选择安装目录中的 `blender.exe`，最低支持 Blender 4.2（推荐 5.1），CodeWalker 转换工具与 Sollumz 使用模型组件内置路径。

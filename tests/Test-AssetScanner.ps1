@@ -72,6 +72,10 @@ try {
     Write-TestFile -Path (Join-Path $resource '_vehicle_renders\vehicles.meta') -Content '<invalid'
     Write-TestFile -Path (Join-Path $resource '_temp\temporary_part.yft')
 
+    $globalMetadata = Join-Path $tempRoot 'metadata_registry\data\global'
+    Write-TestFile -Path (Join-Path $globalMetadata 'vehicles.meta') -Content '<CVehicleModelInfo__InitDataList><InitDatas><Item><modelName>miniram2500lema</modelName></Item><Item><modelName>fmgt18</modelName></Item></InitDatas></CVehicleModelInfo__InitDataList>'
+    Write-TestFile -Path (Join-Path $globalMetadata 'handling.meta') -Content '<CHandlingDataMgr><HandlingData><Item><handlingName>MINIRAM2500LEMA</handlingName></Item><Item><handlingName>FMGT18</handlingName></Item></HandlingData></CHandlingDataMgr>'
+
     $partsOnly = Join-Path $tempRoot 'parts_only_pack'
     Write-TestFile -Path (Join-Path $partsOnly 'data\kit\carvariations.meta') -Content @'
 <CVehicleModelInfoVariation><variationData>
@@ -85,6 +89,11 @@ try {
         Write-TestFile -Path (Join-Path $partsOnly "stream\kit\$name")
     }
 
+    $unifiedStream = Join-Path $tempRoot '804_Unified_Vehicle_Pack\stream'
+    foreach ($name in @('fmgt18.yft', 'fmgt18_livery6.yft', 'fmgt18_livery7.yft', 'fmgt18_livery8.yft', 'fmgt18_livery9.yft')) {
+        Write-TestFile -Path (Join-Path $unifiedStream $name)
+    }
+
     $standalone = Join-Path $tempRoot 'standalone_pack\stream'
     Write-TestFile -Path (Join-Path $standalone 'standalone_car.yft')
     Write-TestFile -Path (Join-Path $standalone 'metadata_missing_part.yft')
@@ -93,7 +102,7 @@ try {
     $assets = @(Get-CkRenderableAssets -Path $tempRoot)
     $vehicles = @($assets | Where-Object Kind -eq 'vehicle')
     $vehicleNames = @($vehicles.Model | Sort-Object)
-    $expectedVehicles = @('base_car', 'flat_car', 'metadata_missing_part', 'miniram2500lema', 'recovered_car', 'second_car', 'standalone_car')
+    $expectedVehicles = @('base_car', 'flat_car', 'fmgt18', 'miniram2500lema', 'recovered_car', 'second_car')
     if (($vehicleNames -join '|') -cne ($expectedVehicles -join '|')) {
         throw "目录扫描车型过滤错误。实际: $($vehicleNames -join ', ')"
     }
