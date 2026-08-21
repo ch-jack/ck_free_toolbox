@@ -12,6 +12,7 @@
         Failed = 0
         ReportPath = ''
         ReportHistoryPath = ''
+        SelectionFile = ''
     }
 
     $xaml = @"
@@ -459,6 +460,8 @@
         }
         $angleItem = $ui.AngleBox.SelectedItem
         $yaw = if ($angleItem -and $angleItem.Tag) { [string]$angleItem.Tag } else { '135' }
+        Remove-CkModelSelectionFile -Path $state.SelectionFile
+        $state.SelectionFile = ''
         $args = @(
             '-u',
             $Context.Paths.RenderScript,
@@ -476,8 +479,10 @@
             '--ytd-tool', $env.CodeWalker.YtdTool,
             '--rpf-tool', $env.CodeWalker.RpfTool
         )
-        foreach ($row in $selected) {
-            if ($row.Kind -ne 'archive') { $args += @('--model', $row.Model) }
+        $selectionPlan = Get-CkModelSelectionPlan -SelectedRows $selected -AvailableCount $rows.Count
+        if ($selectionPlan.UseModelFile) {
+            $state.SelectionFile = New-CkModelSelectionFile -Models $selectionPlan.Models
+            $args += @('--model-file', $state.SelectionFile)
         }
 
         $selectedKeys = @{}
@@ -490,6 +495,9 @@
         }
         $ui.AssetList.Items.Refresh()
         $ui.LogBox.Text = ''
+        if ($state.SelectionFile) {
+            Add-CkLogLine -TextBox $ui.LogBox -Line "已通过模型清单传递 $($selectionPlan.Models.Count) 个筛选项。"
+        }
         $ui.RunButton.IsEnabled = $false
         $ui.RunButton.Content = '正在渲染...'
         $ui.RenderStatusTitle.Text = '正在渲染'
@@ -535,6 +543,8 @@
         $onExit = {
             param($exitCode)
             $callbackState.Process = $null
+            Remove-CkModelSelectionFile -Path $callbackState.SelectionFile
+            $callbackState.SelectionFile = ''
             $callbackUi.RenderProgress.Value = if ($exitCode -eq 0) { 100 } else { [Math]::Max($callbackUi.RenderProgress.Value, 95) }
             $callbackUi.RenderPercent.Text = '{0}%' -f [int]$callbackUi.RenderProgress.Value
             $callbackUi.RenderStatusTitle.Text = if ($exitCode -eq 0) { '渲染完成' } else { '渲染失败' }
@@ -572,6 +582,8 @@
         try {
             $state.Process = Start-CkLoggedProcess -FileName $pythonExe -Arguments $args -WorkingDirectory $Context.Paths.RendererDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
         } catch {
+            Remove-CkModelSelectionFile -Path $state.SelectionFile
+            $state.SelectionFile = ''
             $ui.RunButton.IsEnabled = $true
             $ui.RunButton.Content = '开始渲染'
             $ui.RenderStatusTitle.Text = '启动失败'
@@ -658,4 +670,56 @@
         Root = $root
         Activate = $updateEnvironmentAction
     }
+}
+
+function Get-CkModelSelectionPlan {
+    param(
+        [Parameter(Mandatory)][object[]]$SelectedRows,
+        [Parameter(Mandatory)][ValidateRange(0, 2147483647)][int]$AvailableCount
+    )
+
+    if ($SelectedRows.Count -ge $AvailableCount) {
+        return [pscustomobject]@{ UseModelFile = $false; Models = @() }
+    }
+
+    $models = New-Object System.Collections.Generic.List[string]
+    $seen = @{}
+    foreach ($row in $SelectedRows) {
+        if ([string]$row.Kind -eq 'archive') { continue }
+        $model = ([string]$row.Model).Trim()
+        if (-not $model -or $seen.ContainsKey($model)) { continue }
+        $seen[$model] = $true
+        $models.Add($model)
+    }
+
+    return [pscustomobject]@{
+        UseModelFile = ($models.Count -gt 0)
+        Models = @($models)
+    }
+}
+
+function New-CkModelSelectionFile {
+    param([Parameter(Mandatory)][string[]]$Models)
+
+    if (-not $Models.Count) { throw '模型清单不能为空。' }
+    $tempRoot = Join-Path ([IO.Path]::GetTempPath()) 'CKFreeToolbox\ModelRender'
+    if (-not (Test-Path -LiteralPath $tempRoot -PathType Container)) {
+        New-Item -ItemType Directory -Path $tempRoot -Force | Out-Null
+    }
+    $path = Join-Path $tempRoot ('models-{0}.txt' -f [guid]::NewGuid().ToString('N'))
+    [IO.File]::WriteAllLines($path, $Models, (New-Object Text.UTF8Encoding($false)))
+    return $path
+}
+
+function Remove-CkModelSelectionFile {
+    param([string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path)) { return }
+    try {
+        $tempRoot = [IO.Path]::GetFullPath((Join-Path ([IO.Path]::GetTempPath()) 'CKFreeToolbox\ModelRender')).TrimEnd('\') + '\'
+        $fullPath = [IO.Path]::GetFullPath($Path)
+        if ($fullPath.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $fullPath -PathType Leaf)) {
+            [IO.File]::Delete($fullPath)
+        }
+    } catch { }
 }

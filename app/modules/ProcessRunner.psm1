@@ -242,6 +242,11 @@ function Start-CkLoggedProcess {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = $FileName
     $psi.Arguments = Join-CkArgumentList -Arguments $Arguments
+    $estimatedCommandLineLength = [CKFreeToolbox.Runtime.CommandLine]::Quote($FileName).Length + 1 + $psi.Arguments.Length
+    $safeCommandLineLimit = 30000
+    if ($estimatedCommandLineLength -gt $safeCommandLineLimit) {
+        throw "启动参数过长（$estimatedCommandLineLength 个字符，安全上限 $safeCommandLineLimit）。请减少单次项目数量或改用清单文件。"
+    }
     $psi.WorkingDirectory = $WorkingDirectory
     $psi.UseShellExecute = $false
     $psi.RedirectStandardOutput = $true
