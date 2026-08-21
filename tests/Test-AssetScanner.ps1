@@ -24,6 +24,8 @@ try {
   <!-- pack--vip -->
   <InitDatas>
     <Item><modelName>base_car</modelName></Item>
+    <Item><modelName>second_car</modelName></Item>
+    <Item><modelName>base_car_dryclutch_1</modelName></Item>
   </InitDatas>
 </CVehicleModelInfo__InitDataList>
 <?xml version="1.0" encoding="UTF-8"?>
@@ -31,13 +33,23 @@ try {
   <InitDatas><Item><modelName>base_car</modelName></Item></InitDatas>
 </CVehicleModelInfo__InitDataList>
 '@
+    Write-TestFile -Path (Join-Path $resource 'data\subpack\handling.meta') -Content @'
+<CHandlingDataMgr><HandlingData>
+  <Item><handlingName>BASE_CAR</handlingName></Item>
+  <Item><handlingName>SECOND_CAR</handlingName></Item>
+</HandlingData></CHandlingDataMgr>
+'@
     Write-TestFile -Path (Join-Path $resource 'data\subpack\carvariations.meta') -Content @'
 <CVehicleModelInfoVariation>
   <variationData>
     <Item><modelName>second_car</modelName></Item>
+    <Item><modelName>base_car_dryclutch_1</modelName></Item>
+    <Item><modelName>base_car_bumper_2</modelName></Item>
   </variationData>
 </CVehicleModelInfoVariation>
 '@
+    Write-TestFile -Path (Join-Path $resource 'data\flat\handling.meta') -Content '<CHandlingDataMgr><HandlingData><Item><handlingName>flat_car</handlingName></Item></HandlingData></CHandlingDataMgr>'
+    Write-TestFile -Path (Join-Path $resource 'data\flat\carvariations.meta') -Content '<CVehicleModelInfoVariation><variationData><Item><modelName>flat_car_spoiler_1</modelName></Item></variationData></CVehicleModelInfoVariation>'
     Write-TestFile -Path (Join-Path $resource 'data\flat\vehicles.meta') -Content @'
 <CVehicleModelInfo__InitDataList>
   <InitDatas>
@@ -52,11 +64,26 @@ try {
     Write-TestFile -Path (Join-Path $resource 'stream\flat_car.yft')
     Write-TestFile -Path (Join-Path $resource 'stream\flat_car_spoiler_1.yft')
     Write-TestFile -Path (Join-Path $resource 'data\damaged\vehicles.meta') -Content 'garbage <broken <modelName>recovered_car</modelName>'
+    Write-TestFile -Path (Join-Path $resource 'data\damaged\handling.meta') -Content '<CHandlingDataMgr><HandlingData><Item><handlingName>recovered_car</handlingName></Item></HandlingData></CHandlingDataMgr>'
+    Write-TestFile -Path (Join-Path $resource 'data\damaged\carvariations.meta') -Content '<CVehicleModelInfoVariation><variationData><Item><modelName>recovered_car_part_1</modelName></Item></variationData></CVehicleModelInfoVariation>'
     Write-TestFile -Path (Join-Path $resource 'stream\damaged\recovered_car.yft')
     Write-TestFile -Path (Join-Path $resource 'stream\damaged\recovered_car_part_1.yft')
     Write-TestFile -Path (Join-Path $resource '_vehicle_renders\old_output.yft')
     Write-TestFile -Path (Join-Path $resource '_vehicle_renders\vehicles.meta') -Content '<invalid'
     Write-TestFile -Path (Join-Path $resource '_temp\temporary_part.yft')
+
+    $partsOnly = Join-Path $tempRoot 'parts_only_pack'
+    Write-TestFile -Path (Join-Path $partsOnly 'data\kit\carvariations.meta') -Content @'
+<CVehicleModelInfoVariation><variationData>
+    <Item><modelName>miniram2500lema_grill_4a</modelName></Item>
+    <Item><modelName>miniram2500lema_roof_1</modelName></Item>
+    <Item><modelName>miniram2500lema_skirts</modelName></Item>
+    <Item><modelName>miniram2500lema_tips</modelName></Item>
+</variationData></CVehicleModelInfoVariation>
+'@
+    foreach ($name in @('miniram2500lema.yft', 'miniram2500lema_grill_4a.yft', 'miniram2500lema_roof_1.yft', 'miniram2500lema_skirts.yft', 'miniram2500lema_tips.yft')) {
+        Write-TestFile -Path (Join-Path $partsOnly "stream\kit\$name")
+    }
 
     $standalone = Join-Path $tempRoot 'standalone_pack\stream'
     Write-TestFile -Path (Join-Path $standalone 'standalone_car.yft')
@@ -66,7 +93,7 @@ try {
     $assets = @(Get-CkRenderableAssets -Path $tempRoot)
     $vehicles = @($assets | Where-Object Kind -eq 'vehicle')
     $vehicleNames = @($vehicles.Model | Sort-Object)
-    $expectedVehicles = @('base_car', 'flat_car', 'metadata_missing_part', 'recovered_car', 'second_car', 'standalone_car')
+    $expectedVehicles = @('base_car', 'flat_car', 'metadata_missing_part', 'miniram2500lema', 'recovered_car', 'second_car', 'standalone_car')
     if (($vehicleNames -join '|') -cne ($expectedVehicles -join '|')) {
         throw "目录扫描车型过滤错误。实际: $($vehicleNames -join ', ')"
     }
@@ -88,6 +115,8 @@ try {
   </InitDatas>
 </CVehicleModelInfo__InitDataList>
 '@
+    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\data\nested\handling.meta') -Content '<CHandlingDataMgr><HandlingData><Item><handlingName>ZIP_CAR</handlingName></Item></HandlingData></CHandlingDataMgr>'
+    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\data\nested\carvariations.meta') -Content '<CVehicleModelInfoVariation><variationData><Item><modelName>zip_car_spoiler_1</modelName></Item></variationData></CVehicleModelInfoVariation>'
     Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\nested\zip_car.yft')
     Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\nested\zip_car_spoiler_1.yft')
     $zipPath = Join-Path $tempRoot 'vehicle_pack.zip'
