@@ -18,24 +18,35 @@ function Write-TestFile {
 
 try {
     $resource = Join-Path $tempRoot 'unified_pack'
-    Write-TestFile -Path (Join-Path $resource 'vehicles.meta') -Content @'
+    Write-TestFile -Path (Join-Path $resource 'data\subpack\vehicles.meta') -Content @'
+<?xml version="1.0" encoding="UTF-8"?>
 <CVehicleModelInfo__InitDataList>
+  <!-- pack--vip -->
   <InitDatas>
     <Item><modelName>base_car</modelName></Item>
   </InitDatas>
 </CVehicleModelInfo__InitDataList>
 '@
-    Write-TestFile -Path (Join-Path $resource 'carvariations.meta') -Content @'
+    Write-TestFile -Path (Join-Path $resource 'data\subpack\carvariations.meta') -Content @'
 <CVehicleModelInfoVariation>
   <variationData>
     <Item><modelName>second_car</modelName></Item>
   </variationData>
 </CVehicleModelInfoVariation>
 '@
+    Write-TestFile -Path (Join-Path $resource 'data\flat\vehicles.meta') -Content @'
+<CVehicleModelInfo__InitDataList>
+  <InitDatas>
+    <Item><modelName>flat_car</modelName></Item>
+  </InitDatas>
+</CVehicleModelInfo__InitDataList>
+'@
     foreach ($name in @('base_car.yft', 'base_car_hi.yft', 'second_car.yft', 'base_car_dryclutch_1.yft', 'base_car_bumper_2.yft')) {
-        Write-TestFile -Path (Join-Path $resource "stream\$name")
+        Write-TestFile -Path (Join-Path $resource "stream\subpack\$name")
     }
-    Write-TestFile -Path (Join-Path $resource 'stream\display_prop.ydr')
+    Write-TestFile -Path (Join-Path $resource 'stream\subpack\display_prop.ydr')
+    Write-TestFile -Path (Join-Path $resource 'stream\flat_car.yft')
+    Write-TestFile -Path (Join-Path $resource 'stream\flat_car_spoiler_1.yft')
     Write-TestFile -Path (Join-Path $resource '_vehicle_renders\old_output.yft')
     Write-TestFile -Path (Join-Path $resource '_vehicle_renders\vehicles.meta') -Content '<invalid'
     Write-TestFile -Path (Join-Path $resource '_temp\temporary_part.yft')
@@ -48,7 +59,7 @@ try {
     $assets = @(Get-CkRenderableAssets -Path $tempRoot)
     $vehicles = @($assets | Where-Object Kind -eq 'vehicle')
     $vehicleNames = @($vehicles.Model | Sort-Object)
-    $expectedVehicles = @('base_car', 'metadata_missing_part', 'second_car', 'standalone_car')
+    $expectedVehicles = @('base_car', 'flat_car', 'metadata_missing_part', 'second_car', 'standalone_car')
     if (($vehicleNames -join '|') -cne ($expectedVehicles -join '|')) {
         throw "目录扫描车型过滤错误。实际: $($vehicleNames -join ', ')"
     }
@@ -61,15 +72,17 @@ try {
     }
 
     $zipSource = Join-Path $tempRoot 'zip_source'
-    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\vehicles.meta') -Content @'
+    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\data\nested\vehicles.meta') -Content @'
+<?xml version="1.0" encoding="UTF-8"?>
 <CVehicleModelInfo__InitDataList>
+  <!-- invalid--comment -->
   <InitDatas>
     <Item><modelName>zip_car</modelName></Item>
   </InitDatas>
 </CVehicleModelInfo__InitDataList>
 '@
-    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\zip_car.yft')
-    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\zip_car_spoiler_1.yft')
+    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\nested\zip_car.yft')
+    Write-TestFile -Path (Join-Path $zipSource 'zip_resource\stream\nested\zip_car_spoiler_1.yft')
     $zipPath = Join-Path $tempRoot 'vehicle_pack.zip'
     [IO.Compression.ZipFile]::CreateFromDirectory($zipSource, $zipPath)
     $zipAssets = @(Get-CkRenderableAssets -Path $zipPath)

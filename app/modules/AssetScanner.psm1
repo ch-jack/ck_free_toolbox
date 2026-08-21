@@ -45,6 +45,41 @@ function Get-CkAssetSourceKey {
     return $normalized.Substring(0, $separator).TrimEnd('/')
 }
 
+function Get-CkVehicleSourceKeysForMetadata {
+    param([Parameter(Mandatory)][string]$MetadataPath)
+
+    $normalized = $MetadataPath.Replace('\', '/').TrimStart('/')
+    $metadataParent = Get-CkAssetSourceKey -PathText $normalized
+    $keys = @{}
+    $keys[$metadataParent] = $true
+    $keys[$(if ($metadataParent -eq '.') { 'stream' } else { "$metadataParent/stream" })] = $true
+
+    $parts = @($normalized -split '/')
+    $dataIndex = -1
+    for ($index = 0; $index -lt ($parts.Count - 1); $index++) {
+        if ($parts[$index] -ieq 'data') {
+            $dataIndex = $index
+            break
+        }
+    }
+    if ($dataIndex -ge 0) {
+        $resourceKey = if ($dataIndex -eq 0) { '.' } else { ($parts[0..($dataIndex - 1)] -join '/') }
+        $streamKey = if ($resourceKey -eq '.') { 'stream' } else { "$resourceKey/stream" }
+        $keys[$streamKey] = $true
+        $suffixCount = $parts.Count - $dataIndex - 2
+        if ($suffixCount -gt 0) {
+            $suffix = $parts[($dataIndex + 1)..($parts.Count - 2)] -join '/'
+            $keys["$streamKey/$suffix"] = $true
+        }
+    }
+    return @($keys.Keys)
+}
+
+function Remove-CkXmlComments {
+    param([Parameter(Mandatory)][string]$XmlText)
+    return [regex]::Replace($XmlText, '<!--[\s\S]*?-->', '')
+}
+
 function Add-CkVehicleMetadataModels {
     param(
         [Parameter(Mandatory)][hashtable]$Index,
@@ -55,12 +90,20 @@ function Add-CkVehicleMetadataModels {
     $name = [IO.Path]::GetFileName($MetadataPath).ToLowerInvariant()
     if (@('vehicles.meta', 'carvariations.meta') -notcontains $name) { return }
 
+    $originalError = $null
     try {
         $document = New-Object Xml.XmlDocument
         $document.PreserveWhitespace = $false
         $document.LoadXml($XmlText)
     } catch {
-        throw "车辆元数据 XML 无效: $MetadataPath。$($_.Exception.Message)"
+        $originalError = $_.Exception.Message
+        try {
+            $document = New-Object Xml.XmlDocument
+            $document.PreserveWhitespace = $false
+            $document.LoadXml((Remove-CkXmlComments -XmlText $XmlText))
+        } catch {
+            throw "车辆元数据 XML 无效: $MetadataPath。$originalError；移除注释后仍无法解析: $($_.Exception.Message)"
+        }
     }
 
     $models = @(
@@ -70,9 +113,7 @@ function Add-CkVehicleMetadataModels {
     )
     if (-not $models.Count) { return }
 
-    $resourceKey = Get-CkAssetSourceKey -PathText $MetadataPath
-    $streamKey = if ($resourceKey -eq '.') { 'stream' } else { "$resourceKey/stream" }
-    foreach ($sourceKey in @($resourceKey, $streamKey)) {
+    foreach ($sourceKey in @(Get-CkVehicleSourceKeysForMetadata -MetadataPath $MetadataPath)) {
         if (-not $Index.ContainsKey($sourceKey)) { $Index[$sourceKey] = @{} }
         foreach ($model in $models) { $Index[$sourceKey][$model] = $true }
     }
