@@ -75,9 +75,26 @@ function Get-CkVehicleSourceKeysForMetadata {
     return @($keys.Keys)
 }
 
-function Remove-CkXmlComments {
+function Repair-CkXmlText {
     param([Parameter(Mandatory)][string]$XmlText)
-    return [regex]::Replace($XmlText, '<!--[\s\S]*?-->', '')
+    $text = [regex]::Replace($XmlText, '<!--[\s\S]*?-->', '')
+    $text = [regex]::Replace($text, '<\?xml[\s\S]*?\?>', '', [Text.RegularExpressions.RegexOptions]::IgnoreCase)
+    return [regex]::Replace($text, '[\x00-\x08\x0B\x0C\x0E-\x1F]', '')
+}
+
+function Get-CkModelNamesFromText {
+    param([Parameter(Mandatory)][string]$XmlText)
+
+    $models = New-Object System.Collections.Generic.List[string]
+    $seen = @{}
+    foreach ($match in [regex]::Matches($XmlText, '<modelName(?:\s[^>]*)?>([\s\S]*?)</modelName>', [Text.RegularExpressions.RegexOptions]::IgnoreCase)) {
+        $model = [Net.WebUtility]::HtmlDecode([string]$match.Groups[1].Value).Trim()
+        if ($model -and -not $seen.ContainsKey($model)) {
+            $seen[$model] = $true
+            $models.Add($model)
+        }
+    }
+    return @($models)
 }
 
 function Add-CkVehicleMetadataModels {
@@ -90,27 +107,37 @@ function Add-CkVehicleMetadataModels {
     $name = [IO.Path]::GetFileName($MetadataPath).ToLowerInvariant()
     if (@('vehicles.meta', 'carvariations.meta') -notcontains $name) { return }
 
-    $originalError = $null
+    $document = $null
     try {
         $document = New-Object Xml.XmlDocument
         $document.PreserveWhitespace = $false
         $document.LoadXml($XmlText)
     } catch {
-        $originalError = $_.Exception.Message
+        $repaired = Repair-CkXmlText -XmlText $XmlText
         try {
             $document = New-Object Xml.XmlDocument
             $document.PreserveWhitespace = $false
-            $document.LoadXml((Remove-CkXmlComments -XmlText $XmlText))
+            $document.LoadXml($repaired)
         } catch {
-            throw "车辆元数据 XML 无效: $MetadataPath。$originalError；移除注释后仍无法解析: $($_.Exception.Message)"
+            try {
+                $document = New-Object Xml.XmlDocument
+                $document.PreserveWhitespace = $false
+                $document.LoadXml("<ck_metadata_root>$repaired</ck_metadata_root>")
+            } catch {
+                $document = $null
+            }
         }
     }
 
-    $models = @(
-        $document.SelectNodes('//InitDatas/Item/modelName | //variationData/Item/modelName') |
-            ForEach-Object { ([string]$_.InnerText).Trim() } |
-            Where-Object { $_ }
-    )
+    $models = if ($document) {
+        @(
+            $document.SelectNodes('//InitDatas/Item/modelName | //variationData/Item/modelName') |
+                ForEach-Object { ([string]$_.InnerText).Trim() } |
+                Where-Object { $_ }
+        )
+    } else {
+        @(Get-CkModelNamesFromText -XmlText $XmlText)
+    }
     if (-not $models.Count) { return }
 
     foreach ($sourceKey in @(Get-CkVehicleSourceKeysForMetadata -MetadataPath $MetadataPath)) {
