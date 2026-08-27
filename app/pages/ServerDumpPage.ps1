@@ -183,6 +183,7 @@
           <TextBlock Text="任务结果" FontSize="18" FontWeight="Bold"/>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <TextBlock x:Name="ResultStatus" AutomationProperties.AutomationId="ServerDump.ResultStatus" Text="等待任务" Foreground="#777B83" FontSize="13" VerticalAlignment="Center" Margin="0,0,10,0"/>
+            <Button x:Name="RetryFailedButton" AutomationProperties.AutomationId="ServerDump.RetryFailedButton" Content="补充失败下载" Height="28" Margin="0,0,8,0" ToolTip="选择上一次 server-dump JSON 报告，只重新下载其中失败的文件并合并回原输出目录"/>
             <Button x:Name="OpenReportButton" AutomationProperties.AutomationId="ServerDump.OpenReportButton" Content="打开本次报告" Height="28" Margin="0,0,8,0" IsEnabled="False"/>
             <Button x:Name="OpenReportHistoryButton" AutomationProperties.AutomationId="ServerDump.OpenReportHistoryButton" Content="报告历史" Height="28"/>
           </StackPanel>
@@ -217,7 +218,7 @@
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
         'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
-        'StartButton','StopButton','ResultStatus','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
+        'StartButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
 
@@ -233,6 +234,63 @@
     function Get-ServerDumpJavaInfo {
         $settings = Get-CkDependencySettings
         return Get-CkJavaInfo -Settings $settings
+    }
+
+    function Get-ServerDumpRetryReportInfo {
+        param([Parameter(Mandatory)][string]$Path)
+
+        $resolved = [IO.Path]::GetFullPath($Path)
+        if ([IO.Path]::GetExtension($resolved) -ieq '.md') {
+            $resolved = [IO.Path]::ChangeExtension($resolved, '.json')
+        }
+        if (-not (Test-Path -LiteralPath $resolved -PathType Leaf)) { throw "补充下载报告不存在：$resolved" }
+        $file = Get-Item -LiteralPath $resolved
+        if ($file.Length -gt 50MB) { throw '补充下载报告超过 50 MB。' }
+        try {
+            $payload = Get-Content -LiteralPath $resolved -Raw -Encoding UTF8 | ConvertFrom-Json
+        } catch {
+            throw "无法读取补充下载 JSON 报告：$($_.Exception.Message)"
+        }
+        if (-not $payload -or [string]$payload.command -ne 'server-dump') { throw '请选择 dump-tool 生成的 server-dump JSON 报告。' }
+        $target = [string]$payload.target
+        $output = [string]$payload.output
+        if ([string]::IsNullOrWhiteSpace($target) -or [string]::IsNullOrWhiteSpace($output)) { throw '报告缺少目标服务器或原输出目录。' }
+        $failedFiles = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+        if ($payload.PSObject.Properties['retry_failed'] -and $payload.retry_failed -and $payload.retry_failed.PSObject.Properties['remaining_by_resource']) {
+            foreach ($resourceProperty in @($payload.retry_failed.remaining_by_resource.PSObject.Properties)) {
+                $resourceName = [string]$resourceProperty.Name
+                foreach ($pending in @($resourceProperty.Value)) {
+                    $fileName = [string]$pending
+                    if ($resourceName -and $fileName) { [void]$failedFiles.Add("$resourceName/$fileName") }
+                }
+            }
+        }
+        foreach ($item in @($payload.dump_resources)) {
+            $resourceName = [string]$item.name
+            foreach ($failure in @($item.failed_downloads)) {
+                $fileName = [string]$failure.file
+                if ($resourceName -and $fileName) { [void]$failedFiles.Add("$resourceName/$fileName") }
+            }
+            foreach ($pending in @($item.retry_pending_files)) {
+                $fileName = [string]$pending
+                if ($resourceName -and $fileName) { [void]$failedFiles.Add("$resourceName/$fileName") }
+            }
+        }
+        if ($failedFiles.Count -eq 0) { throw '该报告没有需要补充下载的失败文件。' }
+        $scope = $payload.scope
+        $rawMode = [bool](
+            $scope -and (
+                ($scope.PSObject.Properties['rawResourcePreservation'] -and $scope.rawResourcePreservation) -or
+                ($scope.PSObject.Properties['fxapDecrypt'] -and -not $scope.fxapDecrypt)
+            )
+        )
+        return [pscustomobject]@{
+            Path = $resolved
+            Target = $target.Trim()
+            Output = [IO.Path]::GetFullPath($output)
+            RawMode = $rawMode
+            FailedCount = $failedFiles.Count
+        }
     }
 
     function Test-ServerDumpPythonPackages {
@@ -373,7 +431,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
@@ -464,6 +522,11 @@
         $downloadRetryRecovered = & $getSummaryValueAction $summary 'download_retry_recovered'
         $failedDownloads = & $getSummaryValueAction $summary 'failed_downloads'
         $lines.Add("下载重试: 涉及 $downloadRetriedFiles 个文件 | 额外尝试 $downloadRetryAttempts 次 | 重试成功 $downloadRetryRecovered | 最终未下载 $failedDownloads")
+        if ($Payload.PSObject.Properties['retry_failed'] -and $Payload.retry_failed -and $Payload.retry_failed.enabled) {
+            $retry = $Payload.retry_failed
+            $lines.Add("补充失败下载: 请求 $($retry.requested_files) | 本次下载成功 $($retry.recovered_files) | 仍需补充 $($retry.remaining_files) | 额外前置文件 $($retry.prerequisite_files)")
+            if ($retry.source_report) { $lines.Add("补充来源: $($retry.source_report)") }
+        }
         if ($vertexFixEnabled) {
             $lines.Add("顶点修复状态: $($vertexFix.status)")
             if ($vertexFix.output) { $lines.Add("顶点修复副本: $($vertexFix.output)") }
@@ -478,6 +541,9 @@
         foreach ($item in @($Payload.dump_resources | Select-Object -First 120)) {
             $itemFailedDownloads = if ($item.PSObject.Properties['failed_downloads']) { @($item.failed_downloads).Count } else { 0 }
             $lines.Add("[Dump/$($item.status)] $($item.name) | 下载 $($item.downloaded_files)/$($item.files_total) | 最终未下载 $itemFailedDownloads | RPF $($item.rpf_unpacked)")
+            if ($item.PSObject.Properties['retry_mode'] -and $item.retry_mode) {
+                $lines.Add("  补充请求 $(@($item.retry_requested_files).Count) | 下载成功 $(@($item.retry_recovered_files).Count) | 等待前置 $(@($item.retry_pending_files).Count) | 额外前置 $(@($item.retry_prerequisite_files).Count)")
+            }
             foreach ($warning in @($item.warnings | Select-Object -First 3)) { $lines.Add("  警告: $warning") }
             foreach ($errorText in @($item.errors | Select-Object -First 3)) { $lines.Add("  错误: $errorText") }
         }
@@ -516,14 +582,15 @@
         $ui.LogBox.Text = $lines -join [Environment]::NewLine
         $ui.LogBox.ScrollToHome()
 
+        $retryResult = [bool]($Payload.PSObject.Properties['retry_failed'] -and $Payload.retry_failed -and $Payload.retry_failed.enabled)
         if ($Payload.status -eq 'success' -and $ExitCode -eq 0) {
-            $ui.ResultStatus.Text = 'Dump 完成'
+            $ui.ResultStatus.Text = if ($retryResult) { '补充下载完成' } else { 'Dump 完成' }
             $ui.ResultStatus.Foreground = '#31D69A'
-            $ui.StatusLine.Text = "已输出 $outputFiles 个文件。"
+            $ui.StatusLine.Text = if ($retryResult) { "失败文件已补充完成，本次下载成功 $($Payload.retry_failed.recovered_files) 个。" } else { "已输出 $outputFiles 个文件。" }
         } elseif ($Payload.status -eq 'partial' -or $ExitCode -eq 10) {
-            $ui.ResultStatus.Text = '完成，需检查'
+            $ui.ResultStatus.Text = if ($retryResult) { '补充完成，仍需检查' } else { '完成，需检查' }
             $ui.ResultStatus.Foreground = '#F4B860'
-            $ui.StatusLine.Text = "任务完成但有 $warnings 个警告、$errors 个错误，请查看报告。"
+            $ui.StatusLine.Text = if ($retryResult) { "仍有 $($Payload.retry_failed.remaining_files) 个文件需要补充，请使用本次新报告继续。" } else { "任务完成但有 $warnings 个警告、$errors 个错误，请查看报告。" }
         } else {
             $ui.ResultStatus.Text = '任务失败'
             $ui.ResultStatus.Foreground = '#EF6B73'
@@ -533,7 +600,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -693,6 +760,7 @@
 
     $getPythonInfoAction = (Get-Command Get-ServerDumpPythonInfo).ScriptBlock.GetNewClosure()
     $getJavaInfoAction = (Get-Command Get-ServerDumpJavaInfo).ScriptBlock.GetNewClosure()
+    $getRetryReportInfoAction = (Get-Command Get-ServerDumpRetryReportInfo).ScriptBlock.GetNewClosure()
     $testPackagesAction = (Get-Command Test-ServerDumpPythonPackages).ScriptBlock.GetNewClosure()
     $getPythonAction = (Get-Command Get-ServerDumpPython).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-ServerDumpEnvironment).ScriptBlock.GetNewClosure()
@@ -1149,6 +1217,8 @@
     }
 
     function Start-ServerDump {
+        param([string]$RetryReportPath = '')
+
         if ($state.DependencyInstallProcess) {
             try {
                 if (-not $state.DependencyInstallProcess.HasExited) { throw 'Python 依赖正在安装，请等待安装窗口完成。' }
@@ -1168,18 +1238,27 @@
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "服务器 Dump 组件不完整，缺少: $relative" }
         }
 
-        $target = $ui.TargetBox.Text.Trim()
+        $retryInfo = if ($RetryReportPath) { & $getRetryReportInfoAction $RetryReportPath } else { $null }
+        $retryMode = $null -ne $retryInfo
+        if ($retryMode) {
+            $ui.TargetBox.Text = [string]$retryInfo.Target
+            $ui.OutputBox.Text = [string]$retryInfo.Output
+            $ui.DecryptFxapBox.IsChecked = -not [bool]$retryInfo.RawMode
+            $ui.VertexFixBox.IsChecked = $false
+        }
+
+        $target = if ($retryMode) { [string]$retryInfo.Target } else { $ui.TargetBox.Text.Trim() }
         if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
         if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
 
-        if ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count) {
+        if (-not $retryMode -and ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count)) {
             throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
         }
-        $selectedResources = @($state.SelectedResources)
-        $decryptFxapRequested = [bool]$ui.DecryptFxapBox.IsChecked
-        $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
+        $selectedResources = if ($retryMode) { @() } else { @($state.SelectedResources) }
+        $decryptFxapRequested = if ($retryMode) { -not [bool]$retryInfo.RawMode } else { [bool]$ui.DecryptFxapBox.IsChecked }
+        $vertexFixRequested = if ($retryMode) { $false } else { [bool]$ui.VertexFixBox.IsChecked }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
         if (-not $decryptFxapRequested -and $vertexFixRequested) {
             throw '不解密 FXAP 时不能启用顶点修复；请勾选“解密 FXAP”或取消顶点修复。'
@@ -1228,31 +1307,34 @@
         $runDir = Join-Path $state.ReportRoot ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
         New-Item -ItemType Directory -Force -Path $runDir | Out-Null
         $reportPath = Join-Path $runDir 'report.json'
-        $selectionPath = Join-Path $runDir 'selected-resources.json'
-        $selectionPayload = [ordered]@{
-            schemaVersion = 1
-            target = $target
-            resources = $selectedResources
+        $selectionPath = ''
+        if (-not $retryMode) {
+            $selectionPath = Join-Path $runDir 'selected-resources.json'
+            $selectionPayload = [ordered]@{
+                schemaVersion = 1
+                target = $target
+                resources = $selectedResources
+            }
+            $selectionJson = $selectionPayload | ConvertTo-Json -Depth 4 -Compress
+            [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
         }
-        $selectionJson = $selectionPayload | ConvertTo-Json -Depth 4 -Compress
-        [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
 
         $args = @(
             '-u', $Context.Paths.DumpToolScript,
             $target,
             '--token-choice', '1',
-            '--resources-file', $selectionPath,
             '--output', $outputPath,
             '--report', $reportPath,
             '--min-free-gb', '5',
             '--non-interactive'
         )
+        if ($retryMode) { $args += @('--retry-failed-report', [string]$retryInfo.Path) } else { $args += @('--resources-file', $selectionPath) }
         if ($decryptFxapRequested) { $args += @('--java', $java) } else { $args += '--no-fxap-decrypt' }
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
         if ($vertexFixRequested) { $args += '--vertex-fix' }
 
         $state.CancelRequested = $false
-        $state.Operation = 'dump'
+        $state.Operation = if ($retryMode) { 'retry-download' } else { 'dump' }
         $state.ReportPath = ''
         $state.StartedAt = Get-Date
         $logFlushTimer.Stop()
@@ -1262,7 +1344,8 @@
         $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源完成所选处理后立即清理临时文件' }
         $fxapPolicy = if ($decryptFxapRequested) { '解密 FXAP' } else { '不解密；完整保留 .fxap、加密文件、脚本及目录结构' }
         $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
-        $ui.LogBox.Text = "开始服务器 Dump...`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n顶点修复: $vertexPolicy。"
+        $operationText = if ($retryMode) { "开始补充失败下载...`r`n来源报告: $($retryInfo.Path)`r`n失败文件: $($retryInfo.FailedCount) 个" } else { '开始服务器 Dump...' }
+        $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n顶点修复: $vertexPolicy。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
@@ -1387,6 +1470,27 @@
     $loadResourcesAction = (Get-Command Start-ServerResourceList).ScriptBlock.GetNewClosure()
     $startAction = (Get-Command Start-ServerDump).ScriptBlock.GetNewClosure()
     $runAction = { & $startAction }.GetNewClosure()
+    $retryFailedAction = {
+        $dialog = New-Object Microsoft.Win32.OpenFileDialog
+        $dialog.Title = '选择上一次服务器 Dump 报告'
+        $dialog.Filter = '服务器 Dump 报告 (report.json;report.md)|*.json;*.md|JSON 报告 (*.json)|*.json|Markdown 报告 (*.md)|*.md'
+        $dialog.CheckFileExists = $true
+        $dialog.Multiselect = $false
+        $dialog.RestoreDirectory = $true
+        if (Test-Path -LiteralPath $state.ReportRoot -PathType Container) { $dialog.InitialDirectory = $state.ReportRoot }
+        $owner = [System.Windows.Window]::GetWindow($root)
+        $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
+        if ($accepted -ne $true) { return }
+        $info = & $getRetryReportInfoAction $dialog.FileName
+        $message = "将补充下载 $($info.FailedCount) 个失败文件，并合并回：$([Environment]::NewLine)$($info.Output)$([Environment]::NewLine)$([Environment]::NewLine)受保护资源可能额外下载必要的 RPF/.fxap 解密上下文。是否继续？"
+        $choice = if ($owner) {
+            [System.Windows.MessageBox]::Show($owner, $message, '补充失败下载', [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+        } else {
+            [System.Windows.MessageBox]::Show($message, '补充失败下载', [System.Windows.MessageBoxButton]::YesNo, [System.Windows.MessageBoxImage]::Question)
+        }
+        if ($choice -ne [System.Windows.MessageBoxResult]::Yes) { return }
+        & $startAction ([string]$info.Path)
+    }.GetNewClosure()
     $stopAction = {
         if (-not $state.Process -or $state.Process.Process.HasExited) { return }
         $state.CancelRequested = $true
@@ -1452,6 +1556,7 @@
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.RetryFailedButton -Action $retryFailedAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
