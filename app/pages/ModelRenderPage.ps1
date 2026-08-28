@@ -546,6 +546,7 @@
         }
         $callbackProgress = [scriptblock]$updateProgressAction
         $callbackOutputPath = $state.OutputPath
+        [datetime]$callbackStartedAt = $state.StartedAt
         $onOutput = {
             param($line)
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line $line
@@ -582,43 +583,67 @@
         }.GetNewClosure()
         $onExit = {
             param($exitCode)
-            $callbackState.Process = $null
-            [void]$removeModelSelectionFileAction.Invoke([string]$callbackState.SelectionFile)
-            $callbackState.SelectionFile = ''
-            $callbackUi.RenderProgress.Value = if ($exitCode -eq 0) { 100 } else { [Math]::Max($callbackUi.RenderProgress.Value, 95) }
-            $callbackUi.RenderPercent.Text = '{0}%' -f [int]$callbackUi.RenderProgress.Value
-            $callbackUi.RenderStatusTitle.Text = if ($exitCode -eq 0) { '渲染完成' } else { '渲染失败' }
-            $callbackUi.RunButton.IsEnabled = $true
-            $callbackUi.RunButton.Content = '开始渲染'
-            foreach ($row in $callbackRows) {
-                $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
-                if ($callbackSelectedKeys.ContainsKey($key) -and @('等待中', '渲染中') -contains [string]$row.Status) {
-                    $row.Status = if ($exitCode -eq 0) { '未处理' } else { '未完成' }
+            $exitStep = 'state'
+            try {
+                if ($callbackState) {
+                    $callbackState.Process = $null
+                    $selectionFile = [string]$callbackState.SelectionFile
+                    if ($removeModelSelectionFileAction -is [scriptblock]) {
+                        [void]$removeModelSelectionFileAction.Invoke($selectionFile)
+                    }
+                    $callbackState.SelectionFile = ''
                 }
-            }
-            $callbackUi.AssetList.Items.Refresh()
-            $reportPath = [string]$callbackState.ReportPath
-            if (-not $reportPath -or -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
-                foreach ($candidateName in @('_render_gallery.html', '_render_report.md', '_render_report.json')) {
-                    $candidate = Join-Path $callbackOutputPath $candidateName
-                    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-                        $candidateFile = Get-Item -LiteralPath $candidate
-                        if ($candidateFile.LastWriteTimeUtc -ge $callbackState.StartedAt.ToUniversalTime()) {
-                            $reportPath = $candidateFile.FullName
-                            break
+
+                $exitStep = 'controls'
+                if ($callbackUi) {
+                    if ($callbackUi.RenderProgress) {
+                        $callbackUi.RenderProgress.Value = if ($exitCode -eq 0) { 100 } else { [Math]::Max($callbackUi.RenderProgress.Value, 95) }
+                    }
+                    if ($callbackUi.RenderPercent -and $callbackUi.RenderProgress) { $callbackUi.RenderPercent.Text = '{0}%' -f [int]$callbackUi.RenderProgress.Value }
+                    if ($callbackUi.RenderStatusTitle) { $callbackUi.RenderStatusTitle.Text = if ($exitCode -eq 0) { '渲染完成' } else { '渲染失败' } }
+                    if ($callbackUi.RunButton) { $callbackUi.RunButton.IsEnabled = $true; $callbackUi.RunButton.Content = '开始渲染' }
+                }
+
+                $exitStep = 'rows'
+                if ($callbackSelectedKeys) {
+                    foreach ($row in @($callbackRows)) {
+                        $key = "$($row.Kind)|$($row.Model)|$($row.Source)"
+                        if ($callbackSelectedKeys.ContainsKey($key) -and @('等待中', '渲染中') -contains [string]$row.Status) {
+                            $row.Status = if ($exitCode -eq 0) { '未处理' } else { '未完成' }
                         }
                     }
                 }
+                if ($callbackUi -and $callbackUi.AssetList -and $callbackUi.AssetList.Items) { $callbackUi.AssetList.Items.Refresh() }
+
+                $exitStep = 'report'
+                $reportPath = if ($callbackState) { [string]$callbackState.ReportPath } else { '' }
+                if (-not $reportPath -or -not (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                    $startedAtUtc = $callbackStartedAt.ToUniversalTime()
+                    foreach ($candidateName in @('_render_gallery.html', '_render_report.md', '_render_report.json')) {
+                        $candidate = Join-Path $callbackOutputPath $candidateName
+                        if (Test-Path -LiteralPath $candidate -PathType Leaf) {
+                            $candidateFile = Get-Item -LiteralPath $candidate
+                            if ($candidateFile.LastWriteTimeUtc -ge $startedAtUtc) {
+                                $reportPath = $candidateFile.FullName
+                                break
+                            }
+                        }
+                    }
+                }
+                if ($callbackState) {
+                    if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
+                        $callbackState.ReportPath = [IO.Path]::GetFullPath($reportPath)
+                        if ($callbackUi -and $callbackUi.OpenReportButton) { $callbackUi.OpenReportButton.IsEnabled = $true }
+                        if ($callbackUi -and $callbackUi.LogBox) { Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)" }
+                    } else {
+                        $callbackState.ReportPath = ''
+                        if ($callbackUi -and $callbackUi.OpenReportButton) { $callbackUi.OpenReportButton.IsEnabled = $false }
+                    }
+                }
+                if ($callbackUi -and $callbackUi.LogBox) { Add-CkLogLine -TextBox $callbackUi.LogBox -Line "退出码: $exitCode" }
+            } catch {
+                throw "ModelRender exit step=${exitStep}: $($_.Exception.Message)"
             }
-            if ($reportPath -and (Test-Path -LiteralPath $reportPath -PathType Leaf)) {
-                $callbackState.ReportPath = [IO.Path]::GetFullPath($reportPath)
-                $callbackUi.OpenReportButton.IsEnabled = $true
-                Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
-            } else {
-                $callbackState.ReportPath = ''
-                $callbackUi.OpenReportButton.IsEnabled = $false
-            }
-            Add-CkLogLine -TextBox $callbackUi.LogBox -Line "退出码: $exitCode"
         }.GetNewClosure()
 
         try {

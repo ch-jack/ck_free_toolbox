@@ -103,6 +103,11 @@ foreach ($invokeToken in @('$callbackProgress.Invoke', '$OnOutput.Invoke', '$OnE
         throw "日志回调仍缺少 ScriptBlock.Invoke: $invokeToken"
     }
 }
+foreach ($exitToken in @('[datetime]$callbackStartedAt', 'ModelRender exit step=', '$callbackUi.AssetList.Items', '$callbackSelectedKeys.ContainsKey')) {
+    if (-not $pageSource.Contains($exitToken)) {
+        throw "模型渲染退出回调缺少空值保护或步骤诊断: $exitToken"
+    }
+}
 if ($pageSource.Contains('& $callbackProgress') -or $pageSource.Contains('& $removeModelSelectionFileAction') -or $runnerSource.Contains('& $OnOutput')) {
     throw '日志回调仍使用易失效的调用运算符。'
 }
