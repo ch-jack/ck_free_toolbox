@@ -2,6 +2,7 @@
 param()
 
 $ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName WindowsBase
 $repoRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 
 Import-Module (Join-Path $repoRoot 'app\modules\ProcessRunner.psm1') -Force
@@ -78,6 +79,59 @@ foreach ($progressToken in @('^\[scan\]', '^\[jobs\]', '^\[start\]', '^\[ok\]|^\
     if (-not $pageSource.Contains($progressToken)) {
         throw "模型截图页面缺少大批量进度处理: $progressToken"
     }
+}
+
+$callbackCounter = [pscustomobject]@{ Value = 0 }
+$nestedProgress = {
+    param([string]$line)
+    $callbackCounter.Value++
+}.GetNewClosure()
+$nestedOutput = {
+    param([string]$line)
+    [void]$nestedProgress.Invoke($line)
+}.GetNewClosure()
+foreach ($index in 1..10000) {
+    [void]$nestedOutput.Invoke("[scan] phase=assets scanned=$index candidates=$index")
+}
+if ($callbackCounter.Value -ne 10000) {
+    throw "嵌套日志回调压力测试数量错误: $($callbackCounter.Value)"
+}
+
+$runnerSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'app\modules\ProcessRunner.psm1'))
+foreach ($invokeToken in @('$callbackProgress.Invoke', '$OnOutput.Invoke', '$OnExit.Invoke', '$OnError.Invoke')) {
+    if (-not ($pageSource + $runnerSource).Contains($invokeToken)) {
+        throw "日志回调仍缺少 ScriptBlock.Invoke: $invokeToken"
+    }
+}
+if ($pageSource.Contains('& $callbackProgress') -or $runnerSource.Contains('& $OnOutput')) {
+    throw '日志回调仍使用易失效的调用运算符。'
+}
+
+$processState = [pscustomobject]@{ Lines = 0; Exit = $false; Code = -1; Error = '' }
+$processOutput = { param($line); $processState.Lines++ }.GetNewClosure()
+$processExit = { param($code); $processState.Code = $code; $processState.Exit = $true }.GetNewClosure()
+$processError = { param($message); $processState.Error = $message }.GetNewClosure()
+$dispatcher = [Windows.Threading.Dispatcher]::CurrentDispatcher
+$childCommand = '1..200 | ForEach-Object { Write-Output (''line-'' + $_) }'
+$runtime = Start-CkLoggedProcess `
+    -FileName "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" `
+    -Arguments @('-NoProfile', '-Command', $childCommand) `
+    -WorkingDirectory $repoRoot `
+    -Dispatcher $dispatcher `
+    -OnOutput $processOutput `
+    -OnExit $processExit `
+    -OnError $processError
+$deadline = (Get-Date).AddSeconds(20)
+while (-not $processState.Exit -and (Get-Date) -lt $deadline) {
+    $frame = New-Object Windows.Threading.DispatcherFrame
+    $stopFrame = [Action]{ $frame.Continue = $false }.GetNewClosure()
+    [void]$dispatcher.BeginInvoke([Windows.Threading.DispatcherPriority]::Background, $stopFrame)
+    [Windows.Threading.Dispatcher]::PushFrame($frame)
+    Start-Sleep -Milliseconds 10
+}
+if (-not $processState.Exit) { throw '共享进程回调测试等待超时。' }
+if ($processState.Code -ne 0 -or $processState.Lines -ne 200 -or $processState.Error) {
+    throw "共享进程回调测试失败: code=$($processState.Code) lines=$($processState.Lines) error=$($processState.Error)"
 }
 
 Write-Host 'Model render selection and command-line guard tests passed.'

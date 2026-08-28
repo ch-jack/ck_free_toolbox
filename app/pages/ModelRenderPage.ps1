@@ -544,7 +544,7 @@
             $modelKey = ([string]$row.Model).ToLowerInvariant()
             if (-not $callbackRowsByModel.ContainsKey($modelKey)) { $callbackRowsByModel[$modelKey] = $row }
         }
-        $callbackProgress = $updateProgressAction
+        $callbackProgress = [scriptblock]$updateProgressAction
         $callbackOutputPath = $state.OutputPath
         $onOutput = {
             param($line)
@@ -573,7 +573,7 @@
                     $callbackUi.AssetList.Items.Refresh()
                 }
             }
-            & $callbackProgress $line
+            [void]$callbackProgress.Invoke([string]$line)
         }.GetNewClosure()
         $onProcessError = {
             param($message)

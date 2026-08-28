@@ -289,7 +289,7 @@ function Start-CkLoggedProcess {
         $processed = 0
         $line = $null
         while ($processed -lt $MaxLines -and $buffer.TryDequeue([ref]$line)) {
-            [void](& $OnOutput $line)
+            [void]$OnOutput.Invoke([string]$line)
             $processed++
             $line = $null
         }
@@ -298,7 +298,7 @@ function Start-CkLoggedProcess {
 
     $tick = {
         try {
-            [void](& $drainOutput $maxLinesPerTick)
+            [void]$drainOutput.Invoke($maxLinesPerTick)
 
             if (-not $exitHandled -and $proc.HasExited) {
                 if (-not $processExitObserved) {
@@ -309,7 +309,7 @@ function Start-CkLoggedProcess {
                 if ($buffer.IsEmpty) {
                     $exitHandled = $true
                     $timer.Stop()
-                    [void](& $OnExit $processExitCode)
+                    [void]$OnExit.Invoke($processExitCode)
                 }
             }
         } catch {
@@ -318,7 +318,7 @@ function Start-CkLoggedProcess {
                 $callbackErrorReported = $true
                 $runtimeState.LastCallbackError = $message
                 if ($OnError) {
-                    try { & $OnError $message } catch { }
+                    try { [void]$OnError.Invoke([string]$message) } catch { }
                 }
             }
         }
