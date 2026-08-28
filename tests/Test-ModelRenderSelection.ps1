@@ -60,7 +60,7 @@ $scopedCleanupAction = & {
     $removeSelectionAction = (Get-Command Remove-CkModelSelectionFile).ScriptBlock.GetNewClosure()
     return {
         $path = & $newSelectionAction -Models @('scope_model')
-        & $removeSelectionAction -Path $path
+        [void]$removeSelectionAction.Invoke([string]$path)
         return $path
     }.GetNewClosure()
 }
@@ -103,7 +103,7 @@ foreach ($invokeToken in @('$callbackProgress.Invoke', '$OnOutput.Invoke', '$OnE
         throw "日志回调仍缺少 ScriptBlock.Invoke: $invokeToken"
     }
 }
-if ($pageSource.Contains('& $callbackProgress') -or $runnerSource.Contains('& $OnOutput')) {
+if ($pageSource.Contains('& $callbackProgress') -or $pageSource.Contains('& $removeModelSelectionFileAction') -or $runnerSource.Contains('& $OnOutput')) {
     throw '日志回调仍使用易失效的调用运算符。'
 }
 

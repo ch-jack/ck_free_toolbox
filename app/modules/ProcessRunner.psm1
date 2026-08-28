@@ -282,13 +282,14 @@ function Start-CkLoggedProcess {
     $processExitCode = 0
     $maxLinesPerTick = 24
     $callbackErrorReported = $false
-    $runtimeState = [pscustomobject]@{ LastCallbackError = '' }
+    $runtimeState = [pscustomobject]@{ LastCallbackError = ''; CallbackStage = '' }
 
     $drainOutput = {
         param([int]$MaxLines)
         $processed = 0
         $line = $null
         while ($processed -lt $MaxLines -and $buffer.TryDequeue([ref]$line)) {
+            $runtimeState.CallbackStage = 'output'
             [void]$OnOutput.Invoke([string]$line)
             $processed++
             $line = $null
@@ -309,12 +310,16 @@ function Start-CkLoggedProcess {
                 if ($buffer.IsEmpty) {
                     $exitHandled = $true
                     $timer.Stop()
+                    $runtimeState.CallbackStage = 'exit'
                     [void]$OnExit.Invoke($processExitCode)
                 }
             }
         } catch {
             if (-not $callbackErrorReported) {
-                $message = $_.Exception.Message
+                $message = "阶段=$($runtimeState.CallbackStage): $($_.Exception.Message)"
+                if ($_.ScriptStackTrace) {
+                    $message += " | stack=$($_.ScriptStackTrace -replace '[\r\n]+', ' <- ')"
+                }
                 $callbackErrorReported = $true
                 $runtimeState.LastCallbackError = $message
                 if ($OnError) {

@@ -482,7 +482,7 @@
         }
         $angleItem = $ui.AngleBox.SelectedItem
         $yaw = if ($angleItem -and $angleItem.Tag) { [string]$angleItem.Tag } else { '135' }
-        & $removeModelSelectionFileAction -Path $state.SelectionFile
+        [void]$removeModelSelectionFileAction.Invoke([string]$state.SelectionFile)
         $state.SelectionFile = ''
         $args = @(
             '-u',
@@ -583,7 +583,7 @@
         $onExit = {
             param($exitCode)
             $callbackState.Process = $null
-            & $removeModelSelectionFileAction -Path $callbackState.SelectionFile
+            [void]$removeModelSelectionFileAction.Invoke([string]$callbackState.SelectionFile)
             $callbackState.SelectionFile = ''
             $callbackUi.RenderProgress.Value = if ($exitCode -eq 0) { 100 } else { [Math]::Max($callbackUi.RenderProgress.Value, 95) }
             $callbackUi.RenderPercent.Text = '{0}%' -f [int]$callbackUi.RenderProgress.Value
@@ -624,7 +624,7 @@
         try {
             $state.Process = Start-CkLoggedProcess -FileName $pythonExe -Arguments $args -WorkingDirectory $Context.Paths.RendererDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
         } catch {
-            & $removeModelSelectionFileAction -Path $state.SelectionFile
+            [void]$removeModelSelectionFileAction.Invoke([string]$state.SelectionFile)
             $state.SelectionFile = ''
             $ui.RunButton.IsEnabled = $true
             $ui.RunButton.Content = '开始渲染'
