@@ -125,7 +125,7 @@
     },
     {
         "id": "xiaoha-cleaner",
-        "title": "一键清理小哈",
+        "title": "秒杀小哈",
         "icon": "⌁",
         "page": "XiaohaCleanerPage.ps1",
         "factory": "New-CkXiaohaCleanerPage",
@@ -137,6 +137,7 @@
             "releaseAssetPattern": "xiaoha-cleaner-*-windows.zip",
             "releaseChecksumAssetPattern": "xiaoha-cleaner-*-windows.zip.sha256",
             "requiredFiles": [
+                "xiaoha-cleaner.exe",
                 "xiaoha-cleaner.py",
                 "XiaohaCleanerAuto.py",
                 "XiaohaCleanerFinal.py",

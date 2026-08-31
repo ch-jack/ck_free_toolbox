@@ -137,6 +137,15 @@ jobs:
             throw "Image compressor page test exited with code $LASTEXITCODE"
           }
 
+      - name: Validate Xiaoha cleaner EXE integration
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\tests\Test-XiaohaCleanerPage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Xiaoha cleaner page test exited with code $LASTEXITCODE"
+          }
+
       - name: Validate model render scanning and progress
         shell: powershell
         run: |

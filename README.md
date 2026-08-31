@@ -2,7 +2,7 @@
 
 CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件、HTTP API 或后台服务。推荐通过 CK免费工具箱.exe 启动，窗口和任务栏使用 static/cklogo.ico。
 
-本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和一键清理小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
+本仓库不是空外壳。`CKFreeToolbox.ps1` 和 `app/` 包含窗口、环境检测、任务进程、日志、组件安装更新及模块化功能页的客户端实现。模型渲染、NUI 重写、RPF 转 FiveM、服务器 Dump、FXAP 解密、扫描移除后门和秒杀小哈引擎分别由对应 GitHub 仓库维护；其中 FXAP 组件来自 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only)，工具箱运行后按需下载。
 地图冲突合并页面接入 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)，同样通过稳定 Release 按需安装，不在工具箱仓库内复制其引擎源码。
 衣服资源打包页面接入 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的 Windows x64 CLI；组件仍由稳定 Release 按需安装，不打包上游 GUI 或引擎源码。
 图片批量压缩页面接入 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img)，通过 FFmpeg 处理 JPG、PNG、GIF 和 WebP；CLI 按需安装，FFmpeg/ffprobe 由用户单独配置。
@@ -170,7 +170,7 @@ git push origin v1.0.2
 - 组件从 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john) 的稳定 Release 安装并校验 SHA-256。
 - 页面提供“打开本次报告”：优先打开组件原生清理报告；扫描、预览和恢复则保存并打开本次原生 JSON 结果。
 
-### 一键清理小哈
+### 秒杀小哈
 
 - 支持选择 FiveM `server-data`、`resources` 或单个资源目录，先执行只读扫描并列出小哈资源、代码注入和关联 SQL。
 - 自动读取 `server.cfg` 以及 `exec` 配置链中的 MySQL 连接信息；密码不会显示在界面、日志或报告中。
@@ -178,6 +178,7 @@ git push origin v1.0.2
 - 数据库清理默认关闭；只有显式启用、选择 MySQL 客户端并确认已停止服务器和完成备份后才会执行。
 - 数据库会删除样本内建表、品牌表、资源源码实际解析出的 `CREATE TABLE` 以及确认新增的列；文件报告不能恢复这些操作，必须从执行前备份恢复。
 - 组件从 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner) 的稳定 Release 安装并校验 SHA-256。
+- v1.1.0 起优先直接运行组件内的 Windows x64 单文件 EXE，不再要求用户安装 Python；旧组件仍保留 Python 回退入口。
 - “打开本次报告”直接打开本轮扫描、清理或恢复生成的文件，不会误用恢复输入框中的旧报告。
 
 ### 统一依赖配置
@@ -236,7 +237,7 @@ git push origin v1.0.2
 - PowerShell 语法检查：主脚本及全部 .ps1/.psm1 文件通过。
 - Python 探测：真实 Python 3.7.0/3.13.9 通过，0 字节 WindowsApps 商店占位程序被拒绝。
 - 统一配置：旧设置迁移、Blender/Python 双路径保存及根目录 `config.json` 结构通过。
-- 缺失环境 UI：NUI/RPF/扫描移除后门/一键清理小哈页面均提供 Python 官网和选择按钮。
+- 缺失环境 UI：NUI/RPF/扫描移除后门页面提供 Python 官网和选择按钮；秒杀小哈优先检测独立 EXE，仅旧组件回退入口需要 Python。
 - 按钮烟测：扫描、搜索、全选、取消和模型渲染通过。
 - 扫描 D:\fivem\TestVeh：识别 47 个可处理模型。
 - 饰品实渲染：jr_labubu2 成功生成 D:\fivem\TestVeh\_vehicle_renders\jr_labubu2.png。
@@ -247,11 +248,11 @@ git push origin v1.0.2
 - NUI 自动去墙：安全扫描、完全本地化写入和按 Run ID 恢复通过。
 - RPF 转 FiveM：组件注册、参数校验、JSON 报告解析和真实 RPF 转换通过。
 - Release 组件安装：CK-model_renderer v1.0.0、nui-wallfix v0.1.0、rpf2fivem v1.0.1 与 ck_anti_john v0.2.3 真实下载、SHA-256 校验和安装通过。
-- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM、扫描移除后门和一键清理小哈按队列自动完成检查，页面分别显示最新 Release 或更新提示。
+- 启动组件检查：模型截图、NUI 去墙、RPF 转 FiveM、扫描移除后门和秒杀小哈按队列自动完成检查，页面分别显示最新 Release 或更新提示。
 - 扫描移除后门页面：XAML 实例化、核心控件、Python 3.7 环境识别及“扫描后门”按钮端到端调用通过；实时消费 `CK_PROGRESS` 并显示多线程完成数、百分比和当前文件，最终 JSON 仍独立解析。
 - 扫描移除后门组件：v0.2.3 的 27 项测试通过；客户 chat.zip 从 4 项普通 node_modules 弱组合误报降为 clean/0 项，已知 C2、隐藏 .cache 和 GP212887 强信号保持命中，全程未执行 ZIP 内代码。
-- 一键清理小哈页面：组件注册、XAML 实例化、Python 环境识别、只读扫描/清理参数和报告恢复入口通过。
-- 一键清理小哈组件：v1.0.0 Release ZIP 与 SHA-256 附件可解析，组件文件清单与工具箱登记一致。
+- 秒杀小哈页面：组件注册、XAML 实例化、EXE 优先/Python 回退、只读扫描/清理参数和报告恢复入口已纳入验证。
+- 秒杀小哈组件：Release ZIP、独立 EXE 与各自 SHA-256 附件保持稳定命名，并由工具箱组件安装链校验。
 - Release 更新链路不调用 GitHub API，不使用 codeload、分支源码 ZIP 或 Git clone。
 - 工具箱自更新：联网版本检查、成功替换、组件/用户目录保留和模拟失败回滚通过。
 
@@ -269,7 +270,7 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、一键清理小哈、地图冲突合并、衣服资源打包、图片批量压缩和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、秒杀小哈、地图冲突合并、衣服资源打包、图片批量压缩和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
 衣服资源打包以 clothing-repacker 注册为外置 Release 组件，页面工厂为 New-CkClothingRepackerPage。
 图片批量压缩以 image-compressor 注册为外置 Release 组件，页面工厂为 New-CkImageCompressorPage。

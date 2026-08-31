@@ -27,7 +27,7 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 - NUI 自动去墙对应 [ch-jack/nui-wallfix](https://github.com/ch-jack/nui-wallfix)。
 - RPF 转 FiveM 对应 [ch-jack/rpf2fivem](https://github.com/ch-jack/rpf2fivem)。
 - 扫描移除后门对应 [ch-jack/ck_anti_john](https://github.com/ch-jack/ck_anti_john)。
-- 一键清理小哈对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
+- 秒杀小哈对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
 - 地图冲突合并对应 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)。
 - 衣服资源打包对应 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
@@ -39,7 +39,7 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 - 必需文件校验通过后才替换组件；更新前保留备份，失败时自动回滚。
 - 安装完成后写入 schema 2 .ck-component.json，记录 releaseTag、附件名和 SHA-256。
 
-模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF、扫描移除后门与一键清理小哈组件的 Python 入口只使用标准库；RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
+模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF 与扫描移除后门组件的 Python 入口只使用标准库；秒杀小哈 v1.1.0 起优先使用独立 EXE 并保留 Python 回退。RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
 SnowyMerger Release 自带 YmapMerger、MewUI、CodeWalker.Core 及运行清单；工具箱只依赖系统 .NET 8 Runtime 和用户本机 GTA V。
 Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、GPL-3.0 许可证和 CodeWalker 第三方声明；工具箱不启动 GUI，也不要求另装 .NET。
 
@@ -152,7 +152,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 4. 目录目标先在外部创建 Run ID 备份；ZIP 默认保留原包并生成 `*.cleaned.zip`。
 5. 修复后自动复扫；仍有可自动修复高危项时拒绝交付结果或回滚目录，人工项单独提示。
 
-## 一键清理小哈安全流程
+## 秒杀小哈安全流程
 
 1. 组件缺失时，从 `ch-jack/xiaoha_cleaner` 最新稳定 Release 下载 ZIP 和 SHA-256。
 2. “只读扫描”只识别小哈资源、代码注入及 SQL 证据，不修改目标文件或数据库。
@@ -173,11 +173,11 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - NUI 组件安装后可执行安全扫描、写入和按 Run ID 恢复。
 - RPF 组件安装后可把目录、单个 RPF 或压缩包转换为独立 FiveM resource，并生成 JSON 报告。
 - 扫描移除后门组件安装后可扫描目录/ZIP、预览移除、确认写入并按 Run ID 恢复。
-- 一键清理小哈组件安装后可扫描 server-data/resources、隔离命中文件、按报告恢复，并在备份确认后选择性清理关联 SQL。
+- 秒杀小哈组件安装后可扫描 server-data/resources、隔离命中文件、按报告恢复，并在备份确认后选择性清理关联 SQL。
 - SnowyMerger 组件安装后可捕获 CLI 日志、识别无冲突输入，并把结果写入 snowy_merger resource。
 - Red40 组件安装后，页面可调用全部公开 CLI 命令；apply/restore/覆盖 XML 的确认与任务日志必须有效。
 - Blender 可打开官网并选择 `blender.exe`；4.1 会显示不支持，4.2+ 检测通过。
-- Python 缺失时 NUI/RPF/扫描移除后门/一键清理小哈页面显示官网和选择按钮；真实 Python 3.7+ 通过，WindowsApps 占位程序失败。
+- Python 缺失时 NUI/RPF/扫描移除后门页面显示官网和选择按钮；秒杀小哈独立 EXE 不依赖 Python，旧组件回退入口仍按 Python 3.7+ 检测。
 - Blender/Python 路径写入同一个根目录 `config.json`，旧设置迁移且自更新后仍保留。
 - .NET 可打开官网；内置转换工具和 Sollumz 随模型组件完成安装。
 - 模型截图运行时的 `_temp` 位于输出目录，任务完成后已自动删除。

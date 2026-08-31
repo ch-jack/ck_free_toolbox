@@ -28,7 +28,7 @@
         <StackPanel>
           <StackPanel Orientation="Horizontal">
             <Border Width="4" Height="22" CornerRadius="3" Background="#F4B860" Margin="0,0,10,0"/>
-            <TextBlock Text="一键清理小哈" FontSize="22" FontWeight="Bold"/>
+            <TextBlock Text="秒杀小哈" FontSize="22" FontWeight="Bold"/>
           </StackPanel>
           <TextBlock Text="移除 Xiaoha / HGAdmin 资源、注入、启动项和已确认数据库对象" Foreground="#777B83" FontSize="13" Margin="14,6,0,0"/>
         </StackPanel>
@@ -147,23 +147,39 @@
         return Get-CkPythonInfo -RuntimeRoot $Context.Paths.RuntimeRoot -BlenderExe $blenderPath -ConfiguredPath ([string]$settings.PythonPath)
     }
 
-    function Get-XiaohaPython {
+    function Get-XiaohaRuntime {
+        if (Test-Path -LiteralPath $Context.Paths.XiaohaCleanerExe -PathType Leaf) {
+            return [pscustomobject]@{
+                FileName = [string]$Context.Paths.XiaohaCleanerExe
+                Arguments = @()
+                Label = '独立 EXE'
+            }
+        }
+        if (-not (Test-Path -LiteralPath $Context.Paths.XiaohaCleanerScript -PathType Leaf)) {
+            throw "秒杀小哈组件入口不存在: $($Context.Paths.XiaohaCleanerDir)"
+        }
         $info = & $getPythonInfoAction
         if (-not $info.Ok) { throw [string]$info.Reason }
-        return [string]$info.Path
+        return [pscustomobject]@{
+            FileName = [string]$info.Path
+            Arguments = @('-u', [string]$Context.Paths.XiaohaCleanerScript)
+            Label = [string]$info.Label
+        }
     }
 
     function Update-XiaohaEnvironment {
+        $exeOk = Test-Path -LiteralPath $Context.Paths.XiaohaCleanerExe -PathType Leaf
         $scriptOk = Test-Path -LiteralPath $Context.Paths.XiaohaCleanerScript -PathType Leaf
-        $pythonInfo = & $getPythonInfoAction
-        $pythonOk = [bool]$pythonInfo.Ok
-        $ok = $scriptOk -and $pythonOk
+        $pythonInfo = if ($exeOk) { $null } else { & $getPythonInfoAction }
+        $pythonOk = [bool]($pythonInfo -and $pythonInfo.Ok)
+        $ok = $exeOk -or ($scriptOk -and $pythonOk)
         Set-CkStatusDot $ui.EnvironmentDot $ok
         $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
-        $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少小哈清理组件' } else { '缺少 Python 3.7+' }
-        $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
-        $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
-        $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' }
+        $ui.EnvironmentText.Text = if ($exeOk) { '运行环境就绪 · 独立 EXE' } elseif ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少秒杀小哈组件' } else { '缺少 Python 3.7+' }
+        $ui.EnvironmentText.ToolTip = if ($exeOk) { [string]$Context.Paths.XiaohaCleanerExe } elseif ($pythonOk) { [string]$pythonInfo.Path } elseif ($pythonInfo) { [string]$pythonInfo.Reason } else { '' }
+        $ui.PythonDownloadButton.Visibility = if ($exeOk -or $pythonOk) { 'Collapsed' } else { 'Visible' }
+        $ui.PythonBrowseButton.Visibility = if ($exeOk) { 'Collapsed' } else { 'Visible' }
+        if (-not $exeOk) { $ui.PythonBrowseButton.Content = if ($pythonOk) { '更改' } else { '选择' } }
     }
 
     function Set-XiaohaRunning {
@@ -177,7 +193,7 @@
         if ($Running) {
             $ui.ResultStatus.Text = $Label
             $ui.ResultStatus.Foreground = '#58A6FF'
-            $ui.StatusLine.Text = '正在运行小哈清理组件，可随时停止任务。'
+            $ui.StatusLine.Text = '正在运行秒杀小哈，可随时停止任务。'
             $ui.ProgressBar.Value = 18
         } else {
             $ui.ProgressBar.IsIndeterminate = $false
@@ -253,7 +269,7 @@
     }
 
     $getPythonInfoAction = (Get-Command Get-XiaohaPythonInfo).ScriptBlock.GetNewClosure()
-    $getPythonAction = (Get-Command Get-XiaohaPython).ScriptBlock.GetNewClosure()
+    $getRuntimeAction = (Get-Command Get-XiaohaRuntime).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-XiaohaEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-XiaohaRunning).ScriptBlock.GetNewClosure()
     $getPropertyAction = (Get-Command Get-XiaohaProperty).ScriptBlock.GetNewClosure()
@@ -269,7 +285,7 @@
         $ui.ResultStatus.Foreground = '#EF6B73'
         $ui.StatusLine.Text = $message
         $ui.LogBox.Text = $message
-        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 一键清理小哈') | Out-Null
+        [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 秒杀小哈') | Out-Null
     }.GetNewClosure()
 
     $openPythonDownloadAction = { Start-Process -FilePath 'https://www.python.org/downloads/windows/' }.GetNewClosure()
@@ -356,7 +372,7 @@
     $openReportAction = {
         $path = [string]$state.ReportPath
         if (-not $path -or -not (Test-Path -LiteralPath $path -PathType Leaf)) {
-            throw '本次小哈操作报告不存在，请先完成一次操作。'
+            throw '本次秒杀小哈操作报告不存在，请先完成一次操作。'
         }
         Start-Process -FilePath notepad.exe -ArgumentList @("`"$path`"") -ErrorAction Stop
     }.GetNewClosure()
@@ -364,12 +380,9 @@
     function Start-XiaohaOperation {
         param([ValidateSet('scan','clean','restore')][string]$Operation)
 
-        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有小哈清理任务正在运行。' }
-        if (-not (Test-Path -LiteralPath $Context.Paths.XiaohaCleanerScript -PathType Leaf)) {
-            throw "小哈清理组件入口不存在: $($Context.Paths.XiaohaCleanerScript)"
-        }
-        $python = & $getPythonAction
-        $args = @('-u', $Context.Paths.XiaohaCleanerScript)
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有秒杀小哈任务正在运行。' }
+        $runtime = & $getRuntimeAction
+        $args = @($runtime.Arguments)
         $expectedReport = ''
         $label = ''
         $cleanReportRoot = ''
@@ -418,7 +431,7 @@
                 }
                 $answer = [System.Windows.MessageBox]::Show(
                     "$warning`n`n是否继续？",
-                    '确认执行小哈清理',
+                    '确认执行秒杀小哈',
                     [System.Windows.MessageBoxButton]::YesNo,
                     [System.Windows.MessageBoxImage]::Warning
                 )
@@ -576,12 +589,12 @@
                 $callbackUi.ResultStatus.Text = '任务失败'
                 $callbackUi.ResultStatus.Foreground = '#EF6B73'
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
-                $callbackUi.LogBox.Text = if ($raw) { $raw } else { '小哈清理组件没有返回报告。' }
+                $callbackUi.LogBox.Text = if ($raw) { $raw } else { '秒杀小哈组件没有返回报告。' }
             }
         }.GetNewClosure()
 
         try {
-            $state.Process = Start-CkLoggedProcess -FileName $python -Arguments $args -WorkingDirectory $Context.Paths.XiaohaCleanerDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
+            $state.Process = Start-CkLoggedProcess -FileName ([string]$runtime.FileName) -Arguments $args -WorkingDirectory $Context.Paths.XiaohaCleanerDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
         } catch {
             & $setRunningAction $false
             throw
@@ -620,7 +633,7 @@
 
     return [pscustomobject]@{
         Id = 'xiaoha-cleaner'
-        Title = '一键清理小哈'
+        Title = '秒杀小哈'
         Icon = '⌁'
         Root = $root
         Activate = $updateEnvironmentAction

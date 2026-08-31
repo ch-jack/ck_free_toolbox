@@ -208,6 +208,7 @@ $context = [pscustomobject]@{
         AntiJohnDir = Join-Path $WorkspaceRoot 'ck_anti_john'
         AntiJohnScript = Join-Path $WorkspaceRoot 'ck_anti_john\ck-anti-john.py'
         XiaohaCleanerDir = Join-Path $WorkspaceRoot 'xiaoha_cleaner'
+        XiaohaCleanerExe = Join-Path $WorkspaceRoot 'xiaoha_cleaner\xiaoha-cleaner.exe'
         XiaohaCleanerScript = Join-Path $WorkspaceRoot 'xiaoha_cleaner\xiaoha-cleaner.py'
         SnowyMergerDir = Join-Path $WorkspaceRoot 'snowy-merger'
         SnowyMergerExe = Join-Path $WorkspaceRoot 'snowy-merger\YmapMerger.exe'
