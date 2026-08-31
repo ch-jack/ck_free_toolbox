@@ -181,9 +181,13 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          & '.\CK免费工具箱.exe' -SmokeTest
-          if ($LASTEXITCODE -ne 0) {
-            throw "Packaged launcher smoke test exited with code $LASTEXITCODE"
+          $launchers = @(Get-ChildItem -LiteralPath . -File -Filter '*.exe')
+          if ($launchers.Count -ne 1) {
+            throw "Expected one root launcher EXE, found $($launchers.Count)."
+          }
+          $process = Start-Process -FilePath $launchers[0].FullName -ArgumentList '-SmokeTest' -PassThru -Wait -WindowStyle Hidden
+          if ($process.ExitCode -ne 0) {
+            throw "Packaged launcher smoke test exited with code $($process.ExitCode)"
           }
 
       - name: Bundle latest default components
