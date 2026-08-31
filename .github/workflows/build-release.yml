@@ -177,6 +177,15 @@ jobs:
             throw "Release builder exited with code $LASTEXITCODE"
           }
 
+      - name: Smoke test packaged launcher startup
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & '.\CK免费工具箱.exe' -SmokeTest
+          if ($LASTEXITCODE -ne 0) {
+            throw "Packaged launcher smoke test exited with code $LASTEXITCODE"
+          }
+
       - name: Bundle latest default components
         shell: powershell
         run: |

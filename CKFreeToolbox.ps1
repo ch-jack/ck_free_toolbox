@@ -4,6 +4,8 @@ Add-Type -AssemblyName WindowsBase
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
+$SmokeTest = (@($args) -contains '-SmokeTest')
+
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PortableRenderer = Join-Path $ScriptRoot 'vehicle_renderer\render_all_vehicles.py'
 $PortableManifest = Join-Path $ScriptRoot 'package-manifest.json'
@@ -184,7 +186,7 @@ function Show-CkDisclaimerGate {
     return ($dialog.Tag -eq $true)
 }
 
-if (-not (Show-CkDisclaimerGate -Version $DisclaimerVersion)) {
+if (-not $SmokeTest -and -not (Show-CkDisclaimerGate -Version $DisclaimerVersion)) {
     return
 }
 
@@ -1101,12 +1103,12 @@ function Show-ToolPage {
 
     if ($currentPageId -and $pages.ContainsKey($currentPageId)) {
         $pages[$currentPageId].Root.Visibility = 'Collapsed'
-        Set-CkNavButtonState -Button $buttons[$currentPageId] -Active $false
+        & $setNavButtonStateAction -Button $buttons[$currentPageId] -Active $false
     }
 
     $componentState.CurrentToolId = $Id
     $pages[$Id].Root.Visibility = 'Visible'
-    Set-CkNavButtonState -Button $buttons[$Id] -Active $true
+    & $setNavButtonStateAction -Button $buttons[$Id] -Active $true
 
     $pageTitle.Text = $pages[$Id].Title
     $pageSubtitle.Text = '本机组件与 GitHub 更新'
@@ -1130,6 +1132,7 @@ $startComponentOperationAction = $componentOperationActions.Start
 $startStartupComponentChecksAction = (Get-Command Start-CkStartupComponentChecks).ScriptBlock.GetNewClosure()
 $updateSelfUpdateUiAction = (Get-Command Update-CkSelfUpdateUi).ScriptBlock.GetNewClosure()
 $startSelfUpdateOperationAction = (Get-Command Start-CkSelfUpdateOperation).ScriptBlock.GetNewClosure()
+$setNavButtonStateAction = (Get-Command Set-CkNavButtonState).ScriptBlock.GetNewClosure()
 $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
 
 $qqGroupNumber = '1063823087'
@@ -1201,6 +1204,8 @@ function Update-CkThemeToggleUi {
     }
 }
 
+$updateThemeToggleUiAction = (Get-Command Update-CkThemeToggleUi).ScriptBlock.GetNewClosure()
+
 $themeAction = {
     param($sender, $eventArgs)
     $preference = ([string]$sender.Tag).ToLowerInvariant()
@@ -1208,7 +1213,7 @@ $themeAction = {
     [void](Set-CkToolboxThemePreference -Theme $preference)
     $resolvedTheme = if ($preference -eq 'light') { 'Light' } else { 'Dark' }
     [void](Set-CkTheme -Theme $resolvedTheme)
-    Update-CkThemeToggleUi
+    & $updateThemeToggleUiAction
 }.GetNewClosure()
 
 $filterToolsAction = {
@@ -1297,11 +1302,16 @@ foreach ($tool in $tools) {
 }
 
 $toolCountText.Text = [string]$tools.Count
-Update-CkThemeToggleUi
+& $updateThemeToggleUiAction
 
 $defaultTool = @($tools | Where-Object { $_.default })[0]
 if (-not $defaultTool) { $defaultTool = @($tools)[0] }
 & $showToolPageAction -Id $defaultTool.id
+
+if ($SmokeTest) {
+    Write-Output "CK_TOOLBOX_SMOKE_OK theme=$(Get-CkTheme) tools=$($tools.Count) default=$($defaultTool.id)"
+    return
+}
 
 & $updateSelfUpdateUiAction
 if ($selfUpdateState.Enabled) {

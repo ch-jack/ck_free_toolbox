@@ -82,12 +82,66 @@ try {
         'AutomationProperties.AutomationId="Toolbox.SelfUpdateButton"',
         'AutomationProperties.AutomationId="Toolbox.JoinQqGroupButton"',
         'AutomationProperties.AutomationId="Tool.ComponentActionButton"',
-        'AutomationProperties.AutomationId="Tool.OpenSourceButton"'
+        'AutomationProperties.AutomationId="Tool.OpenSourceButton"',
+        '$setNavButtonStateAction = (Get-Command Set-CkNavButtonState).ScriptBlock.GetNewClosure()',
+        '& $setNavButtonStateAction -Button $buttons[$Id] -Active $true',
+        '$updateThemeToggleUiAction = (Get-Command Update-CkThemeToggleUi).ScriptBlock.GetNewClosure()',
+        '& $updateThemeToggleUiAction'
     )) {
         Assert-CkThemeTest ($shellSource.Contains($contract)) "Shell automation contract missing: $contract"
     }
 
-    Write-Output 'Theme config migration, live switching, runtime brushes, and shell contracts passed.'
+    $tokens = $null
+    $parseErrors = $null
+    $shellAst = [System.Management.Automation.Language.Parser]::ParseFile(
+        (Join-Path $repoRoot 'CKFreeToolbox.ps1'),
+        [ref]$tokens,
+        [ref]$parseErrors
+    )
+    Assert-CkThemeTest ($parseErrors.Count -eq 0) 'Shell source could not be parsed for closure regression testing.'
+    foreach ($functionName in @('Set-CkNavButtonState','Show-ToolPage')) {
+        $functionAst = $shellAst.Find({
+            param($node)
+            $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $functionName
+        }, $true)
+        Assert-CkThemeTest ($null -ne $functionAst) "Shell function missing: $functionName"
+        . ([scriptblock]::Create($functionAst.Extent.Text))
+    }
+
+    $pages = @{
+        first = [pscustomobject]@{ Root = New-Object System.Windows.Controls.Grid; Title = '第一页' }
+        second = [pscustomobject]@{ Root = New-Object System.Windows.Controls.Grid; Title = '第二页' }
+    }
+    $pages.first.Root.Visibility = 'Collapsed'
+    $pages.second.Root.Visibility = 'Collapsed'
+    $buttons = @{
+        first = New-Object System.Windows.Controls.Button
+        second = New-Object System.Windows.Controls.Button
+    }
+    foreach ($button in $buttons.Values) {
+        $stack = New-Object System.Windows.Controls.StackPanel
+        [void]$stack.Children.Add((New-Object System.Windows.Controls.TextBlock))
+        [void]$stack.Children.Add((New-Object System.Windows.Controls.TextBlock))
+        $button.Content = $stack
+    }
+    $toolConfigs = @{
+        first = [pscustomobject]@{ sourceUrl = 'https://github.com/ch-jack/first' }
+        second = [pscustomobject]@{ sourceUrl = 'https://github.com/ch-jack/second' }
+    }
+    $componentState = [pscustomobject]@{ CurrentToolId = '' }
+    $pageTitle = New-Object System.Windows.Controls.TextBlock
+    $pageSubtitle = New-Object System.Windows.Controls.TextBlock
+    $openSourceButton = New-Object System.Windows.Controls.Button
+    $refreshComponentHeaderAction = { }
+    $setNavButtonStateAction = (Get-Command Set-CkNavButtonState).ScriptBlock.GetNewClosure()
+    $showToolPageAction = (Get-Command Show-ToolPage).ScriptBlock.GetNewClosure()
+    & $showToolPageAction -Id first
+    & $showToolPageAction -Id second
+    Assert-CkThemeTest ($componentState.CurrentToolId -eq 'second') 'Shell page closure did not switch to the requested page.'
+    Assert-CkThemeTest ($pages.first.Root.Visibility -eq 'Collapsed') 'Shell page closure did not hide the previous page.'
+    Assert-CkThemeTest ($pages.second.Root.Visibility -eq 'Visible') 'Shell page closure did not show the requested page.'
+
+    Write-Output 'Theme migration, live switching, runtime brushes, shell contracts, and navigation closure passed.'
 }
 finally {
     if (Test-Path -LiteralPath $tempRoot) {
