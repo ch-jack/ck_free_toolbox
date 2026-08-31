@@ -216,7 +216,7 @@
 
         $ok = $scriptOk -and $reportRuntimeOk -and $providersOk -and $pythonOk
         Set-CkStatusDot $ui.EnvironmentDot $ok
-        $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
+        $ui.EnvironmentText.Foreground = if ($ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF6B73') }
         $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少 nui-wallfix' } elseif (-not $reportRuntimeOk) { '组件版本过旧，请更新' } elseif (-not $pythonOk) { '缺少 Python 3.7+' } else { '缺少 CDN 规则' }
         $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
@@ -334,19 +334,19 @@
 
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = '处理完成'
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = '任务已完成。'
         } elseif ($ExitCode -eq 10) {
             $ui.ResultStatus.Text = '完成，需人工检查'
-            $ui.ResultStatus.Foreground = '#F4B860'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
             $ui.StatusLine.Text = '存在未解决或仅报告项目，请检查报告明细。'
         } elseif ($ExitCode -eq 50) {
             $ui.ResultStatus.Text = '恢复冲突'
-            $ui.ResultStatus.Foreground = '#EF6B73'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
             $ui.StatusLine.Text = '文件在写入后发生变化，默认未覆盖。'
         } else {
             $ui.ResultStatus.Text = '处理失败'
-            $ui.ResultStatus.Foreground = '#EF6B73'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
             $ui.StatusLine.Text = if ($Payload.error) { [string]$Payload.error } else { "进程退出码: $ExitCode" }
         }
     }
@@ -361,7 +361,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF6B73'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - NUI 自动去墙') | Out-Null
@@ -631,7 +631,7 @@
             } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '结果解析失败'
-                $callbackUi.ResultStatus.Foreground = '#EF6B73'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { 'nui-wallfix 没有返回结果。' }
             }
@@ -639,7 +639,7 @@
             if ($wasCancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.ReportPath) {
                     $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件写出的本次报告。'
                     Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
@@ -674,7 +674,7 @@
         $state.CancelRequested = $true
         $ui.CancelButton.IsEnabled = $false
         $ui.ResultStatus.Text = '正在停止'
-        $ui.ResultStatus.Foreground = '#F4B860'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = '正在停止当前任务...'
         try {
             $state.Process.Process.Kill()

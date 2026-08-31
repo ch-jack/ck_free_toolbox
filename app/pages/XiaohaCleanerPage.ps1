@@ -174,7 +174,7 @@
         $pythonOk = [bool]($pythonInfo -and $pythonInfo.Ok)
         $ok = $exeOk -or ($scriptOk -and $pythonOk)
         Set-CkStatusDot $ui.EnvironmentDot $ok
-        $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
+        $ui.EnvironmentText.Foreground = if ($ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF6B73') }
         $ui.EnvironmentText.Text = if ($exeOk) { '运行环境就绪 · 独立 EXE' } elseif ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少秒杀小哈组件' } else { '缺少 Python 3.7+' }
         $ui.EnvironmentText.ToolTip = if ($exeOk) { [string]$Context.Paths.XiaohaCleanerExe } elseif ($pythonOk) { [string]$pythonInfo.Path } elseif ($pythonInfo) { [string]$pythonInfo.Reason } else { '' }
         $ui.PythonDownloadButton.Visibility = if ($exeOk -or $pythonOk) { 'Collapsed' } else { 'Visible' }
@@ -192,7 +192,7 @@
         $ui.ProgressBar.IsIndeterminate = $Running
         if ($Running) {
             $ui.ResultStatus.Text = $Label
-            $ui.ResultStatus.Foreground = '#58A6FF'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#58A6FF')
             $ui.StatusLine.Text = '正在运行秒杀小哈，可随时停止任务。'
             $ui.ProgressBar.Value = 18
         } else {
@@ -241,7 +241,7 @@
         $success = ($ExitCode -eq 0) -and ($status -notmatch 'failed|error')
         $ui.ProgressBar.Value = if ($success) { 100 } else { 94 }
         $ui.ResultStatus.Text = if ($success) { if ($status -eq 'scan') { '扫描完成' } elseif ($status -eq 'cleaned') { '清理完成' } else { '任务完成' } } else { '任务有错误' }
-        $ui.ResultStatus.Foreground = if ($success) { '#31D69A' } else { '#EF6B73' }
+        $ui.ResultStatus.Foreground = if ($success) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF6B73') }
         $ui.StatusLine.Text = if ($success) { '报告已生成；执行数据库清理前请确认备份。' } else { "进程退出码: $ExitCode" }
 
         $lines = New-Object System.Collections.Generic.List[string]
@@ -282,7 +282,7 @@
         & $setRunningAction $false
         $ui.ProgressBar.Value = 0
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF6B73'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
         $ui.StatusLine.Text = $message
         $ui.LogBox.Text = $message
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 秒杀小哈') | Out-Null
@@ -570,7 +570,7 @@
                 if ($payload) { & $callbackShowResult $payload $exitCode $raw }
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.ReportPath) {
                     $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件写出的本次报告。'
                     Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
@@ -587,7 +587,7 @@
             } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '任务失败'
-                $callbackUi.ResultStatus.Foreground = '#EF6B73'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '秒杀小哈组件没有返回报告。' }
             }
@@ -610,7 +610,7 @@
         $state.CancelRequested = $true
         $ui.CancelButton.IsEnabled = $false
         $ui.ResultStatus.Text = '正在停止'
-        $ui.ResultStatus.Foreground = '#F4B860'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = '正在停止当前任务...'
         try { $state.Process.Process.Kill() } catch { $state.CancelRequested = $false; throw "停止任务失败: $($_.Exception.Message)" }
     }.GetNewClosure()

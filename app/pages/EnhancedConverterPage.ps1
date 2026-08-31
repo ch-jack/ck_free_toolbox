@@ -343,7 +343,7 @@
             $ui.ProgressBar.IsIndeterminate = ($state.TotalFiles -le 0)
             $ui.ProgressText.Text = if ($state.TotalFiles -gt 0) { "0% (0/$($state.TotalFiles))" } else { $text.Running }
             $ui.ResultStatus.Text = $text.Running
-            $ui.ResultStatus.Foreground = '#58A6FF'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#58A6FF')
             $ui.StatusLine.Text = if ($state.IsOptimize) { $text.StartingOptimize } else { $text.StartingConvert }
         } else {
             $ui.ProgressBar.IsIndeterminate = $false
@@ -432,7 +432,7 @@
         param([string]$message)
 
         $ui.ResultStatus.Text = $text.OperationFailed
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[toolbox] $message"
         [System.Windows.MessageBox]::Show(
@@ -577,13 +577,13 @@
 
             if ($cancelled) {
                 $callbackUi.ResultStatus.Text = $callbackText.Stopped
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = "$($callbackText.Stopped) | $summary"
             } elseif (($callbackState.FailedFiles -gt 0 -or $callbackState.UnattemptedFiles -gt 0) -and $callbackState.ProcessedFiles -ge $callbackState.TotalFiles) {
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.ProgressText.Text = "100% ($($callbackState.ProcessedFiles)/$($callbackState.TotalFiles))"
                 $callbackUi.ResultStatus.Text = $callbackText.PartialDone
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = $summary
                 if ($callbackMoveFailed) {
                     $callbackUi.StatusLine.Text += " | $($callbackText.FailedDirectoryLabel): $callbackFailedDirectory"
@@ -592,7 +592,7 @@
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.ProgressText.Text = if ($callbackState.TotalFiles -gt 0) { "100% ($($callbackState.TotalFiles)/$($callbackState.TotalFiles))" } else { '100%' }
                 $callbackUi.ResultStatus.Text = $callbackDone
-                $callbackUi.ResultStatus.Foreground = '#31D69A'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
                 $callbackUi.StatusLine.Text = "$callbackDone | $summary"
             } else {
                 $callbackUi.ProgressBar.IsIndeterminate = $false
@@ -601,7 +601,7 @@
                     $callbackUi.ProgressText.Text = '0%'
                 }
                 $callbackUi.ResultStatus.Text = $callbackText.Failed
-                $callbackUi.ResultStatus.Foreground = '#EF7C86'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
                 $callbackUi.StatusLine.Text = "$($callbackText.ExitCode): $exitCode | $summary"
             }
 
@@ -633,7 +633,7 @@
         $state.CancelRequested = $true
         $ui.StopButton.IsEnabled = $false
         $ui.ResultStatus.Text = $text.Stopping
-        $ui.ResultStatus.Foreground = '#F4B860'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = $text.Stopping
         $process = $state.Process.Process
         try {
@@ -715,7 +715,7 @@
     $workerReady = Test-Path -LiteralPath $state.WorkerPath -PathType Leaf
     $environmentReady = $cliReady -and $workerReady
     Set-CkStatusDot $ui.EnvironmentDot $environmentReady
-    $ui.EnvironmentText.Foreground = if ($environmentReady) { '#31D69A' } else { '#EF6B73' }
+    $ui.EnvironmentText.Foreground = if ($environmentReady) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF6B73') }
     $ui.EnvironmentText.Text = if (-not $cliReady) { $text.Missing } elseif (-not $workerReady) { $text.WorkerMissing } else { $text.Ready }
     $ui.EnvironmentText.ToolTip = $state.CliPath + [Environment]::NewLine + $state.WorkerPath
     & $updateMoveFailedAction

@@ -46,6 +46,9 @@ function New-CkToolboxConfig {
             nodePath = ''
             ffmpegPath = ''
         }
+        appearance = [pscustomobject][ordered]@{
+            theme = 'system'
+        }
         agreements = [pscustomobject][ordered]@{
             disclaimerAccepted = $false
             disclaimerVersion = 0
@@ -89,6 +92,15 @@ function ConvertTo-CkToolboxConfig {
     if (-not $config.dependencies.PSObject.Properties['ffmpegPath']) {
         $config.dependencies | Add-Member -NotePropertyName ffmpegPath -NotePropertyValue ''
     }
+    if (-not $config.PSObject.Properties['appearance'] -or -not $config.appearance) {
+        $config | Add-Member -NotePropertyName appearance -NotePropertyValue ([pscustomobject][ordered]@{}) -Force
+    }
+    if (-not $config.appearance.PSObject.Properties['theme']) {
+        $config.appearance | Add-Member -NotePropertyName theme -NotePropertyValue 'system'
+    }
+    $theme = ([string]$config.appearance.theme).Trim().ToLowerInvariant()
+    if ($theme -notin @('system','light','dark')) { $theme = 'system' }
+    $config.appearance.theme = $theme
     if (-not $config.PSObject.Properties['agreements'] -or -not $config.agreements) {
         $config | Add-Member -NotePropertyName agreements -NotePropertyValue ([pscustomobject][ordered]@{}) -Force
     }
@@ -201,6 +213,24 @@ function Set-CkToolboxDependencyPath {
     return $fullPath
 }
 
+function Get-CkToolboxThemePreference {
+    $config = Get-CkToolboxConfig
+    return [string]$config.appearance.theme
+}
+
+function Set-CkToolboxThemePreference {
+    param(
+        [Parameter(Mandatory)]
+        [ValidateSet('system','light','dark')]
+        [string]$Theme
+    )
+
+    $config = Get-CkToolboxConfig
+    $config.appearance.theme = $Theme.ToLowerInvariant()
+    Save-CkToolboxConfig -Config $config
+    return [string]$config.appearance.theme
+}
+
 function Test-CkToolboxDisclaimerAccepted {
     param(
         [Parameter(Mandatory)]
@@ -227,4 +257,4 @@ function Set-CkToolboxDisclaimerAccepted {
     Save-CkToolboxConfig -Config $config
 }
 
-Export-ModuleMember -Function Initialize-CkToolboxConfig, Get-CkToolboxConfigPath, Get-CkToolboxConfig, Save-CkToolboxConfig, Get-CkDependencySettings, Set-CkToolboxDependencyPath, Test-CkToolboxDisclaimerAccepted, Set-CkToolboxDisclaimerAccepted
+Export-ModuleMember -Function Initialize-CkToolboxConfig, Get-CkToolboxConfigPath, Get-CkToolboxConfig, Save-CkToolboxConfig, Get-CkDependencySettings, Set-CkToolboxDependencyPath, Get-CkToolboxThemePreference, Set-CkToolboxThemePreference, Test-CkToolboxDisclaimerAccepted, Set-CkToolboxDisclaimerAccepted

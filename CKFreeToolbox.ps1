@@ -32,6 +32,9 @@ Import-Module (Join-Path $ModuleRoot 'ToolboxConfig.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'EnvironmentProbe.psm1') -Force
 Import-Module (Join-Path $ModuleRoot 'ProcessRunner.psm1') -Force
 [void](Initialize-CkToolboxConfig -Path $UserConfigPath -LegacyPath $LegacyConfigPath)
+$themePreference = Get-CkToolboxThemePreference
+$initialTheme = Resolve-CkThemePreference -Preference $themePreference
+[void](Set-CkTheme -Theme $initialTheme)
 
 $DisclaimerVersion = 2
 
@@ -237,16 +240,34 @@ $context = [pscustomobject]@{
 $shellXaml = @"
 <Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="CK免费工具箱" Width="1180" Height="740" MinWidth="860" MinHeight="560"
-        WindowStartupLocation="CenterScreen" Background="#090A0A" FontFamily="Microsoft YaHei" Foreground="#E5E7EB">
+        Title="CK免费工具箱" Width="1280" Height="800" MinWidth="920" MinHeight="600"
+        WindowStartupLocation="CenterScreen" Background="#090A0A" FontFamily="Microsoft YaHei UI" Foreground="#E5E7EB">
   <Window.Resources>
     <Style TargetType="Button">
       <Setter Property="Foreground" Value="#E5E7EB"/>
       <Setter Property="Background" Value="#171A1F"/>
       <Setter Property="BorderBrush" Value="#2B303A"/>
       <Setter Property="BorderThickness" Value="1"/>
-      <Setter Property="Padding" Value="9,6"/>
+      <Setter Property="Padding" Value="11,7"/>
       <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="OverridesDefaultStyle" Value="True"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="ButtonChrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                RecognizesAccessKey="True"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ButtonChrome" Property="Opacity" Value="0.9"/></Trigger>
+              <Trigger Property="IsPressed" Value="True"><Setter TargetName="ButtonChrome" Property="Opacity" Value="0.78"/></Trigger>
+              <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ButtonChrome" Property="Opacity" Value="0.45"/></Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
     </Style>
     <Style TargetType="TextBox">
       <Setter Property="Foreground" Value="#E5E7EB"/>
@@ -254,6 +275,8 @@ $shellXaml = @"
       <Setter Property="BorderBrush" Value="#343A46"/>
       <Setter Property="BorderThickness" Value="1"/>
       <Setter Property="Padding" Value="10,6"/>
+      <Setter Property="CaretBrush" Value="#72B7F2"/>
+      <Setter Property="SelectionBrush" Value="#2B4A68"/>
     </Style>
     <Style TargetType="ComboBox">
       <Setter Property="Foreground" Value="#E5E7EB"/>
@@ -339,92 +362,119 @@ $shellXaml = @"
   </Window.Resources>
   <Grid>
     <Grid.RowDefinitions>
-      <RowDefinition Height="60"/>
+      <RowDefinition Height="66"/>
       <RowDefinition Height="*"/>
     </Grid.RowDefinitions>
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="132"/>
+      <ColumnDefinition Width="220"/>
       <ColumnDefinition Width="*"/>
     </Grid.ColumnDefinitions>
 
     <Border Grid.ColumnSpan="2" Background="#070707" BorderBrush="#20242C" BorderThickness="0,0,0,1">
-      <Grid Margin="18,0">
-        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-          <Border Width="36" Height="36" Background="#0B0B0D" CornerRadius="8" BorderBrush="#2B303A" BorderThickness="1" Margin="0,0,12,0">
-            <Grid>
-              <TextBlock Text="CK" Foreground="#FFFFFF" FontWeight="Black" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-              <Border Width="9" Height="9" Background="#31D69A" CornerRadius="4" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,4,4"/>
+      <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition Width="220"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+        <Border Grid.Column="0" BorderBrush="#20242C" BorderThickness="0,0,1,0">
+          <Grid Margin="16,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="36"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+            <Border Width="36" Height="36" Background="#0B0B0D" CornerRadius="9" BorderBrush="#2B303A" BorderThickness="1" VerticalAlignment="Center">
+              <Grid>
+                <TextBlock Text="CK" Foreground="#FAFBFC" FontWeight="Black" FontSize="13" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Ellipse Width="8" Height="8" Fill="#31D69A" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,5,5"/>
+              </Grid>
+            </Border>
+            <StackPanel Grid.Column="1" Margin="11,0,0,0" VerticalAlignment="Center">
+              <TextBlock Text="CK 免费工具箱" FontSize="15" FontWeight="SemiBold"/>
+              <TextBlock x:Name="ToolboxVersionText" AutomationProperties.AutomationId="Toolbox.VersionText" Text="v1.0.2" Foreground="#6E7580" FontFamily="Cascadia Mono" FontSize="10" Margin="0,3,0,0"/>
+            </StackPanel>
+          </Grid>
+        </Border>
+
+        <Border Grid.Column="1" Width="360" Height="36" Margin="20,0,14,0" HorizontalAlignment="Left" VerticalAlignment="Center"
+                Background="#0D0F12" BorderBrush="#242A33" BorderThickness="1" CornerRadius="8">
+          <Grid Margin="11,0,8,0">
+            <Grid.ColumnDefinitions><ColumnDefinition Width="22"/><ColumnDefinition Width="*"/><ColumnDefinition Width="46"/></Grid.ColumnDefinitions>
+            <TextBlock Text="⌕" Foreground="#8B929E" FontSize="15" VerticalAlignment="Center"/>
+            <Grid Grid.Column="1">
+              <TextBox x:Name="ToolSearchBox" AutomationProperties.AutomationId="Toolbox.ToolSearchBox"
+                       Background="Transparent" BorderThickness="0" Padding="0" FontSize="12" VerticalContentAlignment="Center"
+                       ToolTip="搜索工具名称，按 Ctrl+K 快速聚焦"/>
+              <TextBlock x:Name="ToolSearchHint" Text="搜索工具或功能" Foreground="#6E7580" FontSize="12"
+                         VerticalAlignment="Center" IsHitTestVisible="False"/>
             </Grid>
-          </Border>
-          <TextBlock Text="CK免费工具箱" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
-          <TextBlock x:Name="ToolboxVersionText" AutomationProperties.AutomationId="Toolbox.VersionText" Text="v1.0.2" Foreground="#6E7580" FontSize="13" Margin="12,2,0,0" VerticalAlignment="Center"/>
-        </StackPanel>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                    <TextBlock x:Name="SelfUpdateStatusText" AutomationProperties.AutomationId="Toolbox.SelfUpdateStatus"
-                     Text="正在检查版本" Foreground="#6E7580" FontSize="12" Margin="0,3,10,0" VerticalAlignment="Center"/>
+            <Border Grid.Column="2" Height="21" Background="#171A1F" BorderBrush="#343A46" BorderThickness="1" CornerRadius="5" VerticalAlignment="Center">
+              <TextBlock Text="Ctrl K" Foreground="#8B929E" FontFamily="Cascadia Mono" FontSize="9" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Border>
+
+        <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,14,0">
+          <TextBlock x:Name="SelfUpdateStatusText" AutomationProperties.AutomationId="Toolbox.SelfUpdateStatus"
+                     Text="正在检查版本" Foreground="#6E7580" FontSize="11" Margin="0,3,9,0" VerticalAlignment="Center"/>
           <Button x:Name="SelfUpdateButton" AutomationProperties.AutomationId="Toolbox.SelfUpdateButton"
-                  Content="检查更新" Width="92" Height="30" Margin="0,0,12,0"
-                  Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="12"/>
-          <Button x:Name="JoinQqGroupButton" AutomationProperties.AutomationId="Toolbox.JoinQqGroupButton"
-                  Content="一键加群" Width="96" Height="30" Margin="0,0,12,0"
-                  Background="#14213A" BorderBrush="#315A91" Foreground="#7DB5FF" FontSize="12"
-                  ToolTip="加入QQ群 1063823087"/>
-          <Border Background="#101A16" BorderBrush="#1E4D3C" BorderThickness="1" CornerRadius="6" Padding="10,6">
+                  Content="检查更新" Width="82" Height="32" Margin="0,0,8,0"
+                  Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="11"/>
+          <Border Height="32" Background="#15181C" BorderBrush="#242833" BorderThickness="1" CornerRadius="8" Padding="3" Margin="0,0,8,0">
             <StackPanel Orientation="Horizontal">
-              <Ellipse Width="8" Height="8" Fill="#31D69A" Margin="0,0,7,0" VerticalAlignment="Center"/>
-              <TextBlock Text="本机运行" Foreground="#8BDDBD" FontSize="13"/>
+              <Button x:Name="LightThemeButton" AutomationProperties.AutomationId="Toolbox.ThemeLightButton" Tag="light"
+                      Content="浅" Width="31" Height="24" Padding="0" FontSize="10" ToolTip="切换浅色模式"/>
+              <Button x:Name="DarkThemeButton" AutomationProperties.AutomationId="Toolbox.ThemeDarkButton" Tag="dark"
+                      Content="深" Width="31" Height="24" Padding="0" FontSize="10" Margin="2,0,0,0" ToolTip="切换深色模式"/>
+            </StackPanel>
+          </Border>
+          <Border Background="#101A16" BorderBrush="#1E4D3C" BorderThickness="1" CornerRadius="8" Padding="10,7">
+            <StackPanel Orientation="Horizontal">
+              <Ellipse Width="7" Height="7" Fill="#31D69A" Margin="0,0,7,0" VerticalAlignment="Center"/>
+              <TextBlock Text="本机运行" Foreground="#8BDDBD" FontSize="11" FontWeight="SemiBold"/>
             </StackPanel>
           </Border>
         </StackPanel>
-          <ProgressBar x:Name="SelfUpdateProgressBar" AutomationProperties.AutomationId="Toolbox.SelfUpdateProgressBar"
-                       Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Bottom"
-                       Background="#1B222A" Foreground="#58A6FF" Visibility="Collapsed"/>
+        <ProgressBar x:Name="SelfUpdateProgressBar" AutomationProperties.AutomationId="Toolbox.SelfUpdateProgressBar"
+                     Grid.ColumnSpan="3" Height="3" Minimum="0" Maximum="100" Value="0" VerticalAlignment="Bottom"
+                     Background="#1B222A" Foreground="#58A6FF" Visibility="Collapsed"/>
       </Grid>
     </Border>
 
     <Border Grid.Row="1" Background="#0A0B0B" BorderBrush="#20242C" BorderThickness="0,0,1,0">
-      <Grid>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto"/>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        <Grid Grid.RowSpan="2" Margin="12,16,6,12">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-          <TextBlock Text="工具" Foreground="#616874" FontSize="13" FontWeight="Bold" Margin="6,0,0,10"/>
-          <ScrollViewer x:Name="NavScrollViewer" AutomationProperties.AutomationId="Toolbox.NavScrollViewer" Grid.Row="1"
-                        VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                        PanningMode="VerticalOnly">
-            <StackPanel x:Name="NavHost" Margin="0,0,4,0"/>
-          </ScrollViewer>
+      <Grid Margin="10,14,10,12">
+        <Grid.RowDefinitions><RowDefinition Height="30"/><RowDefinition Height="*"/><RowDefinition Height="50"/></Grid.RowDefinitions>
+        <Grid Grid.Row="0" Margin="8,0">
+          <TextBlock Text="工具" Foreground="#616874" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Top"/>
+          <TextBlock x:Name="ToolCountText" Text="0" Foreground="#6E7580" FontFamily="Cascadia Mono" FontSize="10"
+                     HorizontalAlignment="Right" VerticalAlignment="Top"/>
         </Grid>
-        <TextBlock Grid.Row="2" Text="POWERED BY CK" Foreground="#3B4048" FontSize="11" TextAlignment="Center" Margin="0,0,0,18"/>
+        <ScrollViewer x:Name="NavScrollViewer" AutomationProperties.AutomationId="Toolbox.NavScrollViewer" Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" PanningMode="VerticalOnly">
+          <StackPanel x:Name="NavHost" Margin="0,0,4,0"/>
+        </ScrollViewer>
+        <Grid Grid.Row="2" Margin="0,10,0,0">
+          <Button x:Name="JoinQqGroupButton" AutomationProperties.AutomationId="Toolbox.JoinQqGroupButton"
+                  Content="＋  一键加群" Height="36" HorizontalAlignment="Stretch"
+                  Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="11"
+                  ToolTip="加入QQ群 1063823087"/>
+        </Grid>
       </Grid>
     </Border>
 
     <Grid Grid.Row="1" Grid.Column="1">
       <Grid.RowDefinitions>
-        <RowDefinition Height="64"/>
+        <RowDefinition Height="82"/>
         <RowDefinition Height="*"/>
       </Grid.RowDefinitions>
       <Border Background="#090A0A" BorderBrush="#171B22" BorderThickness="0,0,0,1">
-        <Grid Margin="28,0,32,0">
+        <Grid Margin="24,0,26,0">
           <StackPanel VerticalAlignment="Center">
-            <TextBlock x:Name="PageTitle" Text="模型自动截图" FontSize="24" FontWeight="Bold"/>
-            <TextBlock x:Name="PageSubtitle" Text="可扩展客户端工具箱" Foreground="#6E7580" FontSize="12" Margin="0,3,0,0"/>
+            <TextBlock x:Name="PageTitle" Text="模型自动截图" FontSize="24" FontWeight="SemiBold"/>
+            <TextBlock x:Name="PageSubtitle" Text="可扩展客户端工具箱" Foreground="#6E7580" FontSize="12" Margin="0,6,0,0"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
             <TextBlock x:Name="ComponentStatusText" AutomationProperties.AutomationId="Tool.ComponentStatusText"
-                       Text="检测组件" Foreground="#8B929E" FontSize="12" VerticalAlignment="Center" Margin="0,0,10,0"/>
+                       Text="检测组件" Foreground="#8B929E" FontSize="11" VerticalAlignment="Center" Margin="0,0,12,0"/>
             <Button x:Name="ComponentActionButton" AutomationProperties.AutomationId="Tool.ComponentActionButton"
-                    Content="检查更新" Width="104" Height="34" Margin="0,0,8,0"
-                    Background="#151A20" BorderBrush="#343D49" Foreground="#B8C0CC" FontSize="13"/>
+                    Content="检查组件" Width="94" Height="34" Margin="0,0,8,0"
+                    Background="#151A20" BorderBrush="#343D49" Foreground="#B8C0CC" FontSize="11"/>
             <Button x:Name="OpenSourceButton" AutomationProperties.AutomationId="Tool.OpenSourceButton"
-                    Content="GitHub 开源地址 ↗" Width="142" Height="34"
-                    Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="13" FontWeight="SemiBold"
+                    Content="GitHub 开源地址 ↗" Width="136" Height="34"
+                    Background="#111820" BorderBrush="#2B4A68" Foreground="#72B7F2" FontSize="11" FontWeight="SemiBold"
                     ToolTip="打开当前项目的 GitHub 仓库"/>
           </StackPanel>
           <ProgressBar x:Name="ComponentProgressBar" AutomationProperties.AutomationId="Tool.ComponentProgressBar"
@@ -447,10 +497,10 @@ function Set-CkResponsiveWindowSize {
     $workWidth = if ($workArea.Width -gt 0) { $workArea.Width } else { 1366 }
     $workHeight = if ($workArea.Height -gt 0) { $workArea.Height } else { 768 }
 
-    $minimumWidth = [Math]::Min(860, [Math]::Max(720, [Math]::Floor($workWidth * 0.72)))
-    $minimumHeight = [Math]::Min(560, [Math]::Max(460, [Math]::Floor($workHeight * 0.68)))
-    $targetWidth = [Math]::Min(1180, [Math]::Floor($workWidth * 0.78))
-    $targetHeight = [Math]::Min(740, [Math]::Floor($workHeight * 0.76))
+    $minimumWidth = [Math]::Min(920, [Math]::Max(820, [Math]::Floor($workWidth * 0.74)))
+    $minimumHeight = [Math]::Min(600, [Math]::Max(500, [Math]::Floor($workHeight * 0.70)))
+    $targetWidth = [Math]::Min(1360, [Math]::Floor($workWidth * 0.88))
+    $targetHeight = [Math]::Min(860, [Math]::Floor($workHeight * 0.86))
 
     $Window.MinWidth = $minimumWidth
     $Window.MinHeight = $minimumHeight
@@ -478,6 +528,11 @@ $selfUpdateStatusText = $window.FindName('SelfUpdateStatusText')
 $selfUpdateButton = $window.FindName('SelfUpdateButton')
 $joinQqGroupButton = $window.FindName('JoinQqGroupButton')
 $selfUpdateProgressBar = $window.FindName('SelfUpdateProgressBar')
+$toolSearchBox = $window.FindName('ToolSearchBox')
+$toolSearchHint = $window.FindName('ToolSearchHint')
+$toolCountText = $window.FindName('ToolCountText')
+$lightThemeButton = $window.FindName('LightThemeButton')
+$darkThemeButton = $window.FindName('DarkThemeButton')
 $toolboxVersionText.Text = "v$ToolboxVersion"
 
 $tools = Get-Content -LiteralPath $ToolRegistryPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -516,29 +571,37 @@ function New-NavButton {
     $button.Tag = $Tool.id
     [System.Windows.Automation.AutomationProperties]::SetName($button, [string]$Tool.title)
     [System.Windows.Automation.AutomationProperties]::SetAutomationId($button, "Nav-$($Tool.id)")
-    $button.Height = 68
-    $button.Margin = '0,0,0,8'
-    $button.Padding = '2,6'
-    $button.HorizontalAlignment = 'Center'
-    $button.HorizontalContentAlignment = 'Center'
-    $button.Background = '#111419'
-    $button.BorderBrush = '#242A34'
+    $button.Height = 40
+    $button.Margin = '0,0,0,3'
+    $button.Padding = '10,0'
+    $button.HorizontalAlignment = 'Stretch'
+    $button.HorizontalContentAlignment = 'Left'
+    $button.VerticalContentAlignment = 'Center'
+    $button.Background = [System.Windows.Media.Brushes]::Transparent
+    $button.BorderBrush = [System.Windows.Media.Brushes]::Transparent
 
     $stack = New-Object System.Windows.Controls.StackPanel
-    $stack.HorizontalAlignment = 'Center'
+    $stack.Orientation = 'Horizontal'
+    $stack.HorizontalAlignment = 'Left'
+    $stack.VerticalAlignment = 'Center'
     $icon = New-Object System.Windows.Controls.TextBlock
     $icon.Text = [string]$Tool.icon
-    $icon.FontSize = if ([string]$Tool.icon -eq 'A⊞') { 18 } else { 22 }
-    $icon.HorizontalAlignment = 'Center'
+    $icon.Width = 24
+    $icon.FontSize = if ([string]$Tool.icon -eq 'A⊞') { 14 } else { 16 }
+    $icon.Foreground = (Get-CkThemeBrush '#777B83')
+    $icon.HorizontalAlignment = 'Left'
+    $icon.VerticalAlignment = 'Center'
+    $icon.TextAlignment = 'Center'
     $label = New-Object System.Windows.Controls.TextBlock
     $label.Text = [string]$Tool.title
     $label.FontSize = 12
-    $label.Foreground = '#8B929E'
-    $label.HorizontalAlignment = 'Center'
-    $label.TextAlignment = 'Center'
-    $label.TextTrimming = 'None'
+    $label.Foreground = (Get-CkThemeBrush '#8B929E')
+    $label.HorizontalAlignment = 'Left'
+    $label.VerticalAlignment = 'Center'
+    $label.TextAlignment = 'Left'
+    $label.TextTrimming = 'CharacterEllipsis'
     $label.ToolTip = [string]$Tool.title
-    $label.Margin = '0,3,0,0'
+    $label.Margin = '8,0,0,0'
     [void]$stack.Children.Add($icon)
     [void]$stack.Children.Add($label)
     $button.Content = $stack
@@ -595,7 +658,7 @@ function Update-CkComponentHeader {
     $componentActionButton.Visibility = 'Visible'
     if ($componentState.Process -and $componentState.Process.ToolId -eq $componentState.CurrentToolId) {
         $componentStatusText.Text = [string]$componentState.Process.Message
-        $componentStatusText.Foreground = '#72B7F2'
+        $componentStatusText.Foreground = (Get-CkThemeBrush '#72B7F2')
         $componentActionButton.Content = if ($componentState.Process.Action -eq 'check') { '检查中...' } else { '安装中...' }
         $componentActionButton.IsEnabled = $false
         $componentProgressBar.Visibility = 'Visible'
@@ -605,7 +668,7 @@ function Update-CkComponentHeader {
     if ($componentState.Process) {
         $activeTool = $toolConfigs[$componentState.Process.ToolId]
         $componentStatusText.Text = if ($activeTool) { "后台检查：$($activeTool.title)" } else { '正在后台检查组件' }
-        $componentStatusText.Foreground = '#72B7F2'
+        $componentStatusText.Foreground = (Get-CkThemeBrush '#72B7F2')
         $componentActionButton.Content = '等待检查'
         $componentActionButton.IsEnabled = $false
         $componentProgressBar.Visibility = 'Collapsed'
@@ -618,37 +681,37 @@ function Update-CkComponentHeader {
     $componentActionButton.IsEnabled = $true
     if (-not $local.Installed) {
         $componentStatusText.Text = '组件缺失'
-        $componentStatusText.Foreground = '#EF7C86'
+        $componentStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
         $componentActionButton.Content = '安装组件'
         $componentActionButton.Tag = 'install'
-        $componentActionButton.Foreground = '#54E0A9'
+        $componentActionButton.Foreground = (Get-CkThemeBrush '#54E0A9')
         return
     }
     if ($remote -and [string]$remote.status -eq 'error') {
         $componentStatusText.Text = '检查更新失败'
-        $componentStatusText.Foreground = '#EF7C86'
+        $componentStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
         $componentActionButton.Content = '重试检查'
         $componentActionButton.Tag = 'check'
-        $componentActionButton.Foreground = '#EF7C86'
+        $componentActionButton.Foreground = (Get-CkThemeBrush '#EF7C86')
         return
     }
     if ($remote -and $remote.updateAvailable) {
         $latestVersion = [string]$remote.latestVersion
         $componentStatusText.Text = if ($latestVersion) { "发现新版本 $latestVersion" } else { '发现新版本' }
-        $componentStatusText.Foreground = '#F4B860'
+        $componentStatusText.Foreground = (Get-CkThemeBrush '#F4B860')
         $componentActionButton.Content = '更新组件'
         $componentActionButton.Tag = 'install'
-        $componentActionButton.Foreground = '#F4B860'
+        $componentActionButton.Foreground = (Get-CkThemeBrush '#F4B860')
         return
     }
 
     $checked = $componentState.Checked.ContainsKey($componentState.CurrentToolId)
     $currentVersion = if ($remote -and $remote.latestVersion) { [string]$remote.latestVersion } else { [string]$local.LocalVersion }
     $componentStatusText.Text = if ($checked -and $currentVersion) { "已是最新 $currentVersion" } elseif ($local.LocalVersion) { "已安装 $($local.LocalVersion)" } else { '组件已安装' }
-    $componentStatusText.Foreground = '#31D69A'
+    $componentStatusText.Foreground = (Get-CkThemeBrush '#31D69A')
     $componentActionButton.Content = '检查更新'
     $componentActionButton.Tag = 'check'
-    $componentActionButton.Foreground = '#B8C0CC'
+    $componentActionButton.Foreground = (Get-CkThemeBrush '#B8C0CC')
 }
 
 function Start-CkComponentOperation {
@@ -705,7 +768,7 @@ function Start-CkComponentOperation {
         param($message)
         if ($callbackState.CurrentToolId -eq $callbackToolId) {
             $componentStatusText.Text = $message
-            $componentStatusText.Foreground = '#EF7C86'
+            $componentStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
         }
     }.GetNewClosure()
     $onExit = {
@@ -819,7 +882,7 @@ function Update-CkSelfUpdateUi {
     $selfUpdateButton.Visibility = 'Visible'
     if ($selfUpdateState.Process) {
         $selfUpdateStatusText.Text = [string]$selfUpdateState.Process.Message
-        $selfUpdateStatusText.Foreground = '#72B7F2'
+        $selfUpdateStatusText.Foreground = (Get-CkThemeBrush '#72B7F2')
         $selfUpdateButton.Content = if ($selfUpdateState.Process.Action -eq 'prepare') { '更新中...' } else { '检查中...' }
         $selfUpdateButton.IsEnabled = $false
         $selfUpdateProgressBar.Visibility = 'Visible'
@@ -832,27 +895,27 @@ function Update-CkSelfUpdateUi {
     switch ($selfUpdateState.Status) {
         'available' {
             $selfUpdateStatusText.Text = "发现 $($selfUpdateState.LatestVersion)"
-            $selfUpdateStatusText.Foreground = '#F4B860'
+            $selfUpdateStatusText.Foreground = (Get-CkThemeBrush '#F4B860')
             $selfUpdateButton.Content = '立即更新'
-            $selfUpdateButton.Foreground = '#F4B860'
+            $selfUpdateButton.Foreground = (Get-CkThemeBrush '#F4B860')
         }
         'current' {
             $selfUpdateStatusText.Text = "已是最新 v$($selfUpdateState.CurrentVersion)"
-            $selfUpdateStatusText.Foreground = '#31D69A'
+            $selfUpdateStatusText.Foreground = (Get-CkThemeBrush '#31D69A')
             $selfUpdateButton.Content = '检查更新'
-            $selfUpdateButton.Foreground = '#72B7F2'
+            $selfUpdateButton.Foreground = (Get-CkThemeBrush '#72B7F2')
         }
         'error' {
             $selfUpdateStatusText.Text = '版本检查失败'
-            $selfUpdateStatusText.Foreground = '#EF7C86'
+            $selfUpdateStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
             $selfUpdateButton.Content = '重试'
-            $selfUpdateButton.Foreground = '#EF7C86'
+            $selfUpdateButton.Foreground = (Get-CkThemeBrush '#EF7C86')
         }
         default {
             $selfUpdateStatusText.Text = '尚未检查版本'
-            $selfUpdateStatusText.Foreground = '#6E7580'
+            $selfUpdateStatusText.Foreground = (Get-CkThemeBrush '#6E7580')
             $selfUpdateButton.Content = '检查更新'
-            $selfUpdateButton.Foreground = '#72B7F2'
+            $selfUpdateButton.Foreground = (Get-CkThemeBrush '#72B7F2')
         }
     }
 }
@@ -1006,6 +1069,25 @@ function Start-CkSelfUpdateOperation {
     & $updateSelfUpdateUiAction
 }
 
+function Set-CkNavButtonState {
+    param(
+        [Parameter(Mandatory)]$Button,
+        [Parameter(Mandatory)][bool]$Active
+    )
+
+    if ($Active) {
+        $Button.Background = Get-CkThemeBrush '#2B303A' -Property Background
+        $Button.BorderBrush = Get-CkThemeBrush '#465266' -Property BorderBrush
+    } else {
+        $Button.Background = [System.Windows.Media.Brushes]::Transparent
+        $Button.BorderBrush = [System.Windows.Media.Brushes]::Transparent
+    }
+    if ($Button.Content -is [System.Windows.Controls.StackPanel] -and $Button.Content.Children.Count -ge 2) {
+        $Button.Content.Children[0].Foreground = if ($Active) { Get-CkThemeBrush '#72B7F2' -Property Foreground } else { Get-CkThemeBrush '#777B83' -Property Foreground }
+        $Button.Content.Children[1].Foreground = if ($Active) { Get-CkThemeBrush '#E5E7EB' -Property Foreground } else { Get-CkThemeBrush '#8B929E' -Property Foreground }
+    }
+}
+
 function Show-ToolPage {
     param([string]$Id)
 
@@ -1019,17 +1101,15 @@ function Show-ToolPage {
 
     if ($currentPageId -and $pages.ContainsKey($currentPageId)) {
         $pages[$currentPageId].Root.Visibility = 'Collapsed'
-        $buttons[$currentPageId].Background = '#111419'
-        $buttons[$currentPageId].BorderBrush = '#242A34'
+        Set-CkNavButtonState -Button $buttons[$currentPageId] -Active $false
     }
 
     $componentState.CurrentToolId = $Id
     $pages[$Id].Root.Visibility = 'Visible'
-    $buttons[$Id].Background = '#2B303A'
-    $buttons[$Id].BorderBrush = '#465266'
+    Set-CkNavButtonState -Button $buttons[$Id] -Active $true
 
     $pageTitle.Text = $pages[$Id].Title
-    $pageSubtitle.Text = '模块化页面 · 本机组件 · GitHub 更新'
+    $pageSubtitle.Text = '本机组件与 GitHub 更新'
     $sourceUrl = if ($toolConfig.PSObject.Properties['sourceUrl']) { [string]$toolConfig.sourceUrl } else { '' }
     $openSourceButton.Tag = $sourceUrl
     $openSourceButton.ToolTip = if ($sourceUrl) { $sourceUrl } else { '当前项目未配置开源地址' }
@@ -1107,10 +1187,79 @@ $selfUpdateAction = {
         & $startSelfUpdateOperationAction 'check' $false
     }
 }.GetNewClosure()
+
+function Update-CkThemeToggleUi {
+    $currentTheme = Get-CkTheme
+    foreach ($entry in @(
+        [pscustomobject]@{ Button = $lightThemeButton; Theme = 'Light' },
+        [pscustomobject]@{ Button = $darkThemeButton; Theme = 'Dark' }
+    )) {
+        $active = ($entry.Theme -eq $currentTheme)
+        $entry.Button.Background = if ($active) { Get-CkThemeBrush '#2B303A' -Property Background } else { [System.Windows.Media.Brushes]::Transparent }
+        $entry.Button.BorderBrush = if ($active) { Get-CkThemeBrush '#465266' -Property BorderBrush } else { [System.Windows.Media.Brushes]::Transparent }
+        $entry.Button.Foreground = if ($active) { Get-CkThemeBrush '#72B7F2' -Property Foreground } else { Get-CkThemeBrush '#8B929E' -Property Foreground }
+    }
+}
+
+$themeAction = {
+    param($sender, $eventArgs)
+    $preference = ([string]$sender.Tag).ToLowerInvariant()
+    if ($preference -notin @('light','dark')) { throw '主题选项无效。' }
+    [void](Set-CkToolboxThemePreference -Theme $preference)
+    $resolvedTheme = if ($preference -eq 'light') { 'Light' } else { 'Dark' }
+    [void](Set-CkTheme -Theme $resolvedTheme)
+    Update-CkThemeToggleUi
+}.GetNewClosure()
+
+$filterToolsAction = {
+    $query = ([string]$toolSearchBox.Text).Trim()
+    $toolSearchHint.Visibility = if ($query) { 'Collapsed' } else { 'Visible' }
+    $visibleCount = 0
+    foreach ($tool in $tools) {
+        $title = [string]$tool.title
+        $id = [string]$tool.id
+        $visible = (-not $query) -or
+            ($title.IndexOf($query, [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
+            ($id.IndexOf($query, [StringComparison]::OrdinalIgnoreCase) -ge 0)
+        $buttons[$id].Visibility = if ($visible) { 'Visible' } else { 'Collapsed' }
+        if ($visible) { $visibleCount++ }
+    }
+    $toolCountText.Text = if ($query) { "$visibleCount/$($tools.Count)" } else { [string]$tools.Count }
+}.GetNewClosure()
+
+$toolSearchKeyHandler = [System.Windows.Input.KeyEventHandler]{
+    param($sender, $eventArgs)
+    if ($eventArgs.Key -eq [System.Windows.Input.Key]::Enter) {
+        $firstVisible = @($tools | Where-Object { $buttons[[string]$_.id].Visibility -eq 'Visible' })[0]
+        if ($firstVisible) {
+            & $showToolPageAction -Id ([string]$firstVisible.id)
+            $eventArgs.Handled = $true
+        }
+    } elseif ($eventArgs.Key -eq [System.Windows.Input.Key]::Escape) {
+        $toolSearchBox.Clear()
+        $eventArgs.Handled = $true
+    }
+}.GetNewClosure()
+
+$windowShortcutHandler = [System.Windows.Input.KeyEventHandler]{
+    param($sender, $eventArgs)
+    $controlDown = (([System.Windows.Input.Keyboard]::Modifiers -band [System.Windows.Input.ModifierKeys]::Control) -eq [System.Windows.Input.ModifierKeys]::Control)
+    if ($controlDown -and $eventArgs.Key -eq [System.Windows.Input.Key]::K) {
+        [void]$toolSearchBox.Focus()
+        $toolSearchBox.SelectAll()
+        $eventArgs.Handled = $true
+    }
+}.GetNewClosure()
+
 Register-CkButtonAction -Button $openSourceButton -Action $openSourceAction
 Register-CkButtonAction -Button $componentActionButton -Action $componentAction
 Register-CkButtonAction -Button $selfUpdateButton -Action $selfUpdateAction
 Register-CkButtonAction -Button $joinQqGroupButton -Action $joinQqGroupAction
+Register-CkButtonAction -Button $lightThemeButton -Action $themeAction
+Register-CkButtonAction -Button $darkThemeButton -Action $themeAction
+Register-CkTextChangedAction -TextBox $toolSearchBox -Action $filterToolsAction
+$toolSearchBox.Add_KeyDown($toolSearchKeyHandler)
+$window.Add_PreviewKeyDown($windowShortcutHandler)
 
 foreach ($tool in $tools) {
     $toolConfigs[$tool.id] = $tool
@@ -1146,6 +1295,9 @@ foreach ($tool in $tools) {
     Register-CkButtonAction -Button $button -Action $navAction
     [void]$navHost.Children.Add($button)
 }
+
+$toolCountText.Text = [string]$tools.Count
+Update-CkThemeToggleUi
 
 $defaultTool = @($tools | Where-Object { $_.default })[0]
 if (-not $defaultTool) { $defaultTool = @($tools)[0] }

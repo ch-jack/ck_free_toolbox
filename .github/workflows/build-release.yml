@@ -157,6 +157,17 @@ jobs:
             }
           }
 
+      - name: Validate themes and all WPF pages
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          foreach ($testPath in @('.\tests\Test-Theme.ps1', '.\tests\Test-AllPagesTheme.ps1')) {
+            & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File $testPath
+            if ($LASTEXITCODE -ne 0) {
+              throw "Theme and page test failed: $testPath (exit $LASTEXITCODE)"
+            }
+          }
+
       - name: Build lightweight client
         shell: powershell
         run: |

@@ -7,11 +7,17 @@ CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件�
 衣服资源打包页面接入 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的 Windows x64 CLI；组件仍由稳定 Release 按需安装，不打包上游 GUI 或引擎源码。
 图片批量压缩页面接入 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img)，通过 FFmpeg 处理 JPG、PNG、GIF 和 WebP；CLI 按需安装，FFmpeg/ffprobe 由用户单独配置。
 
+主界面支持深色与浅色主题。首次启动跟随 Windows 应用主题，用户手动切换后会把选择保存到根目录 `config.json`；顶部搜索框可按工具名称筛选，`Ctrl+K` 可快速聚焦。
+
 ## 界面预览
 
-### 模型自动截图
+### 模型自动截图（深色）
 
 ![CK免费工具箱 - 模型自动截图](homepage-preview.png)
+
+### 模型自动截图（浅色）
+
+![CK免费工具箱 - 模型自动截图浅色主题](homepage-preview-light.png)
 
 ### NUI 自动去墙
 

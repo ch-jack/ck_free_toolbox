@@ -425,7 +425,7 @@
 
         $allOk = $pythonOk -and ($javaOk -or -not $javaRequired) -and $depsInfo.Ok -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
-        $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }
 
     function Set-ServerDumpRunning {
@@ -440,7 +440,7 @@
         if ($Running) {
             $ui.ProgressBar.Value = 2
             $ui.ResultStatus.Text = '正在运行'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = '正在执行服务器 Dump 及已选择的 FXAP 处理，可随时停止。'
         }
     }
@@ -585,15 +585,15 @@
         $retryResult = [bool]($Payload.PSObject.Properties['retry_failed'] -and $Payload.retry_failed -and $Payload.retry_failed.enabled)
         if ($Payload.status -eq 'success' -and $ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($retryResult) { '补充下载完成' } else { 'Dump 完成' }
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = if ($retryResult) { "失败文件已补充完成，本次下载成功 $($Payload.retry_failed.recovered_files) 个。" } else { "已输出 $outputFiles 个文件。" }
         } elseif ($Payload.status -eq 'partial' -or $ExitCode -eq 10) {
             $ui.ResultStatus.Text = if ($retryResult) { '补充完成，仍需检查' } else { '完成，需检查' }
-            $ui.ResultStatus.Foreground = '#F4B860'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
             $ui.StatusLine.Text = if ($retryResult) { "仍有 $($Payload.retry_failed.remaining_files) 个文件需要补充，请使用本次新报告继续。" } else { "任务完成但有 $warnings 个警告、$errors 个错误，请查看报告。" }
         } else {
             $ui.ResultStatus.Text = '任务失败'
-            $ui.ResultStatus.Foreground = '#EF6B73'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
             $ui.StatusLine.Text = if (@($Payload.errors).Count) { [string]@($Payload.errors)[0] } else { "进程退出码: $ExitCode" }
         }
     }
@@ -629,7 +629,7 @@
         $state.SelectedResources = @()
         $ui.ResourceSelectionText.Text = $Message
         $ui.ResourceSelectionText.ToolTip = ''
-        $ui.ResourceSelectionText.Foreground = '#686E78'
+        $ui.ResourceSelectionText.Foreground = (Get-CkThemeBrush '#686E78')
         $ui.StartButton.IsEnabled = $false
     }
 
@@ -709,7 +709,7 @@
             $box.ToolTip = [string]$resource.name
             $box.Margin = '4,4,4,4'
             $box.Padding = '2'
-            $box.Foreground = '#111827'
+            $box.Foreground = (Get-CkThemeBrush '#111827')
             $box.IsChecked = & $resourceSelectorAction -Resource $resource -Expression $pattern
             $handler = { & $updateCountAction }.GetNewClosure()
             $box.Add_Checked($handler)
@@ -775,7 +775,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF6B73'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 服务器 Dump') | Out-Null
@@ -1014,7 +1014,7 @@
         [void]$ui.TargetBox.Focus()
         if ($useIpExample) { $ui.TargetBox.SelectAll() } else { $ui.TargetBox.Select($example.Length - 4, 4) }
         $ui.ResultStatus.Text = if ($useIpExample) { '已填入 IP 示例' } else { '已填入 cfx 示例' }
-        $ui.ResultStatus.Foreground = '#72B7F2'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
         $ui.StatusLine.Text = "cfx 示例：$cfxExample；IP 示例：$ipExample"
         $ui.LogBox.Text = "支持输入示例：`r`ncfx：$cfxExample`r`nIP：$ipExample`r`n`r`nFXAP 可选择解密，或不解密并完整保留原始资源目录。"
     }.GetNewClosure()
@@ -1194,11 +1194,11 @@
             $selectedCount = $callbackState.SelectedResources.Count
             $callbackUi.ResourceSelectionText.Text = "已确认 $selectedCount / $($callbackState.ResourceNames.Count) 个资源"
             $callbackUi.ResourceSelectionText.ToolTip = ($callbackState.SelectedResources -join [Environment]::NewLine)
-            $callbackUi.ResourceSelectionText.Foreground = '#54E0A9'
+            $callbackUi.ResourceSelectionText.Foreground = (Get-CkThemeBrush '#54E0A9')
             $callbackUi.ResourceCount.Text = [string]$selectedCount
             $callbackUi.StartButton.IsEnabled = $true
             $callbackUi.ResultStatus.Text = '资源已确认'
-            $callbackUi.ResultStatus.Foreground = '#31D69A'
+            $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $callbackUi.StatusLine.Text = "已确认 $selectedCount 个资源；点击开始服务器 Dump 执行第二步。"
             Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 已确认 $selectedCount 个资源，尚未开始 Dump。"
         }.GetNewClosure()
@@ -1417,7 +1417,7 @@
             } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '结果解析失败'
-                $callbackUi.ResultStatus.Foreground = '#EF6B73'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode；dump-tool 没有返回有效 JSON。"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { 'dump-tool 没有返回输出。' }
             }
@@ -1444,7 +1444,7 @@
             if ($wasCancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.ReportPath) {
                     $callbackUi.StatusLine.Text = '任务已停止；已保留停止前生成的报告。'
                     Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
@@ -1496,7 +1496,7 @@
         $state.CancelRequested = $true
         $ui.StopButton.IsEnabled = $false
         $ui.ResultStatus.Text = '正在停止'
-        $ui.ResultStatus.Foreground = '#F4B860'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = if ($state.Operation -eq 'resource-list') {
             '正在停止资源清单获取...'
         } else {

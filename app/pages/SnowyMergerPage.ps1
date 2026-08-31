@@ -157,7 +157,7 @@
         if ($Running) {
             $ui.ProgressBar.Value = 5
             $ui.ResultStatus.Text = '正在合并'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = '正在扫描冲突并读取 GTA V 原版文件，请勿关闭工具箱。'
         }
     }.GetNewClosure()
@@ -187,7 +187,7 @@
 
         $allOk = $environment.DotNet8.Ok -and $componentOk -and $gtaOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
-        $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }.GetNewClosure()
 
     $saveReportAction = {
@@ -217,7 +217,7 @@
     $showPageError = {
         param([string]$Message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $Message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $Message"
         [System.Windows.MessageBox]::Show($Message, 'CK免费工具箱 - 地图冲突合并') | Out-Null
@@ -413,25 +413,25 @@
             if ($cancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = 'SnowyMerger 已停止；已经写出的文件不会自动回滚。'
             } elseif ($ExitCode -ne 0) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '合并失败'
-                $callbackUi.ResultStatus.Foreground = '#EF7C86'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
                 $callbackUi.StatusLine.Text = "SnowyMerger 退出码: $ExitCode。请查看本次日志。"
             } elseif ($callbackState.NoConflicts) {
                 $callbackUi.ResultStatus.Text = '未发现冲突'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = '输入目录没有重复 YMAP；未生成新的 snowy_merger resource。'
             } elseif (Test-Path -LiteralPath (Join-Path $callbackState.OutputPath 'snowy_merger') -PathType Container) {
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.ResultStatus.Text = '合并完成'
-                $callbackUi.ResultStatus.Foreground = '#31D69A'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
                 $callbackUi.StatusLine.Text = 'snowy_merger 已生成；请检查日志中的跳过项与冲突策略。'
             } else {
                 $callbackUi.ResultStatus.Text = '未生成输出'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = '进程正常结束，但没有找到 snowy_merger 输出目录。'
             }
 

@@ -176,7 +176,7 @@
         $pythonOk = [bool]$pythonInfo.Ok
         $ok = $scriptOk -and $pythonOk
         Set-CkStatusDot $ui.EnvironmentDot $ok
-        $ui.EnvironmentText.Foreground = if ($ok) { '#31D69A' } else { '#EF6B73' }
+        $ui.EnvironmentText.Foreground = if ($ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF6B73') }
         $ui.EnvironmentText.Text = if ($ok) { "运行环境就绪 · $($pythonInfo.Label)" } elseif (-not $scriptOk) { '缺少后门扫描组件' } else { '缺少 Python 3.7+' }
         $ui.EnvironmentText.ToolTip = if ($pythonOk) { [string]$pythonInfo.Path } else { [string]$pythonInfo.Reason }
         $ui.PythonDownloadButton.Visibility = if ($pythonOk) { 'Collapsed' } else { 'Visible' }
@@ -195,7 +195,7 @@
         $ui.ProgressBar.IsIndeterminate = $Running
         if ($Running) {
             $ui.ResultStatus.Text = $Label
-            $ui.ResultStatus.Foreground = '#58A6FF'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#58A6FF')
             $ui.StatusLine.Text = '正在进行纯静态处理，可随时停止任务。'
             $ui.ProgressBar.Value = 18
         } else {
@@ -446,7 +446,7 @@
 
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($operation -eq 'restore') { '恢复完成' } else { '处理完成' }
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = if ($verdict -eq 'clean' -and $findings -gt 0) {
                 "未发现高风险后门；仍有 $findings 条审计提示，请查看结果表。"
             } elseif ($verdict -eq 'clean') {
@@ -456,15 +456,15 @@
             }
         } elseif ($ExitCode -eq 10) {
             $ui.ResultStatus.Text = if ($state.LastOperation -eq 'scan') { '发现风险' } else { '预览完成，等待确认' }
-            $ui.ResultStatus.Foreground = '#F4B860'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
             $ui.StatusLine.Text = if ($state.LastOperation -eq 'scan') { '发现可疑或已确认感染项，请查看明细。' } else { '当前仅生成预览，没有写入目标。' }
         } elseif ($ExitCode -eq 50) {
             $ui.ResultStatus.Text = '恢复冲突'
-            $ui.ResultStatus.Foreground = '#EF6B73'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
             $ui.StatusLine.Text = '移除后的文件又发生变化，默认拒绝覆盖。'
         } else {
             $ui.ResultStatus.Text = '处理失败'
-            $ui.ResultStatus.Foreground = '#EF6B73'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
             $ui.StatusLine.Text = if ($errorText) { $errorText } else { "进程退出码: $ExitCode" }
         }
     }
@@ -484,7 +484,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF6B73'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 扫描移除后门') | Out-Null
@@ -790,14 +790,14 @@
             } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '结果解析失败'
-                $callbackUi.ResultStatus.Foreground = '#EF6B73'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '后门扫描组件没有返回结果。' }
             }
             if ($wasCancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.ReportPath) {
                     $callbackUi.StatusLine.Text = '任务已停止；已保留停止前组件返回的本次报告。'
                     Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"
@@ -826,7 +826,7 @@
         $state.CancelRequested = $true
         $ui.CancelButton.IsEnabled = $false
         $ui.ResultStatus.Text = '正在停止'
-        $ui.ResultStatus.Foreground = '#F4B860'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = '正在停止当前任务...'
         try { $state.Process.Process.Kill() } catch { $state.CancelRequested = $false; throw "停止任务失败: $($_.Exception.Message)" }
     }.GetNewClosure()

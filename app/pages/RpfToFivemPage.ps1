@@ -166,7 +166,7 @@
         $ui.ComponentText.Text = if ($componentOk) { '提取器与 7-Zip 已就绪' } else { '请在顶部安装组件' }
         $allOk = $pythonOk -and $environment.DotNet.Ok -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
-        $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }
 
     function Set-RpfRunning {
@@ -179,7 +179,7 @@
         if ($Running) {
             $ui.ProgressBar.Value = 10
             $ui.ResultStatus.Text = '正在转换'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = '正在扫描输入、解压并转换 RPF，可随时停止。'
         } else {
             $ui.ProgressBar.IsIndeterminate = $false
@@ -228,7 +228,7 @@
             $detail = if ($item.error) { [string]$item.error } elseif ($item.output) { [string]$item.output } else { [string]$item.relative_hint }
             [void]$rows.Add([pscustomobject]@{
                 Status = $(if ($ok) { '转换成功' } else { '转换失败' })
-                StatusColor = $(if ($ok) { '#31D69A' } else { '#EF7C86' })
+                StatusColor = $(if ($ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#EF7C86') })
                 Name = [string]$item.resource_name
                 Detail = $detail
                 FilesText = "$([int]$item.output_files) 文件"
@@ -276,15 +276,15 @@
 
         if ($found -eq 0) {
             $ui.ResultStatus.Text = '未发现 RPF'
-            $ui.ResultStatus.Foreground = '#F4B860'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
             $ui.StatusLine.Text = '输入中没有可处理的 RPF，请检查目录或压缩包。'
         } elseif ($failed -gt 0 -or $ExitCode -ne 0) {
             $ui.ResultStatus.Text = '完成，部分失败'
-            $ui.ResultStatus.Foreground = '#F4B860'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
             $ui.StatusLine.Text = "成功 $succeeded，失败 $failed；请查看资源明细。"
         } else {
             $ui.ResultStatus.Text = '转换完成'
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = "已生成 $succeeded 个 FiveM resource，共 $outputFiles 个文件。"
         }
     }
@@ -300,7 +300,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - RPF 转 FiveM') | Out-Null
@@ -492,14 +492,14 @@
             if ($payload) { & $callbackShowResult $payload $exitCode } else {
                 $callbackUi.ProgressBar.Value = 94
                 $callbackUi.ResultStatus.Text = '转换失败'
-                $callbackUi.ResultStatus.Foreground = '#EF7C86'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
                 $callbackUi.StatusLine.Text = "进程退出码: $exitCode；转换器没有返回有效 JSON。"
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '转换器没有返回输出。' }
             }
             if ($cancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.ReportPath) {
                     $callbackUi.StatusLine.Text = '转换已停止；已归档停止前生成的本次报告。已完成的 resource 不会自动删除。'
                     Add-CkLogLine -TextBox $callbackUi.LogBox -Line "本次报告: $($callbackState.ReportPath)"

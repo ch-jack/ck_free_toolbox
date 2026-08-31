@@ -241,7 +241,7 @@
         $ui.RendererText.Text = $env.Renderer.Label
         Set-CkStatusDot $ui.RendererDot $env.Renderer.Ok
         $ui.DependencyStatus.Text = if ($env.AllOk) { '全部就绪' } else { '请处理缺失项' }
-        $ui.DependencyStatus.Foreground = if ($env.AllOk) { '#31D69A' } else { '#F4B860' }
+        $ui.DependencyStatus.Foreground = if ($env.AllOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
         $ui.CpuText.Text = $env.CpuName
         $ui.MemoryText.Text = if ($env.MemoryGb) { "$($env.MemoryGb) GB" } else { '-- GB' }
         $ui.WorkerText.Text = "并行 $($env.RecommendedWorkers) 个任务"

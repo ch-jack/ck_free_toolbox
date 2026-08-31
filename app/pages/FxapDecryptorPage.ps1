@@ -283,24 +283,24 @@
 
         switch ($Status) {
             'available' {
-                $ui.ApiStatusDot.Fill = '#31D69A'
+                $ui.ApiStatusDot.Fill = (Get-CkThemeBrush '#31D69A')
                 $ui.ApiStatusText.Text = 'API 可用'
-                $ui.ApiStatusText.Foreground = '#31D69A'
+                $ui.ApiStatusText.Foreground = (Get-CkThemeBrush '#31D69A')
             }
             'unavailable' {
-                $ui.ApiStatusDot.Fill = '#EF6B73'
+                $ui.ApiStatusDot.Fill = (Get-CkThemeBrush '#EF6B73')
                 $ui.ApiStatusText.Text = 'API 不可用'
-                $ui.ApiStatusText.Foreground = '#EF6B73'
+                $ui.ApiStatusText.Foreground = (Get-CkThemeBrush '#EF6B73')
             }
             'unconfigured' {
-                $ui.ApiStatusDot.Fill = '#6E7580'
+                $ui.ApiStatusDot.Fill = (Get-CkThemeBrush '#6E7580')
                 $ui.ApiStatusText.Text = 'API 待组件'
-                $ui.ApiStatusText.Foreground = '#8B929E'
+                $ui.ApiStatusText.Foreground = (Get-CkThemeBrush '#8B929E')
             }
             default {
-                $ui.ApiStatusDot.Fill = '#F4B860'
+                $ui.ApiStatusDot.Fill = (Get-CkThemeBrush '#F4B860')
                 $ui.ApiStatusText.Text = 'API 检测中'
-                $ui.ApiStatusText.Foreground = '#F4B860'
+                $ui.ApiStatusText.Foreground = (Get-CkThemeBrush '#F4B860')
             }
         }
         $ui.ApiImpactNoticePanel.Visibility = if ($Status -in @('unavailable','unconfigured')) { 'Visible' } else { 'Collapsed' }
@@ -370,7 +370,7 @@
         $state.Ready = $nodeOk -and $componentOk
 
         Set-CkStatusDot $ui.NodeDot $nodeOk
-        $ui.JavaDot.Fill = if ($javaOk) { '#31D69A' } else { '#F4B860' }
+        $ui.JavaDot.Fill = if ($javaOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
         Set-CkStatusDot $ui.ComponentDot $componentOk
         $ui.NodeText.Text = [string]$nodeInfo.Label
         $ui.NodeText.ToolTip = if ($nodeOk) { [string]$nodeInfo.Path } else { [string]$nodeInfo.Reason }
@@ -380,7 +380,7 @@
         $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
         $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
-        $ui.DotNet8Dot.Fill = if ($dotNet8Ok) { '#31D69A' } else { '#F4B860' }
+        $ui.DotNet8Dot.Fill = if ($dotNet8Ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
         $ui.DotNet8Text.Text = [string]$dotNet8Info.Label
         $ui.DotNet8Text.ToolTip = if ($dotNet8Ok) { [string]$dotNet8Info.Path } else { '只有勾选自动修复顶点时才需要 .NET 8 Runtime。' }
         $ui.DotNet8DownloadButton.Visibility = if ($dotNet8Ok) { 'Collapsed' } else { 'Visible' }
@@ -393,10 +393,10 @@
 
         if ($state.Ready) {
             $ui.EnvironmentStatus.Text = if ($javaOk) { '运行环境就绪' } else { '可运行 · Lua 保留字节码' }
-            $ui.EnvironmentStatus.Foreground = if ($javaOk) { '#31D69A' } else { '#F4B860' }
+            $ui.EnvironmentStatus.Foreground = if ($javaOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
         } else {
             $ui.EnvironmentStatus.Text = '请处理缺失项'
-            $ui.EnvironmentStatus.Foreground = '#EF7C86'
+            $ui.EnvironmentStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         }
         if (-not $state.Process) { $ui.StartButton.IsEnabled = [bool]$state.Ready }
         & $updateOutputPathAction
@@ -416,7 +416,7 @@
         $ui.ProgressBar.IsIndeterminate = $false
         if ($Running) {
             $ui.ResultStatus.Text = '正在解密'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = '正在识别 resource、获取密钥并解密文件，可随时停止。'
             $ui.ProgressBar.Value = 2
         }
@@ -669,7 +669,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF6B73'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - FXAP 文件夹解密') | Out-Null
@@ -856,17 +856,17 @@
             $reportStatus = if ($cancelled) { 'cancelled' } elseif ($exitCode -eq 0) { 'success' } elseif ($exitCode -eq 2) { 'partial' } else { 'failed' }
             if ($cancelled) {
                 $callbackUi.ResultStatus.Text = '已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.StatusLine.Text = '任务已停止；已输出的文件不会自动删除。'
             } elseif ($exitCode -eq 0) {
                 $callbackUi.ResultStatus.Text = '解密完成'
-                $callbackUi.ResultStatus.Foreground = '#31D69A'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.StatusLine.Text = "已完成 $($callbackState.ResourceTotal) 个 resource，输出位于 $($callbackState.OutputPath)"
             } elseif ($exitCode -eq 2) {
                 $vertexFailed = $callbackState.VertexFixRequested -and $callbackState.VertexFixStatus -in @('failed','partial')
                 $callbackUi.ResultStatus.Text = if ($vertexFailed) { '解密完成，顶点修复存在失败' } else { '完成，存在文件失败' }
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.StatusLine.Text = if ($vertexFailed) {
                     "原解密输出已保留；顶点修复处理 $($callbackState.VertexFixRepaired)，失败 $($callbackState.VertexFixFailed)，请检查日志。"
@@ -875,7 +875,7 @@
                 }
             } else {
                 $callbackUi.ResultStatus.Text = '解密失败'
-                $callbackUi.ResultStatus.Foreground = '#EF6B73'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
                 $callbackUi.StatusLine.Text = "fxap_only 退出码: $exitCode，请查看日志。"
             }
             if (-not $cancelled -and $callbackAutoOpenRequested -and $reportStatus -in @('success','partial')) {

@@ -245,7 +245,7 @@
         $ui.ComponentText.Text = if ($componentOk) { '自包含 Windows x64 CLI 已就绪' } else { '请在顶部安装组件' }
         $ui.ComponentText.ToolTip = [string]$Context.Paths.ClothingRepackerExe
         $ui.EnvironmentStatus.Text = if ($componentOk) { '运行环境就绪' } else { '组件未安装' }
-        $ui.EnvironmentStatus.Foreground = if ($componentOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($componentOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }.GetNewClosure()
 
     $updateAnalyzeInputModeAction = {
@@ -280,7 +280,7 @@
     $showPageError = {
         param([string]$Message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $Message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $Message"
         [System.Windows.MessageBox]::Show($Message, 'CK免费工具箱 - 衣服资源打包') | Out-Null
@@ -1208,7 +1208,7 @@
             $ui.ProgressBar.IsIndeterminate = $true
             $ui.ProgressBar.Value = 8
             $ui.ResultStatus.Text = '正在运行'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = 'CLI 正在处理，请留意日志中的警告与错误。'
         } else { $ui.ProgressBar.IsIndeterminate = $false }
     }.GetNewClosure()
@@ -1326,7 +1326,7 @@
             if ($cancelled) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务已停止'
-                $callbackUi.ResultStatus.Foreground = '#F4B860'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 if ($callbackState.CommandKey -eq 'apply' -and -not $trustedRestorePath) {
                     $callbackUi.StatusLine.Text = 'apply 已停止且没有可信恢复记录；输出可能不完整，请勿启动服务器，并手动检查生成目录与备份目录。'
                     if (-not $safetyError) { $safetyError = 'apply 被停止且没有可信恢复记录；需要手动检查和清理不完整输出。' }
@@ -1344,7 +1344,7 @@
             } elseif ($ExitCode -ne 0 -or $safetyError) {
                 $callbackUi.ProgressBar.Value = 0
                 $callbackUi.ResultStatus.Text = '任务失败'
-                $callbackUi.ResultStatus.Foreground = '#EF7C86'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
                 $callbackUi.StatusLine.Text = if ($safetyError) { $safetyError } elseif ($trustedRestorePath) { "CLI 退出码: ${ExitCode}；存在可信恢复清单，可检查并恢复：$trustedRestorePath" } else { "CLI 退出码: ${ExitCode}。请查看日志中的具体错误。" }
                 if ($safetyError) {
                     $toolboxLine = "[工具箱] $safetyError"
@@ -1358,7 +1358,7 @@
             } else {
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.ResultStatus.Text = '任务完成'
-                $callbackUi.ResultStatus.Foreground = '#31D69A'
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
                 $callbackUi.StatusLine.Text = "$($callbackState.CommandName)已完成，请检查日志中的警告与统计。"
             }
             $logPath = ''

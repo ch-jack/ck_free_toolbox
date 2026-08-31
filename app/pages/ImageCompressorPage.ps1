@@ -172,7 +172,7 @@
         $ui.ComponentText.ToolTip = [string]$Context.Paths.ImageCompressorScript
         $allOk = $python.Ok -and $ffmpeg.Ok -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
-        $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }
 
     function Set-ImageRunning {
@@ -189,7 +189,7 @@
         $ui.StopButton.IsEnabled = $Running
         if ($Running) {
             $ui.ResultStatus.Text = '正在处理'
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
         }
     }
 
@@ -270,11 +270,11 @@
         $ui.ProgressBar.Value = if ($ExitCode -eq 0) { 100 } else { 96 }
         if ($ExitCode -eq 0 -and $failed -eq 0) {
             $ui.ResultStatus.Text = '处理完成'
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = "共 $($rows.Count) 个文件，节省 $( & $formatBytesAction $savedBytes )（$($savedPercent.ToString('0.00'))%）。"
         } else {
             $ui.ResultStatus.Text = '任务存在失败'
-            $ui.ResultStatus.Foreground = '#EF7C86'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
             $ui.StatusLine.Text = "失败 $failed 个；请检查逐文件报告。"
         }
     }
@@ -293,7 +293,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 图片批量压缩') | Out-Null
@@ -490,7 +490,7 @@
                 & $callbackShowResult $payload $exitCode
             } else {
                 $callbackUi.ResultStatus.Text = if ($cancelled) { '任务已停止' } else { '结果解析失败' }
-                $callbackUi.ResultStatus.Foreground = if ($cancelled) { '#F4B860' } else { '#EF7C86' }
+                $callbackUi.ResultStatus.Foreground = if ($cancelled) { (Get-CkThemeBrush '#F4B860') } else { (Get-CkThemeBrush '#EF7C86') }
                 $callbackUi.StatusLine.Text = if ($cancelled) { '任务已由用户停止。' } else { "进程退出码: $exitCode" }
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '组件没有返回 JSON 结果。' }
             }

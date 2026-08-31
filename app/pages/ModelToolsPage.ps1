@@ -273,7 +273,7 @@
         $ui.ComponentText.Text = if ($componentOk) { 'list / copy 组件已就绪' } else { '请在顶部安装组件' }
         $allOk = $pythonOk -and $componentOk
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
-        $ui.EnvironmentStatus.Foreground = if ($allOk) { '#31D69A' } else { '#F4B860' }
+        $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }
 
     function Set-ModelToolsRunning {
@@ -285,7 +285,7 @@
         $ui.ProgressBar.IsIndeterminate = $Running
         if ($Running) {
             $ui.ResultStatus.Text = $Label
-            $ui.ResultStatus.Foreground = '#72B7F2'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#72B7F2')
             $ui.StatusLine.Text = '正在纯静态扫描资源；不会执行输入目录中的任何代码。'
             $ui.ProgressBar.Value = 8
         } else {
@@ -359,9 +359,9 @@
                 }
                 default { '未知' }
             }
-            $typeColor = switch ($kind) { 'vehicle' { '#72B7F2' } 'weapon' { '#A99CFF' } 'sound' { '#76D7C4' } 'mixed' { '#F4B860' } default { '#777B83' } }
+            $typeColor = switch ($kind) { 'vehicle' { (Get-CkThemeBrush '#72B7F2') } 'weapon' { (Get-CkThemeBrush '#A99CFF') } 'sound' { (Get-CkThemeBrush '#76D7C4') } 'mixed' { (Get-CkThemeBrush '#F4B860') } default { (Get-CkThemeBrush '#777B83') } }
             $confidenceText = switch ($confidence) { 'confirmed' { '已确认' } 'possible' { '疑似' } 'partial' { '部分确认' } default { '未知' } }
-            $confidenceColor = if ($confidence -eq 'confirmed') { '#31D69A' } else { '#F4B860' }
+            $confidenceColor = if ($confidence -eq 'confirmed') { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
             $statusText = switch ($status) {
                 'listed' { '已列出' }
                 'copied' { '已复制' }
@@ -372,7 +372,7 @@
                 'failed' { '失败' }
                 default { $status }
             }
-            $statusColor = switch ($status) { 'copied' { '#31D69A' } 'failed' { '#EF7C86' } 'blocked' { '#EF7C86' } 'skipped_exists' { '#F4B860' } default { '#8B9099' } }
+            $statusColor = switch ($status) { 'copied' { (Get-CkThemeBrush '#31D69A') } 'failed' { (Get-CkThemeBrush '#EF7C86') } 'blocked' { (Get-CkThemeBrush '#EF7C86') } 'skipped_exists' { (Get-CkThemeBrush '#F4B860') } default { (Get-CkThemeBrush '#8B9099') } }
             $reasons = @(& $getPropertyAction $item 'reasons' @()) -join '; '
             $warnings = @(& $getPropertyAction $item 'warnings' @()) -join '; '
             $errorText = [string](& $getPropertyAction $item 'error' '')
@@ -406,12 +406,12 @@
         $copied = & $getIntAction $summary 'copied'
         if ($ExitCode -eq 0) {
             $ui.ResultStatus.Text = if ($state.Operation -eq 'copy') { '复制任务完成' } else { '清单已生成' }
-            $ui.ResultStatus.Foreground = '#31D69A'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = if ($matched -eq 0) { '没有识别到符合筛选条件的载具、武器或声浪资源。' } elseif ($state.Operation -eq 'copy') { "已复制 $copied 个资源；请检查跳过项和报告。" } else { "已列出 $matched 个资源；清单没有复制文件。" }
             $ui.ProgressBar.Value = 100
         } else {
             $ui.ResultStatus.Text = '任务存在错误'
-            $ui.ResultStatus.Foreground = '#EF7C86'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
             $ui.StatusLine.Text = "失败 $failed，安全阻止 $blocked；请查看本次报告。"
             $ui.ProgressBar.Value = 96
         }
@@ -431,7 +431,7 @@
     $showPageError = {
         param([string]$message)
         $ui.ResultStatus.Text = '操作失败'
-        $ui.ResultStatus.Foreground = '#EF7C86'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#EF7C86')
         $ui.StatusLine.Text = $message
         Add-CkLogLine -TextBox $ui.LogBox -Line "[工具箱] $message"
         [System.Windows.MessageBox]::Show($message, 'CK免费工具箱 - 载具武器声浪提取') | Out-Null
@@ -587,7 +587,7 @@
                 }
             } else {
                 $callbackUi.ResultStatus.Text = if ($cancelled) { '任务已停止' } else { '结果解析失败' }
-                $callbackUi.ResultStatus.Foreground = if ($cancelled) { '#F4B860' } else { '#EF7C86' }
+                $callbackUi.ResultStatus.Foreground = if ($cancelled) { (Get-CkThemeBrush '#F4B860') } else { (Get-CkThemeBrush '#EF7C86') }
                 $callbackUi.StatusLine.Text = if ($cancelled) { '任务已由用户停止。' } else { "进程退出码: $exitCode" }
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { '组件没有返回 JSON 结果。' }
                 $callbackUi.OpenReportButton.IsEnabled = Test-Path -LiteralPath $callbackState.ReportPath -PathType Leaf
