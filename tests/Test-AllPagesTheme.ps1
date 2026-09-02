@@ -55,6 +55,8 @@ $context = [pscustomobject]@{
         ClothingRepackerExe = Join-Path $workspaceRoot 'red40-clothing-packer\ClothingRepacker.Cli.exe'
         ImageCompressorDir = Join-Path $workspaceRoot 'fivem-compression-img'
         ImageCompressorScript = Join-Path $workspaceRoot 'fivem-compression-img\fivem-compression-img.py'
+        VjmiDevToolsDir = Join-Path $workspaceRoot 'arya-fivem-tool'
+        VjmiDevToolsExe = Join-Path $workspaceRoot 'arya-fivem-tool\AryaFiveMTool.exe'
         DefaultWallfixInput = ''
         DefaultRpfInput = ''
         DefaultAntiJohnInput = ''
@@ -78,7 +80,7 @@ try {
     $registry = Get-Content -LiteralPath (Join-Path $appRoot 'config\tools.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $tools = @()
     foreach ($registeredTool in $registry) { $tools += $registeredTool }
-    Assert-CkPageThemeTest ($tools.Count -eq 12) "Expected 12 registered tools, found $($tools.Count)."
+    Assert-CkPageThemeTest ($tools.Count -eq 13) "Expected 13 registered tools, found $($tools.Count)."
 
     $pages = @{}
     $darkSamples = @{}

@@ -18,6 +18,7 @@ dist/
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
 SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件工作器按需创建。
 Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-packer，发布包只保留中文 CLI 页面和组件登记。
+Arya FiveM Tool 同样不预装；其运行目录为 arya-fivem-tool，发布包只保留中文启动页和组件登记。
 
 ## 运行时 Release 组件
 
@@ -30,6 +31,7 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 - 秒杀小哈对应 [ch-jack/xiaoha_cleaner](https://github.com/ch-jack/xiaoha_cleaner)。
 - 地图冲突合并对应 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)。
 - 衣服资源打包对应 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer)。
+- FiveM NUI 调试对应 [ch-jack/vjmidevtools](https://github.com/ch-jack/vjmidevtools)。
 - 启动后后台依次检查所有登记组件的最新稳定 Release，缓存每个组件的最新版本或检查错误，不阻塞主窗口。
 - 组件缺失时显示“安装组件”，用户确认后才访问公开 releases/latest 跳转。
 - 只下载配置匹配的 Release ZIP，不使用 codeload、分支源码 ZIP 或 Git clone。
@@ -42,6 +44,7 @@ Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-pack
 模型 Release 已内置 Sollumz v2.8.3，工具箱通过 Blender 自带 Python 配置带哈希校验的依赖。NUI、RPF 与扫描移除后门组件的 Python 入口只使用标准库；秒杀小哈 v1.1.0 起优先使用独立 EXE 并保留 Python 回退。RPF Release 另内置提取器、CodeWalker DLL 和 7-Zip。旧版 commit 清单会在下一次更新时迁移。
 SnowyMerger Release 自带 YmapMerger、MewUI、CodeWalker.Core 及运行清单；工具箱只依赖系统 .NET 8 Runtime 和用户本机 GTA V。
 Red40 Release 提供自包含 Windows x64 `ClothingRepacker.Cli.exe`、README、GPL-3.0 许可证和 CodeWalker 第三方声明；工具箱不启动 GUI，也不要求另装 .NET。
+VJMI DevTools Release 提供自包含 Windows x64 `AryaFiveMTool.exe`，ZIP 只有一个 `vjmidevtools/` 顶层目录并附带独立 SHA-256；工具箱不安装系统 Python。
 
 FXAP 解密组件保持按需安装；其可选顶点修复由组件 Release 提供最小 CLI 文件，工具箱本体不内置 FXAP 组件或 .NET Runtime。启用后只处理本次完整解密成功资源的完整副本，并默认在完成后打开修复副本（未生成副本则打开原解密目录）。
 
@@ -167,6 +170,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tools\Build-ReleasePac
 - ZIP 中不存在根目录 `config.json`、`vehicle_renderer/`、`nui-wallfix/`、`rpf_to_fivem/`、`ck_anti_john/`、`xiaoha_cleaner/`、`runtime/blender/`、`blender.exe` 和 `python.exe`。
 - ZIP 中不存在 snowy-merger/；SnowyMergerPage.ps1 和 tools.json 注册必须存在。
 - ZIP 中不存在 red40-clothing-packer/；ClothingRepackerPage.ps1 和 tools.json 注册必须存在，清单中的 clothingRepacker 必须为 false。
+- ZIP 中不存在 arya-fivem-tool/；VjmiDevToolsPage.ps1 和 tools.json 注册必须存在，清单中的 vjmiDevTools 必须为 false。
 - 全新配置首次启动显示免责条款；未勾选时同意按钮不可用，拒绝或关闭后不进入主界面，同意后再次启动不重复弹出同版本条款。条款版本 2 新增“允许二创、禁止收费”，已同意版本 1 的配置必须重新确认。
 - 首次启动时各按需组件页面显示组件缺失，并提供“安装组件”操作。
 - 模型组件安装后可扫描并渲染 `.yft`、`.ydr`、`.ydd` 或 `.ymap`。

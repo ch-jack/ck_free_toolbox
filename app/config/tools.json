@@ -300,6 +300,32 @@
         "default": false
     },
     {
+        "id": "vjmidevtools",
+        "title": "FiveM NUI 调试",
+        "icon": "⌘",
+        "page": "VjmiDevToolsPage.ps1",
+        "factory": "New-CkVjmiDevToolsPage",
+        "sourceUrl": "https://github.com/ch-jack/vjmidevtools",
+        "component": {
+            "repo": "ch-jack/vjmidevtools",
+            "installDir": "arya-fivem-tool",
+            "bootstrap": "",
+            "releaseAssetPattern": "vjmidevtools-*-windows-x64.zip",
+            "releaseChecksumAssetPattern": "vjmidevtools-*-windows-x64.zip.sha256",
+            "requiredFiles": [
+                "AryaFiveMTool.exe",
+                "_internal/python312.dll",
+                "_internal/pythonnet/runtime/Python.Runtime.dll",
+                "_internal/webview/lib/runtimes/win-x64/native/WebView2Loader.dll",
+                "VERSION",
+                "component-manifest.json",
+                "README.md",
+                "NOTICE.md"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "enhanced-converter",
         "title": "增强版转换器",
         "icon": "✦",

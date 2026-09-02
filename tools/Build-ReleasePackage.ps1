@@ -243,8 +243,10 @@ $userGuide = @(
     'SnowyMerger v1.2+ 需要系统安装 .NET 8 Runtime；页面会自动检测并提供官网。',
     'Red40 衣服资源打包 CLI 同样按需安装，不会预装进工具箱发布包。',
     '图片批量压缩 CLI 同样按需安装；FFmpeg/ffprobe 由用户单独安装或选择，不会打包。',
+    'FiveM NUI 调试组件同样按需安装；组件是自包含 Windows x64 程序，不依赖系统 Python。',
+    'FiveM NUI 调试仅限自有或明确授权的服务器；JavaScript、URL 屏蔽和 vRP 批量动作可能影响实时玩家或服务器数据。',
     '请勿删除 app 和 static 目录。运行后安装的 vehicle_renderer、nui-wallfix、rpf_to_fivem、fivem_model_tools、dump-tool、fxap-decryptor、ck_anti_john、xiaoha_cleaner 目录也需要保留。',
-    '运行后安装的 snowy-merger、red40-clothing-packer 和 fivem-compression-img 目录也需要保留。',
+    '运行后安装的 snowy-merger、red40-clothing-packer、fivem-compression-img 和 arya-fivem-tool 目录也需要保留。',
     '支持 Windows 10/11 64 位系统。'
 ) -join [Environment]::NewLine
 [IO.File]::WriteAllText((Join-Path $packagePath '使用说明.txt'), $userGuide, $Utf8Bom)
@@ -266,6 +268,7 @@ $requiredPackageFiles = @(
     (Join-Path $packagePath 'app\pages\SnowyMergerPage.ps1'),
     (Join-Path $packagePath 'app\pages\ClothingRepackerPage.ps1'),
     (Join-Path $packagePath 'app\pages\ImageCompressorPage.ps1'),
+    (Join-Path $packagePath 'app\pages\VjmiDevToolsPage.ps1'),
     (Join-Path $packagePath 'app\pages\AntiJohnPage.ps1'),
     (Join-Path $packagePath 'app\pages\XiaohaCleanerPage.ps1'),
     (Join-Path $packagePath 'app\pages\EnhancedConverterPage.ps1'),
@@ -331,6 +334,7 @@ $manifest = [ordered]@{
         snowyMerger = $false
         clothingRepacker = $false
         imageCompressor = $false
+        vjmiDevTools = $false
         alchemist = $true
         componentManager = $true
         selfUpdater = $true

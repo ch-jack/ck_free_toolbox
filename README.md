@@ -6,6 +6,7 @@ CK免费工具箱 v1.0.2 是纯本机客户端工具，不需要服务端文件�
 地图冲突合并页面接入 [ch-jack/SnowyMerger](https://github.com/ch-jack/SnowyMerger)，同样通过稳定 Release 按需安装，不在工具箱仓库内复制其引擎源码。
 衣服资源打包页面接入 [ch-jack/red40_clothing_packer](https://github.com/ch-jack/red40_clothing_packer) 的 Windows x64 CLI；组件仍由稳定 Release 按需安装，不打包上游 GUI 或引擎源码。
 图片批量压缩页面接入 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img)，通过 FFmpeg 处理 JPG、PNG、GIF 和 WebP；CLI 按需安装，FFmpeg/ffprobe 由用户单独配置。
+FiveM NUI 调试页面接入 [ch-jack/vjmidevtools](https://github.com/ch-jack/vjmidevtools) 的 Arya Windows x64 程序；组件按需安装，不依赖系统 Python，也不会预装进工具箱发布包。
 
 主界面支持深色与浅色主题。首次启动跟随 Windows 应用主题，用户手动切换后会把选择保存到根目录 `config.json`；顶部搜索框可按工具名称筛选，`Ctrl+K` 可快速聚焦。
 
@@ -141,6 +142,14 @@ git push origin v1.0.2
 - 每次运行生成 UTF-8 CSV 和 JSON，逐文件记录文件名、格式、原大小、新大小、节省空间、压缩率、耗时和错误。
 - 组件从 [ch-jack/fivem_compression_img](https://github.com/ch-jack/fivem_compression_img) 的稳定 Release 按需安装并校验 SHA-256；FFmpeg 与 ffprobe 不打包进组件或工具箱。
 
+### FiveM NUI 调试
+
+- 通过 FiveM 本机 `localhost:13172` Chrome DevTools Protocol 端口监控 NUI 流量、检查目标、导出 HTML/JavaScript，并对明确选择的 NUI 上下文执行调试脚本。
+- Arya 以自包含 Windows x64 组件运行；优先打开 WebView2 窗口，失败时回退到本机浏览器，不要求用户安装 Python。
+- 本地控制 API 只监听 `127.0.0.1:5000`，使用每进程随机会话、Host/Origin 校验；端口被其他程序占用时只报错，不会结束对方进程。
+- URL 屏蔽默认不启用任何隐藏规则；vRP 批量传送、封禁、监禁、消息和转账在执行前再次确认。
+- 仅限自有或明确授权的服务器和资源；JavaScript、URL 屏蔽及批量管理动作可能影响实时玩家和服务器数据。
+
 ### FXAP 文件夹解密
 
 - 选择直接包含 `.fxap` 的单个 resource，或包含多个 resource 的父目录；输出自动写到相邻的 `<目录名>_decrypted`。
@@ -219,6 +228,7 @@ git push origin v1.0.2
 - 已安装的 snowy-merger 组件及其 vanilla_cache 同样位于工具箱核心更新边界之外，不会被自更新删除。
 - 已安装的 red40-clothing-packer 组件及 ClothingRepackerWork 方案、备份、报告和输出同样不会被自更新删除。
 - 已安装的 fivem-compression-img 组件、图片输出和 `%LOCALAPPDATA%\CKFreeToolbox\image-compressor-reports` 报告不会被自更新删除。
+- 已安装的 arya-fivem-tool 组件及 `%LOCALAPPDATA%\AryaJSTool` 本地数据不会被自更新删除。
 - 替换失败会自动恢复旧核心文件，日志位于 %LOCALAPPDATA%\CKFreeToolbox\update.log。
 
 ## 交互可靠性
@@ -276,10 +286,11 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、秒杀小哈、地图冲突合并、衣服资源打包、图片批量压缩和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、秒杀小哈、地图冲突合并、衣服资源打包、图片批量压缩、FiveM NUI 调试和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
 衣服资源打包以 clothing-repacker 注册为外置 Release 组件，页面工厂为 New-CkClothingRepackerPage。
 图片批量压缩以 image-compressor 注册为外置 Release 组件，页面工厂为 New-CkImageCompressorPage。
+FiveM NUI 调试以 vjmidevtools 注册为外置 Release 组件，页面工厂为 New-CkVjmiDevToolsPage。
 
 每个工具还可注册 sourceUrl、component.repo 和 releaseAssetPattern。主窗口据此显示开源链接、检测必需文件、查询最新稳定 Release 并调用隔离组件工作器。
 
@@ -289,6 +300,7 @@ ck_free_toolbox/
 开发模式下同级 snowy-merger 目录也会直接被检测；正式轻量包仍只包含页面与统一安装代码。
 开发模式下同级 red40-clothing-packer 目录也会直接检测其中的 `ClothingRepacker.Cli.exe`；正式轻量包不会内置该组件。
 开发模式下同级 fivem-compression-img 目录也会直接检测；正式轻量包不会内置该组件或 FFmpeg 二进制。
+开发模式下同级 arya-fivem-tool 目录也会直接检测 `AryaFiveMTool.exe`；正式轻量包不会内置该组件。
 
 GitHub Actions 与本地一键打包都只依赖本仓库源码，详见 `docs/PACKAGING.md`。
 
