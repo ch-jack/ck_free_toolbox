@@ -50,7 +50,7 @@
             <Border Width="4" Height="22" CornerRadius="3" Background="#9B8CFF" Margin="0,0,10,0"/>
             <StackPanel>
               <TextBlock Text="FXAP 文件夹解密" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="选择资源目录即可自动解密；CFX key 可选，接口鉴权由 fxap_only 内部处理。" Foreground="#8B9099" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="选择资源目录即可自动解密；CFX key 可选，无 key 时优先使用组件内 grants.json。" Foreground="#8B9099" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <StackPanel HorizontalAlignment="Right" VerticalAlignment="Center">
@@ -67,7 +67,7 @@
             <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
             <TextBlock Text="API 说明" Foreground="#72B7F2" FontSize="11" FontWeight="SemiBold" Margin="0,0,9,0"/>
             <TextBlock x:Name="ApiImpactNotice" AutomationProperties.AutomationId="FxapDecryptor.ApiImpactNotice" Grid.Column="1"
-                       Text="API 状态不影响解密功能，仅影响无密钥解密服务。" Foreground="#8B929E" FontSize="11" TextWrapping="Wrap"/>
+                       Text="API 状态只影响 grants.json 未命中的无密钥资源；本地命中时不受影响。" Foreground="#8B929E" FontSize="11" TextWrapping="Wrap"/>
           </Grid>
         </Border>
         <Grid>
@@ -105,8 +105,8 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
-                <TextBlock Text=".NET 8（修复）" FontSize="14" FontWeight="SemiBold"/>
-                <TextBlock x:Name="DotNet8Text" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="原生修复" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="随组件安装" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
               <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="FxapDecryptor.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
             </Grid>
@@ -158,7 +158,7 @@
           <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。修复会生成完整副本，原解密输出不会被覆盖。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
         </Border>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,11,0,0">
-          <TextBlock Text="未填写 CFX key 或当前 resource 密钥不完整时，fxap_only 会按 resource ID 查询 grants API；客户端派生仍由 Cloudflare 完成。工具箱不提供、保存或传递接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
+          <TextBlock Text="未填写 CFX key 时，fxap_only 会优先按 resource ID 查询组件内 grants.json；缺失或字段不兼容时才查询 grants API。客户端派生仍由 Cloudflare 完成，工具箱不读取接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
         </Border>
       </StackPanel>
     </Border>
@@ -237,10 +237,10 @@
 
     function Get-FxapComponentInfo {
         $required = @(
-            'index.js','package.json','VERSION','component-manifest.json','src\cloudflare-grants.js','src\grants-api.js',
+            'index.js','grants.json','package.json','VERSION','component-manifest.json','src\cloudflare-grants.js','src\grants-api.js','src\local-grants.js',
             'src\constants.js','src\crypto.js','src\decryptor.js','src\discover.js',
             'src\java-decompiler.js','src\keymaster.js','tools\unluac54.jar','tools\unluac54.jar.sha256',
-            'src\vertex-fixer.js','tools\vertex-fixer\FivemDecryptFixer.Cli.exe','tools\vertex-fixer\FivemDecryptFixer.Cli.dll',
+            'src\vertex-fixer.js','tools\vertex-fixer\FivemDecryptFixer.Cli.exe','tools\vertex-fixer\CK.VertexBridge.dll','tools\vertex-fixer\FivemDecryptFixer.Cli.dll',
             'tools\vertex-fixer\FivemDecryptFixer.Cli.deps.json','tools\vertex-fixer\FivemDecryptFixer.Cli.runtimeconfig.json',
             'tools\vertex-fixer\FivemDecryptFixer.dll','tools\vertex-fixer\CodeWalker.Core.dll','tools\vertex-fixer\SharpDX.dll','tools\vertex-fixer\SharpDX.Mathematics.dll'
         )
@@ -352,11 +352,11 @@
     function Update-FxapEnvironment {
         $nodeInfo = & $getNodeInfoAction
         $javaInfo = & $getJavaInfoAction
-        $dotNet8Info = Get-CkDotNet8Info
+        $vertexBridgePath = Join-Path $Context.Paths.FxapDecryptorDir 'tools\vertex-fixer\CK.VertexBridge.dll'
+        $vertexBridgeOk = Test-Path -LiteralPath $vertexBridgePath -PathType Leaf
         $componentInfo = & $getComponentInfoAction
         $nodeOk = [bool]$nodeInfo.Ok
         $javaOk = [bool]$javaInfo.Ok
-        $dotNet8Ok = [bool]$dotNet8Info.Ok
         $componentOk = [bool]$componentInfo.Ok
 
         $nextApiHealthUrl = [string]$componentInfo.ApiHealthUrl
@@ -380,10 +380,10 @@
         $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
         $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
-        $ui.DotNet8Dot.Fill = if ($dotNet8Ok) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
-        $ui.DotNet8Text.Text = [string]$dotNet8Info.Label
-        $ui.DotNet8Text.ToolTip = if ($dotNet8Ok) { [string]$dotNet8Info.Path } else { '只有勾选自动修复顶点时才需要 .NET 8 Runtime。' }
-        $ui.DotNet8DownloadButton.Visibility = if ($dotNet8Ok) { 'Collapsed' } else { 'Visible' }
+        $ui.DotNet8Dot.Fill = if ($vertexBridgeOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
+        $ui.DotNet8Text.Text = if ($vertexBridgeOk) { '自包含 EXE / DLL' } else { '缺少 CK.VertexBridge.dll' }
+        $ui.DotNet8Text.ToolTip = $vertexBridgePath
+        $ui.DotNet8DownloadButton.Visibility = 'Collapsed'
         $ui.ComponentText.Text = if ($componentOk) {
             if ($componentInfo.Version) { "已就绪 · $($componentInfo.Version)" } else { '已就绪' }
         } else {
@@ -702,10 +702,6 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
-    $openDotNet8DownloadAction = {
-        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0/runtime'
-    }.GetNewClosure()
-
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -791,10 +787,6 @@
         $javaInfo = & $getJavaInfoAction
         $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
-        if ($vertexFixRequested) {
-            $dotNet8Info = Get-CkDotNet8Info
-            if (-not $dotNet8Info.Ok) { throw '自动修复顶点需要 .NET 8 Runtime，请先点击页面顶部 .NET 8 的“官网”按钮安装。' }
-        }
         $arguments = @($Context.Paths.FxapDecryptorScript)
         if ($vertexFixRequested) { $arguments += '--vertex-fix' }
         if ($cfxKey) { $arguments += $cfxKey }
@@ -821,8 +813,8 @@
         $ui.OpenReportButton.IsEnabled = $false
         & $resetStatisticsAction
         $ui.LogBox.Clear()
-        Add-CkLogLine -TextBox $ui.LogBox -Line '[工具箱] 正在启动 fxap_only；接口鉴权配置不会由工具箱读取或传递。'
-        [void]$state.LogBuilder.AppendLine('[工具箱] 正在启动 fxap_only；接口鉴权配置不会由工具箱读取或传递。')
+        Add-CkLogLine -TextBox $ui.LogBox -Line '[工具箱] 正在启动 fxap_only；本地 grants.json 由组件自行读取，接口鉴权配置不会由工具箱读取或传递。'
+        [void]$state.LogBuilder.AppendLine('[工具箱] 正在启动 fxap_only；本地 grants.json 由组件自行读取，接口鉴权配置不会由工具箱读取或传递。')
         if (-not $javaInfo.Ok) {
             Add-CkLogLine -TextBox $ui.LogBox -Line '[工具箱] 未检测到 Java，任务继续；Lua 反编译失败时将保留 .luac。'
             [void]$state.LogBuilder.AppendLine('[工具箱] 未检测到 Java，任务继续；Lua 反编译失败时将保留 .luac。')
@@ -944,7 +936,6 @@
     Register-CkButtonAction -Button $ui.NodeDownloadButton -Action $openNodeDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.NodeBrowseButton -Action $selectNodeAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
-    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNet8DownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseFolderButton -Action $chooseFolderAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError

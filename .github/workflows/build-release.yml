@@ -306,6 +306,27 @@ jobs:
               throw "Source branch configuration is forbidden: $($tool.id)"
             }
           }
+          $componentContracts = [ordered]@{
+            'server-dump' = @(
+              'FIXER/CK.VertexBridge.dll'
+            )
+            'fxap-decryptor' = @(
+              'grants.json',
+              'src/local-grants.js',
+              'tools/vertex-fixer/CK.VertexBridge.dll'
+            )
+          }
+          foreach ($toolId in $componentContracts.Keys) {
+            $matches = @($toolConfig | Where-Object { [string]$_.id -eq $toolId })
+            if ($matches.Count -ne 1) {
+              throw "Expected one component definition for $toolId, found $($matches.Count)."
+            }
+            foreach ($relativePath in $componentContracts[$toolId]) {
+              if ($relativePath -notin @($matches[0].component.requiredFiles)) {
+                throw "Component contract is missing: $toolId/$relativePath"
+              }
+            }
+          }
           $workerSource = Get-Content -LiteralPath (Join-Path $package 'app\workers\ComponentWorker.ps1') -Raw -Encoding UTF8
           if ($workerSource -match 'api\.github\.com|codeload\.github\.com|/commits/') {
             throw 'Source archive download code is forbidden.'

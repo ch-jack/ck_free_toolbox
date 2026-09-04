@@ -92,8 +92,8 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
-                <TextBlock Text=".NET 8" FontSize="14" FontWeight="SemiBold"/>
-                <TextBlock x:Name="DotNet8Text" Text="检测中" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text="原生修复" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="随组件安装" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
               <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="ServerDump.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
             </Grid>
@@ -347,8 +347,8 @@
         $javaInfo = & $getJavaInfoAction
         $javaOk = [bool]$javaInfo.Ok
         $javaRequired = [bool]$ui.DecryptFxapBox.IsChecked
-        $dotNet8Info = Get-CkDotNet8Info
-        $dotNet8Ok = [bool]$dotNet8Info.Ok
+        $vertexBridgePath = Join-Path $Context.Paths.DumpToolDir 'FIXER\CK.VertexBridge.dll'
+        $vertexBridgeOk = Test-Path -LiteralPath $vertexBridgePath -PathType Leaf
         $depsInfo = if ($pythonOk) { & $testPackagesAction ([string]$pythonInfo.Path) } else { [pscustomobject]@{ Ok = $false; Label = '等待 Python'; Reason = [string]$pythonInfo.Reason } }
         $scriptOk = Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf
         $requirementsOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'requirements.txt') -PathType Leaf
@@ -358,6 +358,7 @@
         $fixerCliFiles = @(
             'FIXER\FivemDecryptFixer.dll',
             'FIXER\FivemDecryptFixer.Cli.exe',
+            'FIXER\CK.VertexBridge.dll',
             'FIXER\FivemDecryptFixer.Cli.dll',
             'FIXER\FivemDecryptFixer.Cli.deps.json',
             'FIXER\FivemDecryptFixer.Cli.runtimeconfig.json'
@@ -379,7 +380,7 @@
         Set-CkStatusDot $ui.PythonDot $pythonOk
         Set-CkStatusDot $ui.JavaDot ($javaOk -or -not $javaRequired)
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
-        Set-CkStatusDot $ui.DotNet8Dot $dotNet8Ok
+        Set-CkStatusDot $ui.DotNet8Dot $vertexBridgeOk
         Set-CkStatusDot $ui.ComponentDot $componentOk
 
         $ui.PythonText.Text = [string]$pythonInfo.Label
@@ -401,9 +402,9 @@
         } else {
             "使用 $($pythonInfo.Path) 运行 dump-tool\install.bat，只安装 Dump 所需 Python 依赖。"
         }
-        $ui.DotNet8Text.Text = [string]$dotNet8Info.Label
-        $ui.DotNet8Text.ToolTip = if ($dotNet8Ok) { [string]$dotNet8Info.Path } else { '顶点修复 CLI 需要 .NET 8 Runtime。' }
-        $ui.DotNet8DownloadButton.Visibility = if ($dotNet8Ok) { 'Collapsed' } else { 'Visible' }
+        $ui.DotNet8Text.Text = if ($vertexBridgeOk) { '自包含 EXE / DLL' } else { '缺少 CK.VertexBridge.dll' }
+        $ui.DotNet8Text.ToolTip = $vertexBridgePath
+        $ui.DotNet8DownloadButton.Visibility = 'Collapsed'
 
         if ($componentOk) {
             $ui.ComponentText.Text = 'Dump 与 FXAP 解密组件已就绪'
@@ -930,10 +931,6 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
-    $openDotNet8DownloadAction = {
-        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0'
-    }.GetNewClosure()
-
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -1231,7 +1228,7 @@
         & $assertResourceSelectionSupportAction
         foreach ($relative in @(
             'requirements.txt','Bin\Unpacker.exe','Tools\Decompile\unluac54.jar','FIXER\FivemDecryptFixer.exe',
-            'FIXER\FivemDecryptFixer.dll','FIXER\FivemDecryptFixer.Cli.exe','FIXER\FivemDecryptFixer.Cli.dll',
+            'FIXER\FivemDecryptFixer.dll','FIXER\FivemDecryptFixer.Cli.exe','FIXER\CK.VertexBridge.dll','FIXER\FivemDecryptFixer.Cli.dll',
             'FIXER\FivemDecryptFixer.Cli.deps.json','FIXER\FivemDecryptFixer.Cli.runtimeconfig.json'
         )) {
             $required = Join-Path $Context.Paths.DumpToolDir $relative
@@ -1263,11 +1260,6 @@
         if (-not $decryptFxapRequested -and $vertexFixRequested) {
             throw '不解密 FXAP 时不能启用顶点修复；请勾选“解密 FXAP”或取消顶点修复。'
         }
-        if ($vertexFixRequested) {
-            $dotNet8Info = Get-CkDotNet8Info
-            if (-not $dotNet8Info.Ok) { throw '顶点修复需要 .NET 8 Runtime，请先点击页面顶部 .NET 8 的“官网”按钮安装。' }
-        }
-
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
         $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
@@ -1550,7 +1542,6 @@
     Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
-    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNet8DownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PasteExampleButton -Action $showExampleAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
