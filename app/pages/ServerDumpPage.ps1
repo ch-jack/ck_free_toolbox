@@ -772,6 +772,7 @@
     $testResourceSelectorAction = (Get-Command Test-ServerDumpResourceSelector).ScriptBlock.GetNewClosure()
     $clearResourceSelectionAction = (Get-Command Clear-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
     $showResourceSelectionAction = (Get-Command Show-ServerDumpResourceSelection).ScriptBlock.GetNewClosure()
+    $convertResourceSelectionJsonAction = (Get-Command ConvertTo-CkServerDumpResourceSelectionJson).ScriptBlock.GetNewClosure()
 
     $showPageError = {
         param([string]$message)
@@ -1253,7 +1254,9 @@
         if (-not $retryMode -and ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count)) {
             throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
         }
-        $selectedResources = if ($retryMode) { @() } else { @($state.SelectedResources) }
+        # An if-expression enumerates its output, which turns a one-item array into a scalar.
+        $selectedResources = @()
+        if (-not $retryMode) { $selectedResources = @($state.SelectedResources) }
         $decryptFxapRequested = if ($retryMode) { -not [bool]$retryInfo.RawMode } else { [bool]$ui.DecryptFxapBox.IsChecked }
         $vertexFixRequested = if ($retryMode) { $false } else { [bool]$ui.VertexFixBox.IsChecked }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
@@ -1302,12 +1305,7 @@
         $selectionPath = ''
         if (-not $retryMode) {
             $selectionPath = Join-Path $runDir 'selected-resources.json'
-            $selectionPayload = [ordered]@{
-                schemaVersion = 1
-                target = $target
-                resources = $selectedResources
-            }
-            $selectionJson = $selectionPayload | ConvertTo-Json -Depth 4 -Compress
+            $selectionJson = & $convertResourceSelectionJsonAction -Target $target -Resources @($selectedResources)
             [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
         }
 
@@ -1560,4 +1558,18 @@
         Root = $root
         Activate = $updateEnvironmentAction
     }
+}
+
+function ConvertTo-CkServerDumpResourceSelectionJson {
+    param(
+        [Parameter(Mandatory)][string]$Target,
+        [Parameter(Mandatory)][AllowEmptyCollection()][string[]]$Resources
+    )
+
+    if (-not $Resources.Count) { throw '资源清单不能为空。' }
+    return [ordered]@{
+        schemaVersion = 1
+        target = $Target
+        resources = @($Resources)
+    } | ConvertTo-Json -Depth 4 -Compress
 }

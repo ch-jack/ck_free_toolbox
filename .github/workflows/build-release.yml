@@ -155,6 +155,15 @@ jobs:
             throw "Xiaoha cleaner page test exited with code $LASTEXITCODE"
           }
 
+      - name: Validate server dump resource selection
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\tests\Test-ServerDumpResourceSelection.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Server dump resource selection test exited with code $LASTEXITCODE"
+          }
+
       - name: Validate model render scanning and progress
         shell: powershell
         run: |
