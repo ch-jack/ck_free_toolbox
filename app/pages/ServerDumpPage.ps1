@@ -41,7 +41,7 @@
             <Border Width="4" Height="22" CornerRadius="3" Background="#58A6FF" Margin="0,0,10,0"/>
             <StackPanel>
               <TextBlock Text="服务器 Dump" FontSize="21" FontWeight="Bold"/>
-              <TextBlock Text="支持服务器 Dump、可选 FXAP 解密或原始完整保留、可选顶点修复副本；不含完整模型修复。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
+              <TextBlock Text="支持服务器 Dump、可选 FXAP 解密或原始完整保留、可选模型修复副本。" Foreground="#F4B860" FontSize="12" Margin="0,4,0,0"/>
             </StackPanel>
           </StackPanel>
           <TextBlock x:Name="EnvironmentStatus" AutomationProperties.AutomationId="ServerDump.EnvironmentStatus" Text="检测中" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="#F4B860" FontSize="14" FontWeight="SemiBold"/>
@@ -150,13 +150,10 @@
         <TextBlock x:Name="ResourceSelectionText" AutomationProperties.AutomationId="ServerDump.ResourceSelectionText" Text="尚未获取资源清单" Foreground="#686E78" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
           <CheckBox x:Name="DecryptFxapBox" AutomationProperties.AutomationId="ServerDump.DecryptFxapBox" Content="解密 FXAP" IsChecked="True" ToolTip="默认解密；取消后不解密，并将包含 .fxap、加密文件、脚本和子目录的原始资源完整复制到输出"/>
-          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行顶点修复" Margin="26,0,0,0" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
+          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行模型修复" Margin="26,0,0,0" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
           <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="ServerDump.AutoOpenBox" Content="完成后自动打开输出文件夹" Margin="26,0,0,0" IsChecked="True"/>
         </StackPanel>
-        <TextBlock Text="取消“解密 FXAP”后不会执行解密或顶点修复；输出会完整保留原始 .fxap、加密文件及目录结构。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11" Margin="0,7,0,0"/>
-        <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,8,0,0">
-          <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。如需修复模型，可以进群找群主免费修复。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
-        </Border>
+        <TextBlock Text="取消“解密 FXAP”后不会执行解密或模型修复；输出会完整保留原始 .fxap、加密文件及目录结构。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11" Margin="0,7,0,0"/>
       </StackPanel>
     </Border>
 
@@ -205,7 +202,7 @@
       <StackPanel>
         <Grid Margin="0,0,0,10">
           <TextBlock Text="任务日志" FontSize="18" FontWeight="Bold"/>
-          <TextBlock Text="功能含 Dump、可选 FXAP 解密或原始完整保留、可选顶点修复副本；不含完整模型修复。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
+          <TextBlock Text="功能含 Dump、可选 FXAP 解密或原始完整保留、可选模型修复副本。" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
         <TextBox x:Name="LogBox" AutomationProperties.AutomationId="ServerDump.LogBox" MinHeight="210" MaxHeight="420" AcceptsReturn="True" TextWrapping="NoWrap" HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto" FontFamily="Consolas" FontSize="12" IsReadOnly="True" Text="等待任务输出..."/>
       </StackPanel>
@@ -417,7 +414,7 @@
         } elseif (-not $unluacOk) {
             $ui.ComponentText.Text = '缺少 unluac54.jar'
         } elseif (-not $fixerCliOk) {
-            $ui.ComponentText.Text = '缺少顶点修复 CLI，请更新组件'
+            $ui.ComponentText.Text = '缺少模型修复 CLI，请更新组件'
         } elseif (-not $installerOk) {
             $ui.ComponentText.Text = '缺少 install.bat'
         } else {
@@ -517,7 +514,7 @@
         $fxapDecryptEnabled = if ($scope -and $scope.PSObject.Properties['fxapDecrypt']) { [bool]$scope.fxapDecrypt } else { $true }
         $rawPreservationEnabled = [bool]($scope -and $scope.PSObject.Properties['rawResourcePreservation'] -and $scope.rawResourcePreservation)
         $fxapModeText = if ($rawPreservationEnabled) { '不解密，完整保留原始资源' } elseif ($fxapDecryptEnabled) { '解密 FXAP' } else { '未执行' }
-        $lines.Add("功能范围: 包含服务器 Dump；FXAP 处理: $fxapModeText；顶点修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })")
+        $lines.Add("功能范围: 包含服务器 Dump；FXAP 处理: $fxapModeText；模型修复: $(if ($vertexFixEnabled) { '已启用' } else { '未启用' })")
         $downloadRetriedFiles = & $getSummaryValueAction $summary 'download_retried_files'
         $downloadRetryAttempts = & $getSummaryValueAction $summary 'download_retry_attempts'
         $downloadRetryRecovered = & $getSummaryValueAction $summary 'download_retry_recovered'
@@ -529,11 +526,10 @@
             if ($retry.source_report) { $lines.Add("补充来源: $($retry.source_report)") }
         }
         if ($vertexFixEnabled) {
-            $lines.Add("顶点修复状态: $($vertexFix.status)")
-            if ($vertexFix.output) { $lines.Add("顶点修复副本: $($vertexFix.output)") }
-            $lines.Add("顶点修复文件: 扫描 $($vertexFix.scanned_files) | 成功处理 $($vertexFix.repaired_files) | 失败 $($vertexFix.failed_files)")
-            $lines.Add("顶点修复提示: $($vertexFix.disclaimer)")
-            foreach ($warning in @($vertexFix.warnings)) { $lines.Add("顶点修复警告: $warning") }
+            $lines.Add("模型修复状态: $($vertexFix.status)")
+            if ($vertexFix.output) { $lines.Add("模型修复副本: $($vertexFix.output)") }
+            $lines.Add("模型修复文件: 扫描 $($vertexFix.scanned_files) | 成功处理 $($vertexFix.repaired_files) | 失败 $($vertexFix.failed_files)")
+            foreach ($warning in @($vertexFix.warnings)) { $lines.Add("模型修复警告: $warning") }
         }
         if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
         foreach ($errorItem in @($Payload.errors)) { $lines.Add("错误: $errorItem") }
@@ -1261,7 +1257,7 @@
         $vertexFixRequested = if ($retryMode) { $false } else { [bool]$ui.VertexFixBox.IsChecked }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
         if (-not $decryptFxapRequested -and $vertexFixRequested) {
-            throw '不解密 FXAP 时不能启用顶点修复；请勾选“解密 FXAP”或取消顶点修复。'
+            throw '不解密 FXAP 时不能启用模型修复；请勾选“解密 FXAP”或取消模型修复。'
         }
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
@@ -1335,7 +1331,7 @@
         $fxapPolicy = if ($decryptFxapRequested) { '解密 FXAP' } else { '不解密；完整保留 .fxap、加密文件、脚本及目录结构' }
         $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
         $operationText = if ($retryMode) { "开始补充失败下载...`r`n来源报告: $($retryInfo.Path)`r`n失败文件: $($retryInfo.FailedCount) 个" } else { '开始服务器 Dump...' }
-        $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n顶点修复: $vertexPolicy。"
+        $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n模型修复: $vertexPolicy。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
@@ -1353,12 +1349,21 @@
 
         $onOutput = {
             param($line)
+            if ($line -and $line -match '^\[(?:顶点修复|模型修复)提示\]') { return }
+            if ($line -and $line.StartsWith('功能范围:', [StringComparison]::Ordinal)) {
+                $line = $line.Replace('顶点修复', '模型修复').Replace('；不包含完整模型修复。', '。')
+            }
+            if ($line) { $line = $line -replace '^\[顶点修复\]', '[模型修复]' }
             if ($line -and $line.StartsWith('CK_PROGRESS ', [StringComparison]::Ordinal)) {
                 try {
                     $progress = $line.Substring(12) | ConvertFrom-Json
                     $callbackUi.ProgressBar.Value = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
-                    $callbackUi.StatusLine.Text = [string]$progress.message
-                    if ($progress.stage) { $callbackUi.ResultStatus.Text = [string]$progress.stage }
+                    $progressMessage = [string]$progress.message
+                    if ($progressMessage) { $progressMessage = $progressMessage.Replace('顶点修复', '模型修复') }
+                    $callbackUi.StatusLine.Text = $progressMessage
+                    if ($progress.stage) {
+                        $callbackUi.ResultStatus.Text = if ([string]$progress.stage -eq 'vertex_fix') { '模型修复' } else { [string]$progress.stage }
+                    }
                 } catch { }
                 return
             }
@@ -1419,7 +1424,7 @@
                     if ($vertexOutput -and (Test-Path -LiteralPath $vertexOutput -PathType Container)) {
                         $openPath = $vertexOutput
                     } else {
-                        Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 本次未生成可用的顶点修复副本，自动打开原解密目录。'
+                        Add-CkLogLine -TextBox $callbackUi.LogBox -Line '[工具箱] 本次未生成可用的模型修复副本，自动打开原解密目录。'
                     }
                 }
                 if ($openPath -and (Test-Path -LiteralPath $openPath -PathType Container)) {

@@ -151,12 +151,9 @@
           <Button x:Name="OpenOutputButton" AutomationProperties.AutomationId="FxapDecryptor.OpenOutputButton" Grid.Column="1" Content="打开输出" Height="36" Margin="7,22,0,0" IsEnabled="False"/>
         </Grid>
         <StackPanel Orientation="Horizontal" Margin="0,11,0,0">
-          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="FxapDecryptor.VertexFixBox" Content="解密后生成副本并自动修复顶点" Foreground="#D7DAE0" ToolTip="只处理完整解密成功的 FXAP 资源；不会覆盖原解密目录"/>
+          <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="FxapDecryptor.VertexFixBox" Content="解密后生成副本并进行模型修复" Foreground="#D7DAE0" ToolTip="只处理完整解密成功的 FXAP 资源；不会覆盖原解密目录"/>
           <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="FxapDecryptor.AutoOpenBox" Content="完成后自动打开文件夹" Foreground="#D7DAE0" Margin="26,0,0,0" IsChecked="True"/>
         </StackPanel>
-        <Border Background="#181710" BorderBrush="#4A4020" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,8,0,0">
-          <TextBlock Text="顶点修复不等于模型修复，不一定能 100% 修复模型，也不保证修复后的模型可以被 FiveM 加载。修复会生成完整副本，原解密输出不会被覆盖。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
-        </Border>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="5" Padding="9,7" Margin="0,11,0,0">
           <TextBlock Text="未填写 CFX key 时，fxap_only 会优先按 resource ID 查询组件内 grants.json；缺失或字段不兼容时才查询 grants API。客户端派生仍由 Cloudflare 完成，工具箱不读取接口 Bearer Token。未检测到 Java 时仍可运行，Lua 字节码会保留为 .luac。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11"/>
         </Border>
@@ -440,6 +437,12 @@
     function Update-FxapProgressFromLine {
         param([string]$Line)
 
+        if ($Line -match '^(?:Vertex fix|Model repair) warning:') {
+            $ui.ProgressBar.Value = [Math]::Max(96, [double]$ui.ProgressBar.Value)
+            $ui.StatusLine.Text = '解密完成，正在生成副本并进行模型修复。'
+            return
+        }
+        if ($Line) { $Line = $Line -replace '^Vertex fix', 'Model repair' }
         Add-CkLogLine -TextBox $ui.LogBox -Line $Line
         [void]$state.LogBuilder.AppendLine($Line)
         if ($Line -match '^Resources:\s+(?<count>\d+)\s*$') {
@@ -452,24 +455,19 @@
             $ui.OutputBox.Text = [string]$state.OutputPath
             return
         }
-        if ($Line -match '^Vertex fix output:\s+(?<path>.+?)\s*$') {
+        if ($Line -match '^(?:Vertex fix|Model repair) output:\s+(?<path>.+?)\s*$') {
             $state.VertexFixOutputPath = [string]$Matches.path
             $ui.ProgressBar.Value = [Math]::Max(98, [double]$ui.ProgressBar.Value)
-            $ui.StatusLine.Text = "顶点修复副本已生成：$($state.VertexFixOutputPath)"
+            $ui.StatusLine.Text = "模型修复副本已生成：$($state.VertexFixOutputPath)"
             return
         }
-        if ($Line -match '^Vertex fix:\s+status=(?<status>\S+)\s+resources=(?<resources>\d+)\s+scanned=(?<scanned>\d+)\s+repaired=(?<repaired>\d+)\s+failed=(?<failed>\d+)\s*$') {
+        if ($Line -match '^(?:Vertex fix|Model repair):\s+status=(?<status>\S+)\s+resources=(?<resources>\d+)\s+scanned=(?<scanned>\d+)\s+repaired=(?<repaired>\d+)\s+failed=(?<failed>\d+)\s*$') {
             $state.VertexFixStatus = [string]$Matches.status
             $state.VertexFixScanned = [int]$Matches.scanned
             $state.VertexFixRepaired = [int]$Matches.repaired
             $state.VertexFixFailed = [int]$Matches.failed
             $ui.ProgressBar.Value = 98
-            $ui.StatusLine.Text = "顶点修复：扫描 $($Matches.scanned)，处理 $($Matches.repaired)，失败 $($Matches.failed)"
-            return
-        }
-        if ($Line -match '^Vertex fix warning:') {
-            $ui.ProgressBar.Value = [Math]::Max(96, [double]$ui.ProgressBar.Value)
-            $ui.StatusLine.Text = '解密完成，正在生成副本并自动修复顶点。'
+            $ui.StatusLine.Text = "模型修复：扫描 $($Matches.scanned)，处理 $($Matches.repaired)，失败 $($Matches.failed)"
             return
         }
         if ($Line -match '^\[(?<current>\d+)/(?<total>\d+)\]\s+(?<name>.+)$') {
@@ -584,10 +582,10 @@
         $markdown.Add("- 用时: $durationSeconds 秒")
         $markdown.Add("- 输入目录: $($state.InputPath)")
         $markdown.Add("- 输出目录: $($state.OutputPath)")
-        $markdown.Add($(if ($state.VertexFixRequested) { "- 顶点修复副本: $($state.VertexFixOutputPath)" } else { '- 顶点修复: 未启用' }))
+        $markdown.Add($(if ($state.VertexFixRequested) { "- 模型修复副本: $($state.VertexFixOutputPath)" } else { '- 模型修复: 未启用' }))
         if ($state.VertexFixRequested) {
-            $markdown.Add("- 顶点修复状态: $($state.VertexFixStatus)")
-            $markdown.Add("- 顶点修复统计: 扫描 $($state.VertexFixScanned)，处理 $($state.VertexFixRepaired)，失败 $($state.VertexFixFailed)")
+            $markdown.Add("- 模型修复状态: $($state.VertexFixStatus)")
+            $markdown.Add("- 模型修复统计: 扫描 $($state.VertexFixScanned)，处理 $($state.VertexFixRepaired)，失败 $($state.VertexFixFailed)")
         }
         $markdown.Add($(if ($state.AutoOpenRequested) { '- 完成后自动打开: 是' } else { '- 完成后自动打开: 否' }))
         $markdown.Add($(if ($state.CfxKeyProvided) { '- CFX key: 已提供（密钥值未写入报告）' } else { '- CFX key: 未提供' }))
@@ -857,11 +855,11 @@
                 $callbackUi.StatusLine.Text = "已完成 $($callbackState.ResourceTotal) 个 resource，输出位于 $($callbackState.OutputPath)"
             } elseif ($exitCode -eq 2) {
                 $vertexFailed = $callbackState.VertexFixRequested -and $callbackState.VertexFixStatus -in @('failed','partial')
-                $callbackUi.ResultStatus.Text = if ($vertexFailed) { '解密完成，顶点修复存在失败' } else { '完成，存在文件失败' }
+                $callbackUi.ResultStatus.Text = if ($vertexFailed) { '解密完成，模型修复存在失败' } else { '完成，存在文件失败' }
                 $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
                 $callbackUi.ProgressBar.Value = 100
                 $callbackUi.StatusLine.Text = if ($vertexFailed) {
-                    "原解密输出已保留；顶点修复处理 $($callbackState.VertexFixRepaired)，失败 $($callbackState.VertexFixFailed)，请检查日志。"
+                    "原解密输出已保留；模型修复处理 $($callbackState.VertexFixRepaired)，失败 $($callbackState.VertexFixFailed)，请检查日志。"
                 } else {
                     "任务完成但有 $($callbackState.Failures) 项失败，请检查日志和 .failed.txt。"
                 }
