@@ -354,14 +354,14 @@
         $dialog.Title = '选择 RPF 或压缩包'
         $dialog.Filter = 'RPF 与压缩包|*.rpf;*.zip;*.rar;*.7z;*.tar;*.gz;*.tgz;*.bz2;*.tbz2;*.xz;*.txz|所有文件|*.*'
         $dialog.Multiselect = $false
-        if (Test-Path -LiteralPath $ui.InputBox.Text.Trim() -PathType Container) { $dialog.InitialDirectory = $ui.InputBox.Text.Trim() }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.InputBox.Text
         try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.InputBox.Text = $dialog.FileName } } finally { $dialog.Dispose() }
     }.GetNewClosure()
 
     $chooseFolderAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择包含 RPF 或压缩包的目录'
-        $dialog.SelectedPath = $ui.InputBox.Text.Trim()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.InputBox.Text
         $dialog.ShowNewFolderButton = $false
         try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.InputBox.Text = $dialog.SelectedPath } } finally { $dialog.Dispose() }
     }.GetNewClosure()
@@ -369,7 +369,7 @@
     $chooseOutputAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择 FiveM 资源输出目录'
-        $dialog.SelectedPath = $ui.OutputBox.Text.Trim()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.OutputBox.Text
         $dialog.ShowNewFolderButton = $true
         try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.OutputBox.Text = $dialog.SelectedPath } } finally { $dialog.Dispose() }
     }.GetNewClosure()

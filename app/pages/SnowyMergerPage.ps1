@@ -234,7 +234,7 @@
         param($TextBox, [string]$Description, [bool]$AllowCreate)
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = $Description
-        $dialog.SelectedPath = $TextBox.Text.Trim()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $TextBox.Text
         $dialog.ShowNewFolderButton = $AllowCreate
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {

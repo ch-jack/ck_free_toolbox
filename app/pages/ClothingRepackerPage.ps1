@@ -290,7 +290,7 @@
         param($TextBox, [string]$Description, [bool]$AllowCreate)
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = $Description
-        $dialog.SelectedPath = $TextBox.Text.Trim()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $TextBox.Text
         $dialog.ShowNewFolderButton = $AllowCreate
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $TextBox.Text = $dialog.SelectedPath }
@@ -302,11 +302,7 @@
         $dialog = New-Object Microsoft.Win32.OpenFileDialog
         $dialog.Filter = $Filter
         $dialog.Title = $Title
-        $current = $TextBox.Text.Trim()
-        if ($current) {
-            if (Test-Path -LiteralPath $current -PathType Leaf) { $dialog.FileName = $current }
-            elseif (Test-Path -LiteralPath (Split-Path -Parent $current) -PathType Container) { $dialog.InitialDirectory = Split-Path -Parent $current }
-        }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $TextBox.Text
         if ($dialog.ShowDialog() -eq $true) { $TextBox.Text = $dialog.FileName }
     }.GetNewClosure()
 
@@ -317,8 +313,7 @@
         $dialog.Title = $Title
         $dialog.DefaultExt = $DefaultExtension
         $dialog.AddExtension = $true
-        $current = $TextBox.Text.Trim()
-        if ($current) { $dialog.FileName = $current }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $TextBox.Text -ForSave
         if ($dialog.ShowDialog() -eq $true) { $TextBox.Text = $dialog.FileName }
     }.GetNewClosure()
 

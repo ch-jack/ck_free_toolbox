@@ -729,10 +729,7 @@
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择包含 .fxap 的单个 resource 或父目录'
         $dialog.ShowNewFolderButton = $false
-        $currentPath = $ui.InputBox.Text.Trim()
-        if ($currentPath -and (Test-Path -LiteralPath $currentPath -PathType Container)) {
-            $dialog.SelectedPath = $currentPath
-        }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.InputBox.Text
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
                 $ui.InputBox.Text = [IO.Path]::GetFullPath($dialog.SelectedPath)

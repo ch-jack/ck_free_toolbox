@@ -464,10 +464,10 @@
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = $description
         $dialog.ShowNewFolderButton = $true
-        $current = $box.Text.Trim()
-        if ($current -and (Test-Path -LiteralPath $current -PathType Container)) { $dialog.SelectedPath = [IO.Path]::GetFullPath($current) }
-        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $box.Text = $dialog.SelectedPath }
-        $dialog.Dispose()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $box.Text
+        try {
+            if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $box.Text = $dialog.SelectedPath }
+        } finally { $dialog.Dispose() }
     }.GetNewClosure()
     $chooseInputAction = { & $chooseFolderAction $ui.InputBox '选择 FiveM resources 根目录或单个 resource 目录' }.GetNewClosure()
     $chooseOutputAction = { & $chooseFolderAction $ui.OutputBox '选择完整资源复制输出目录' }.GetNewClosure()

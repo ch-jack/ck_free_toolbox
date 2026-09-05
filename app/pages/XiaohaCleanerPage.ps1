@@ -314,7 +314,7 @@
     $chooseTargetAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择 FiveM server-data、resources 或服务器目录'
-        $dialog.SelectedPath = $ui.TargetBox.Text
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.TargetBox.Text
         $dialog.ShowNewFolderButton = $false
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {

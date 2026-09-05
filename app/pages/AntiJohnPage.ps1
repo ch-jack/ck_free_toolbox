@@ -520,7 +520,7 @@
     $chooseFolderAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择 FiveM resource 或 resources 目录'
-        $dialog.SelectedPath = $ui.TargetBox.Text
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.TargetBox.Text
         $dialog.ShowNewFolderButton = $false
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -537,8 +537,7 @@
         $dialog.CheckFileExists = $true
         $dialog.Multiselect = $false
         $dialog.RestoreDirectory = $true
-        $current = $ui.TargetBox.Text.Trim()
-        if (Test-Path -LiteralPath $current -PathType Leaf) { $dialog.InitialDirectory = Split-Path -Parent $current }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.TargetBox.Text
         $owner = [System.Windows.Window]::GetWindow($root)
         $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
         if ($accepted -eq $true) {
@@ -561,7 +560,7 @@
     $chooseStateDirAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择后门扫描组件备份目录'
-        $dialog.SelectedPath = $ui.StateDirBox.Text
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.StateDirBox.Text
         $dialog.ShowNewFolderButton = $true
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.StateDirBox.Text = $dialog.SelectedPath }

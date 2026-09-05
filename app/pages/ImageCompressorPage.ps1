@@ -304,19 +304,24 @@
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = $Description
         $dialog.ShowNewFolderButton = $true
-        if ($Box.Text.Trim() -and (Test-Path -LiteralPath $Box.Text.Trim() -PathType Container)) { $dialog.SelectedPath = [IO.Path]::GetFullPath($Box.Text.Trim()) }
-        if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $Box.Text = $dialog.SelectedPath }
-        $dialog.Dispose()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $Box.Text
+        try {
+            if ($dialog.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return $false }
+            $Box.Text = $dialog.SelectedPath
+            return $true
+        } finally { $dialog.Dispose() }
     }.GetNewClosure()
     $chooseInputFolderAction = {
-        & $chooseFolderAction $ui.InputBox '选择包含 JPG、PNG、GIF 或 WebP 的目录'
-        if ($ui.InputBox.Text.Trim()) { $ui.OutputBox.Text = $ui.InputBox.Text.Trim().TrimEnd('\') + '_compressed' }
+        if (& $chooseFolderAction $ui.InputBox '选择包含 JPG、PNG、GIF 或 WebP 的目录') {
+            $ui.OutputBox.Text = $ui.InputBox.Text.Trim().TrimEnd('\') + '_compressed'
+        }
     }.GetNewClosure()
     $chooseInputFileAction = {
         $dialog = New-Object Microsoft.Win32.OpenFileDialog
         $dialog.Title = '选择 JPG、PNG、GIF 或 WebP'
         $dialog.Filter = '支持的图片|*.jpg;*.jpeg;*.png;*.gif;*.webp|所有文件|*.*'
         $dialog.CheckFileExists = $true
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.InputBox.Text
         if ($dialog.ShowDialog() -eq $true) {
             $ui.InputBox.Text = $dialog.FileName
             $ui.OutputBox.Text = Join-Path (Split-Path -Parent $dialog.FileName) (([IO.Path]::GetFileNameWithoutExtension($dialog.FileName)) + '.compressed' + ([IO.Path]::GetExtension($dialog.FileName)))
@@ -328,7 +333,7 @@
             $dialog = New-Object Microsoft.Win32.SaveFileDialog
             $dialog.Title = '选择压缩输出文件'
             $dialog.Filter = '图片文件|*.jpg;*.jpeg;*.png;*.gif;*.webp|所有文件|*.*'
-            $dialog.FileName = [IO.Path]::GetFileName($ui.OutputBox.Text.Trim())
+            Set-CkDialogInitialPath -Dialog $dialog -Path $ui.OutputBox.Text -ForSave
             if ($dialog.ShowDialog() -eq $true) { $ui.OutputBox.Text = $dialog.FileName }
         } else {
             & $chooseFolderAction $ui.OutputBox '选择压缩输出目录'

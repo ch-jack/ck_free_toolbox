@@ -974,7 +974,7 @@
     $chooseOutputAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择服务器 Dump 输出目录'
-        $dialog.SelectedPath = $ui.OutputBox.Text.Trim()
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.OutputBox.Text
         $dialog.ShowNewFolderButton = $true
         try { if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $ui.OutputBox.Text = $dialog.SelectedPath } } finally { $dialog.Dispose() }
     }.GetNewClosure()
@@ -1472,7 +1472,7 @@
         $dialog.CheckFileExists = $true
         $dialog.Multiselect = $false
         $dialog.RestoreDirectory = $true
-        if (Test-Path -LiteralPath $state.ReportRoot -PathType Container) { $dialog.InitialDirectory = $state.ReportRoot }
+        Set-CkDialogInitialPath -Dialog $dialog -Path $state.ReportRoot
         $owner = [System.Windows.Window]::GetWindow($root)
         $accepted = if ($owner) { $dialog.ShowDialog($owner) } else { $dialog.ShowDialog() }
         if ($accepted -ne $true) { return }

@@ -413,7 +413,7 @@
     $chooseTargetAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择 FiveM resource 或 resources 目录'
-        $dialog.SelectedPath = $ui.TargetBox.Text
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.TargetBox.Text
         $dialog.ShowNewFolderButton = $false
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
@@ -434,7 +434,7 @@
     $chooseStateDirAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择 nui-wallfix 备份目录'
-        $dialog.SelectedPath = $ui.StateDirBox.Text
+        Set-CkDialogInitialPath -Dialog $dialog -Path $ui.StateDirBox.Text
         $dialog.ShowNewFolderButton = $true
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {

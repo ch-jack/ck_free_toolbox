@@ -512,6 +512,51 @@ function New-CkStepPanel {
     }
 }
 
+function Set-CkDialogInitialPath {
+    param(
+        [Parameter(Mandatory)]$Dialog,
+        [AllowNull()][AllowEmptyString()][string]$Path,
+        [switch]$ForSave
+    )
+
+    # Text-box input is only a navigation hint: it must not block the picker.
+    if ([string]::IsNullOrWhiteSpace($Path)) { return }
+    try {
+        $candidate = $Path.Trim()
+        if ($candidate.Length -ge 2 -and $candidate.StartsWith('"') -and $candidate.EndsWith('"')) {
+            $candidate = $candidate.Substring(1, $candidate.Length - 2).Trim()
+        }
+        if ([string]::IsNullOrWhiteSpace($candidate)) { return }
+        $candidate = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($candidate)
+        $candidate = [IO.Path]::GetFullPath($candidate)
+        if ($candidate.IndexOfAny([IO.Path]::GetInvalidPathChars()) -ge 0 -or $candidate.IndexOfAny([char[]]'*?') -ge 0) { return }
+        $isFile = [IO.File]::Exists($candidate)
+        $isDirectory = [IO.Directory]::Exists($candidate)
+        $directory = $candidate
+        while (-not [IO.Directory]::Exists($directory)) {
+            $parent = [IO.Path]::GetDirectoryName($directory)
+            if ([string]::IsNullOrWhiteSpace($parent) -or $parent -eq $directory) { return }
+            $directory = $parent
+        }
+    } catch {
+        return
+    }
+
+    if ($Dialog -is [System.Windows.Forms.FolderBrowserDialog]) {
+        $Dialog.SelectedPath = $directory
+    } else {
+        $Dialog.InitialDirectory = $directory
+        if ($isFile) {
+            $Dialog.FileName = $candidate
+        } elseif ($ForSave -and -not $isDirectory) {
+            $fileName = [IO.Path]::GetFileName($candidate)
+            if ($fileName -and $fileName.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -lt 0) {
+                $Dialog.FileName = $fileName
+            }
+        }
+    }
+}
+
 function Set-CkStepState {
     param($Panel, [int]$Step, [string]$Label, $LabelControl)
     if ($LabelControl) { $LabelControl.Text = "步骤 $Step/5: $Label" }
@@ -538,4 +583,4 @@ function Set-CkStepState {
     }
 }
 
-Export-ModuleMember -Function Enable-CkPageMouseWheelRouting, Import-CkXaml, Get-CkNamedControls, Register-CkButtonAction, Register-CkTextChangedAction, Set-CkStatusDot, Add-CkLogLine, New-CkStepPanel, Set-CkStepState, Get-CkThemeBrush, Get-CkTheme, Get-CkSystemTheme, Resolve-CkThemePreference, Set-CkTheme
+Export-ModuleMember -Function Enable-CkPageMouseWheelRouting, Import-CkXaml, Get-CkNamedControls, Register-CkButtonAction, Register-CkTextChangedAction, Set-CkStatusDot, Add-CkLogLine, New-CkStepPanel, Set-CkStepState, Set-CkDialogInitialPath, Get-CkThemeBrush, Get-CkTheme, Get-CkSystemTheme, Resolve-CkThemePreference, Set-CkTheme

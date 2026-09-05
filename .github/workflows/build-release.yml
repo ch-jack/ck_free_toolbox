@@ -88,6 +88,13 @@ jobs:
           }
           Write-Host "PowerShell syntax passed: $($files.Count) files"
 
+      - name: Test file and folder dialogs
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\tests\Test-PathDialogs.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'File and folder dialog regression tests failed' }
+
       - name: Validate Windows PowerShell HTTP compatibility
         shell: powershell
         run: |

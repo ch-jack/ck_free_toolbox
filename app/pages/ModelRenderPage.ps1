@@ -385,7 +385,7 @@
     $chooseInputAction = {
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
         $dialog.Description = '选择包含 FiveM / GTA 模型资源的目录'
-        $dialog.SelectedPath = $state.InputPath
+        Set-CkDialogInitialPath -Dialog $dialog -Path $state.InputPath
         $dialog.ShowNewFolderButton = $false
         try {
             if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) {
