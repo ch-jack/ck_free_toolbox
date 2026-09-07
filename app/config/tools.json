@@ -223,6 +223,35 @@
         "default": false
     },
     {
+        "id": "model-repair",
+        "title": "模型修复",
+        "icon": "◈",
+        "page": "ModelRepairPage.ps1",
+        "factory": "New-CkModelRepairPage",
+        "sourceUrl": "https://github.com/ch-jack/fxap_only",
+        "component": {
+            "repo": "ch-jack/fxap_only",
+            "installDir": "fxap-decryptor",
+            "bootstrap": "",
+            "releaseAssetPattern": "fxap-only-*-windows.zip",
+            "releaseChecksumAssetPattern": "fxap-only-*-windows.zip.sha256",
+            "requiredFiles": [
+                "VERSION",
+                "component-manifest.json",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.exe",
+                "tools/vertex-fixer/CK.VertexBridge.dll",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.dll",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.deps.json",
+                "tools/vertex-fixer/FivemDecryptFixer.Cli.runtimeconfig.json",
+                "tools/vertex-fixer/FivemDecryptFixer.dll",
+                "tools/vertex-fixer/CodeWalker.Core.dll",
+                "tools/vertex-fixer/SharpDX.dll",
+                "tools/vertex-fixer/SharpDX.Mathematics.dll"
+            ]
+        },
+        "default": false
+    },
+    {
         "id": "snowy-merger",
         "title": "地图冲突合并",
         "icon": "≋",

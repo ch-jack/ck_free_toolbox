@@ -233,6 +233,7 @@ try {
         @{ Page = 'RpfToFivemPage.ps1'; Variable = 'chooseOutputAction'; Mode = 'Folder' },
         @{ Page = 'AntiJohnPage.ps1'; Variable = 'chooseZipAction'; Mode = 'Target' },
         @{ Page = 'ServerDumpPage.ps1'; Variable = 'retryFailedAction'; Mode = 'Report' },
+        @{ Page = 'ModelRepairPage.ps1'; Variable = 'chooseFolderAction'; Mode = 'Input' },
         @{ Page = 'ClothingRepackerPage.ps1'; Variable = 'chooseOpenFileAction'; Mode = 'OpenArgument' },
         @{ Page = 'ClothingRepackerPage.ps1'; Variable = 'chooseSaveFileAction'; Mode = 'SaveArgument' },
         @{ Page = 'ImageCompressorPage.ps1'; Variable = 'chooseInputFolderAction'; Mode = 'ImageFolder' }
@@ -259,7 +260,7 @@ try {
     $afterEntries = @([IO.Directory]::GetFileSystemEntries($tempRoot, '*', [IO.SearchOption]::AllDirectories) | Sort-Object)
     Assert-CkPathDialog (($beforeEntries -join "`n") -ceq ($afterEntries -join "`n")) 'Path initialization created files or directories.'
     Assert-CkPathDialog ([IO.File]::ReadAllText($existingFile) -ceq 'fixture') 'Path initialization changed an existing file.'
-    Write-Output "Path dialog regression passed: $script:assertionCount assertions; four real dialog types and eight page actions; no windows displayed."
+    Write-Output "Path dialog regression passed: $script:assertionCount assertions; four real dialog types and nine page actions; no windows displayed."
 } finally {
     Set-Location -LiteralPath $originalLocation.Path
     # Delete only this unique fixture beneath the verified temporary directory.

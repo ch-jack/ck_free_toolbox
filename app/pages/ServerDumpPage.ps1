@@ -92,8 +92,8 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#31D69A" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
-                <TextBlock Text="原生修复" FontSize="14" FontWeight="SemiBold"/>
-                <TextBlock x:Name="DotNet8Text" Text="随组件安装" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text=".NET 8 Runtime" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="仅模型修复时需要" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
               <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="ServerDump.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
             </Grid>
@@ -344,8 +344,9 @@
         $javaInfo = & $getJavaInfoAction
         $javaOk = [bool]$javaInfo.Ok
         $javaRequired = [bool]$ui.DecryptFxapBox.IsChecked
-        $vertexBridgePath = Join-Path $Context.Paths.DumpToolDir 'FIXER\CK.VertexBridge.dll'
-        $vertexBridgeOk = Test-Path -LiteralPath $vertexBridgePath -PathType Leaf
+        $dotnet = Get-CkDotNet8Info
+        $dotnetRequired = [bool]$ui.VertexFixBox.IsChecked
+        $dotnetOk = [bool]$dotnet.Ok
         $depsInfo = if ($pythonOk) { & $testPackagesAction ([string]$pythonInfo.Path) } else { [pscustomobject]@{ Ok = $false; Label = '等待 Python'; Reason = [string]$pythonInfo.Reason } }
         $scriptOk = Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf
         $requirementsOk = Test-Path -LiteralPath (Join-Path $Context.Paths.DumpToolDir 'requirements.txt') -PathType Leaf
@@ -377,7 +378,7 @@
         Set-CkStatusDot $ui.PythonDot $pythonOk
         Set-CkStatusDot $ui.JavaDot ($javaOk -or -not $javaRequired)
         Set-CkStatusDot $ui.DepsDot ([bool]$depsInfo.Ok)
-        Set-CkStatusDot $ui.DotNet8Dot $vertexBridgeOk
+        Set-CkStatusDot $ui.DotNet8Dot ($dotnetOk -or -not $dotnetRequired)
         Set-CkStatusDot $ui.ComponentDot $componentOk
 
         $ui.PythonText.Text = [string]$pythonInfo.Label
@@ -399,9 +400,9 @@
         } else {
             "使用 $($pythonInfo.Path) 运行 dump-tool\install.bat，只安装 Dump 所需 Python 依赖。"
         }
-        $ui.DotNet8Text.Text = if ($vertexBridgeOk) { '自包含 EXE / DLL' } else { '缺少 CK.VertexBridge.dll' }
-        $ui.DotNet8Text.ToolTip = $vertexBridgePath
-        $ui.DotNet8DownloadButton.Visibility = 'Collapsed'
+        $ui.DotNet8Text.Text = if (-not $dotnetRequired) { '仅模型修复时需要' } else { [string]$dotnet.Label }
+        $ui.DotNet8Text.ToolTip = if (-not $dotnetRequired) { '勾选模型修复后需要 Microsoft .NET 8 Runtime。' } elseif ($dotnet.Path) { [string]$dotnet.Path } else { [string]$dotnet.Label }
+        $ui.DotNet8DownloadButton.Visibility = if ($dotnetRequired -and -not $dotnetOk) { 'Visible' } else { 'Collapsed' }
 
         if ($componentOk) {
             $ui.ComponentText.Text = 'Dump 与 FXAP 解密组件已就绪'
@@ -421,7 +422,7 @@
             $ui.ComponentText.Text = '组件不完整，请重新安装'
         }
 
-        $allOk = $pythonOk -and ($javaOk -or -not $javaRequired) -and $depsInfo.Ok -and $componentOk
+        $allOk = $pythonOk -and ($javaOk -or -not $javaRequired) -and $depsInfo.Ok -and $componentOk -and ($dotnetOk -or -not $dotnetRequired)
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
         $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
     }
@@ -928,6 +929,10 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
+    $openDotNetDownloadAction = {
+        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0'
+    }.GetNewClosure()
+
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -1259,6 +1264,9 @@
         if (-not $decryptFxapRequested -and $vertexFixRequested) {
             throw '不解密 FXAP 时不能启用模型修复；请勾选“解密 FXAP”或取消模型修复。'
         }
+        if ($vertexFixRequested -and -not (Get-CkDotNet8Info).Ok) {
+            throw '.NET 8 Runtime 不可用，启用模型修复前请先安装 .NET 8 Runtime。'
+        }
         $outputPath = $ui.OutputBox.Text.Trim()
         if (-not $outputPath) { throw '请选择输出目录。' }
         $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
@@ -1524,6 +1532,7 @@
             '已选择不解密；将完整保留原始 .fxap、加密文件和目录结构，不需要 Java。'
         }
     }.GetNewClosure()
+    $vertexFixChangedAction = { & $updateEnvironmentAction }.GetNewClosure()
 
     $targetChangedAction = {
         if (@($state.SelectedResources).Count -and $ui.TargetBox.Text.Trim() -ne $state.ResourceTarget) {
@@ -1539,12 +1548,15 @@
     $ui.ResourcesBox.Add_TextChanged($resourcePatternChangedAction)
     $ui.DecryptFxapBox.Add_Checked($decryptModeChangedAction)
     $ui.DecryptFxapBox.Add_Unchecked($decryptModeChangedAction)
+    $ui.VertexFixBox.Add_Checked($vertexFixChangedAction)
+    $ui.VertexFixBox.Add_Unchecked($vertexFixChangedAction)
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNetDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PasteExampleButton -Action $showExampleAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseOutputButton -Action $chooseOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError

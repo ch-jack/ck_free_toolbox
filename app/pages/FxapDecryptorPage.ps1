@@ -105,8 +105,8 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="18"/><ColumnDefinition Width="*"/><ColumnDefinition Width="48"/></Grid.ColumnDefinitions>
               <Ellipse x:Name="DotNet8Dot" Width="9" Height="9" Fill="#F4B860" VerticalAlignment="Center"/>
               <StackPanel Grid.Column="1">
-                <TextBlock Text="原生修复" FontSize="14" FontWeight="SemiBold"/>
-                <TextBlock x:Name="DotNet8Text" Text="随组件安装" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                <TextBlock Text=".NET 8 Runtime" FontSize="14" FontWeight="SemiBold"/>
+                <TextBlock x:Name="DotNet8Text" Text="仅模型修复时需要" Foreground="#777B83" FontSize="11" TextTrimming="CharacterEllipsis"/>
               </StackPanel>
               <Button x:Name="DotNet8DownloadButton" AutomationProperties.AutomationId="FxapDecryptor.DotNet8DownloadButton" Grid.Column="2" Content="官网" Width="42" Height="27" Foreground="#58A6FF" Visibility="Collapsed" ToolTip="打开 .NET 8 Runtime 下载页面"/>
             </Grid>
@@ -349,8 +349,9 @@
     function Update-FxapEnvironment {
         $nodeInfo = & $getNodeInfoAction
         $javaInfo = & $getJavaInfoAction
-        $vertexBridgePath = Join-Path $Context.Paths.FxapDecryptorDir 'tools\vertex-fixer\CK.VertexBridge.dll'
-        $vertexBridgeOk = Test-Path -LiteralPath $vertexBridgePath -PathType Leaf
+        $dotnet = Get-CkDotNet8Info
+        $dotnetRequired = [bool]$ui.VertexFixBox.IsChecked
+        $dotnetOk = [bool]$dotnet.Ok
         $componentInfo = & $getComponentInfoAction
         $nodeOk = [bool]$nodeInfo.Ok
         $javaOk = [bool]$javaInfo.Ok
@@ -364,7 +365,7 @@
 
         $state.NodePath = if ($nodeOk) { [string]$nodeInfo.Path } else { '' }
         $state.JavaPath = if ($javaOk) { [string]$javaInfo.Path } else { '' }
-        $state.Ready = $nodeOk -and $componentOk
+        $state.Ready = $nodeOk -and $componentOk -and ($dotnetOk -or -not $dotnetRequired)
 
         Set-CkStatusDot $ui.NodeDot $nodeOk
         $ui.JavaDot.Fill = if ($javaOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
@@ -377,10 +378,10 @@
         $ui.JavaText.ToolTip = if ($javaOk) { "$($javaInfo.Version)$([Environment]::NewLine)$($javaInfo.Path)" } else { [string]$javaInfo.Reason }
         $ui.JavaDownloadButton.Visibility = if ($javaOk) { 'Collapsed' } else { 'Visible' }
         $ui.JavaBrowseButton.Content = if ($javaOk) { '更改' } else { '选择' }
-        $ui.DotNet8Dot.Fill = if ($vertexBridgeOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
-        $ui.DotNet8Text.Text = if ($vertexBridgeOk) { '自包含 EXE / DLL' } else { '缺少 CK.VertexBridge.dll' }
-        $ui.DotNet8Text.ToolTip = $vertexBridgePath
-        $ui.DotNet8DownloadButton.Visibility = 'Collapsed'
+        Set-CkStatusDot $ui.DotNet8Dot ($dotnetOk -or -not $dotnetRequired)
+        $ui.DotNet8Text.Text = if (-not $dotnetRequired) { '仅模型修复时需要' } else { [string]$dotnet.Label }
+        $ui.DotNet8Text.ToolTip = if (-not $dotnetRequired) { '勾选模型修复后需要 Microsoft .NET 8 Runtime。' } elseif ($dotnet.Path) { [string]$dotnet.Path } else { [string]$dotnet.Label }
+        $ui.DotNet8DownloadButton.Visibility = if ($dotnetRequired -and -not $dotnetOk) { 'Visible' } else { 'Collapsed' }
         $ui.ComponentText.Text = if ($componentOk) {
             if ($componentInfo.Version) { "已就绪 · $($componentInfo.Version)" } else { '已就绪' }
         } else {
@@ -700,6 +701,10 @@
         Start-Process -FilePath 'https://adoptium.net/temurin/releases/?version=17&os=windows&arch=x64&package=jre'
     }.GetNewClosure()
 
+    $openDotNetDownloadAction = {
+        Start-Process -FilePath 'https://dotnet.microsoft.com/download/dotnet/8.0'
+    }.GetNewClosure()
+
     $selectJavaAction = {
         $settings = Get-CkDependencySettings
         $dialog = New-Object System.Windows.Forms.FolderBrowserDialog
@@ -781,6 +786,9 @@
         & $updateOutputPathAction
         $javaInfo = & $getJavaInfoAction
         $vertexFixRequested = [bool]$ui.VertexFixBox.IsChecked
+        if ($vertexFixRequested -and -not (Get-CkDotNet8Info).Ok) {
+            throw '.NET 8 Runtime 不可用，启用模型修复前请先安装 .NET 8 Runtime。'
+        }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
         $arguments = @($Context.Paths.FxapDecryptorScript)
         if ($vertexFixRequested) { $arguments += '--vertex-fix' }
@@ -927,11 +935,15 @@
     }.GetNewClosure()
 
     $inputChangedHandler = { & $updateOutputPathAction }.GetNewClosure()
+    $vertexFixChangedHandler = { & $updateEnvironmentAction }.GetNewClosure()
     $ui.InputBox.Add_TextChanged($inputChangedHandler)
+    $ui.VertexFixBox.Add_Checked($vertexFixChangedHandler)
+    $ui.VertexFixBox.Add_Unchecked($vertexFixChangedHandler)
     Register-CkButtonAction -Button $ui.NodeDownloadButton -Action $openNodeDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.NodeBrowseButton -Action $selectNodeAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaDownloadButton -Action $openJavaDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.JavaBrowseButton -Action $selectJavaAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DotNet8DownloadButton -Action $openDotNetDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ChooseFolderButton -Action $chooseFolderAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenOutputButton -Action $openOutputAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError

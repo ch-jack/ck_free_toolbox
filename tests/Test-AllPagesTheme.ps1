@@ -44,6 +44,8 @@ $context = [pscustomobject]@{
         DumpToolScript = Join-Path $workspaceRoot 'dump-tool\auto.py'
         FxapDecryptorDir = Join-Path $workspaceRoot 'fxap-decryptor'
         FxapDecryptorScript = Join-Path $workspaceRoot 'fxap-decryptor\index.js'
+        ModelRepairDir = Join-Path $workspaceRoot 'fxap-decryptor\tools\vertex-fixer'
+        ModelRepairExe = Join-Path $workspaceRoot 'fxap-decryptor\tools\vertex-fixer\FivemDecryptFixer.Cli.exe'
         AntiJohnDir = Join-Path $workspaceRoot 'ck_anti_john'
         AntiJohnScript = Join-Path $workspaceRoot 'ck_anti_john\ck-anti-john.py'
         XiaohaCleanerDir = Join-Path $workspaceRoot 'xiaoha_cleaner'
@@ -80,7 +82,7 @@ try {
     $registry = Get-Content -LiteralPath (Join-Path $appRoot 'config\tools.json') -Raw -Encoding UTF8 | ConvertFrom-Json
     $tools = @()
     foreach ($registeredTool in $registry) { $tools += $registeredTool }
-    Assert-CkPageThemeTest ($tools.Count -eq 13) "Expected 13 registered tools, found $($tools.Count)."
+    Assert-CkPageThemeTest ($tools.Count -eq 14) "Expected 14 registered tools, found $($tools.Count)."
 
     $pages = @{}
     $darkSamples = @{}

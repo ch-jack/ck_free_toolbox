@@ -210,6 +210,8 @@ $context = [pscustomobject]@{
         DumpToolScript = Join-Path $WorkspaceRoot 'dump-tool\auto.py'
         FxapDecryptorDir = Join-Path $WorkspaceRoot 'fxap-decryptor'
         FxapDecryptorScript = Join-Path $WorkspaceRoot 'fxap-decryptor\index.js'
+        ModelRepairDir = Join-Path $WorkspaceRoot 'fxap-decryptor\tools\vertex-fixer'
+        ModelRepairExe = Join-Path $WorkspaceRoot 'fxap-decryptor\tools\vertex-fixer\FivemDecryptFixer.Cli.exe'
         AntiJohnDir = Join-Path $WorkspaceRoot 'ck_anti_john'
         AntiJohnScript = Join-Path $WorkspaceRoot 'ck_anti_john\ck-anti-john.py'
         XiaohaCleanerDir = Join-Path $WorkspaceRoot 'xiaoha_cleaner'
@@ -612,6 +614,16 @@ function New-NavButton {
     return $button
 }
 
+function Get-CkComponentKey {
+    param($Tool)
+
+    if (-not $Tool -or -not $Tool.PSObject.Properties['component']) { return '' }
+    $repo = ([string]$Tool.component.repo).Trim().ToLowerInvariant()
+    $installDir = (([string]$Tool.component.installDir).Trim() -replace '/', '\').Trim('\').ToLowerInvariant()
+    if (-not $repo -or -not $installDir) { return '' }
+    return "$repo|$installDir"
+}
+
 function Get-CkLocalComponentState {
     param($Tool)
 
@@ -658,9 +670,10 @@ function Update-CkComponentHeader {
         return
     }
 
+    $componentKey = & $getComponentKeyAction $tool
     $componentStatusText.Visibility = 'Visible'
     $componentActionButton.Visibility = 'Visible'
-    if ($componentState.Process -and $componentState.Process.ToolId -eq $componentState.CurrentToolId) {
+    if ($componentState.Process -and $componentState.Process.ComponentKey -eq $componentKey) {
         $componentStatusText.Text = [string]$componentState.Process.Message
         $componentStatusText.Foreground = (Get-CkThemeBrush '#72B7F2')
         $componentActionButton.Content = if ($componentState.Process.Action -eq 'check') { '检查中...' } else { '安装中...' }
@@ -681,7 +694,7 @@ function Update-CkComponentHeader {
 
     $componentProgressBar.Visibility = 'Collapsed'
     $local = & $getLocalComponentStateAction $tool
-    $remote = if ($componentState.Remote.ContainsKey($componentState.CurrentToolId)) { $componentState.Remote[$componentState.CurrentToolId] } else { $null }
+    $remote = if ($componentState.Remote.ContainsKey($componentKey)) { $componentState.Remote[$componentKey] } else { $null }
     $componentActionButton.IsEnabled = $true
     if (-not $local.Installed) {
         $componentStatusText.Text = '组件缺失'
@@ -709,7 +722,7 @@ function Update-CkComponentHeader {
         return
     }
 
-    $checked = $componentState.Checked.ContainsKey($componentState.CurrentToolId)
+    $checked = $componentState.Checked.ContainsKey($componentKey)
     $currentVersion = if ($remote -and $remote.latestVersion) { [string]$remote.latestVersion } else { [string]$local.LocalVersion }
     $componentStatusText.Text = if ($checked -and $currentVersion) { "已是最新 $currentVersion" } elseif ($local.LocalVersion) { "已安装 $($local.LocalVersion)" } else { '组件已安装' }
     $componentStatusText.Foreground = (Get-CkThemeBrush '#31D69A')
@@ -727,6 +740,8 @@ function Start-CkComponentOperation {
     }
     $tool = $toolConfigs[$ToolId]
     if (-not $tool) { throw "工具配置不存在: $ToolId" }
+    $componentKey = & $getComponentKeyAction $tool
+    if (-not $componentKey) { throw "工具组件身份无效: $ToolId" }
     if (-not (Test-Path -LiteralPath $componentWorker -PathType Leaf)) {
         throw "组件工作器不存在: $componentWorker"
     }
@@ -747,6 +762,8 @@ function Start-CkComponentOperation {
     $callbackOutput = $output
     $callbackState = $componentState
     $callbackToolId = $ToolId
+    $callbackComponentKey = $componentKey
+    $callbackGetComponentKey = $getComponentKeyAction
     $callbackAction = $Action
     $callbackRefresh = $refreshComponentHeaderAction
     $callbackPages = $pages
@@ -758,10 +775,11 @@ function Start-CkComponentOperation {
         if ($line -match '^CK_PROGRESS\s+(.+)$') {
             try {
                 $progress = $Matches[1] | ConvertFrom-Json
-                if ($callbackState.Process -and $callbackState.Process.ToolId -eq $callbackToolId) {
+                if ($callbackState.Process -and $callbackState.Process.ComponentKey -eq $callbackComponentKey) {
                     $callbackState.Process.Percent = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
                     $callbackState.Process.Message = [string]$progress.message
-                    if ($callbackState.CurrentToolId -eq $callbackToolId) { & $callbackRefresh }
+                    $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+                    if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) { & $callbackRefresh }
                 }
             } catch { }
             return
@@ -770,7 +788,8 @@ function Start-CkComponentOperation {
     }.GetNewClosure()
     $onError = {
         param($message)
-        if ($callbackState.CurrentToolId -eq $callbackToolId) {
+        $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+        if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) {
             $componentStatusText.Text = $message
             $componentStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
         }
@@ -788,9 +807,10 @@ function Start-CkComponentOperation {
             if (-not $payload) {
                 $payload = [pscustomobject]@{ status = 'error'; error = if ($raw) { $raw } else { "组件工作器退出码: $exitCode" } }
             }
-            $callbackState.Checked[$callbackToolId] = $true
-            $callbackState.Remote[$callbackToolId] = $payload
-            if ($callbackState.CurrentToolId -eq $callbackToolId) { & $callbackRefresh }
+            $callbackState.Checked[$callbackComponentKey] = $true
+            $callbackState.Remote[$callbackComponentKey] = $payload
+            $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+            if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) { & $callbackRefresh }
             if ($payload.status -eq 'error' -or $exitCode -ne 0) {
                 if (-not $callbackSilent) {
                     [System.Windows.MessageBox]::Show(
@@ -803,7 +823,18 @@ function Start-CkComponentOperation {
                 return
             }
             if ($callbackAction -eq 'install') {
-                if ($callbackPages[$callbackToolId].Activate) { & $callbackPages[$callbackToolId].Activate }
+                $activateToolIds = @($callbackToolId)
+                $currentToolId = [string]$callbackState.CurrentToolId
+                $currentTool = if ($currentToolId) { $toolConfigs[$currentToolId] } else { $null }
+                if ($currentToolId -and $currentToolId -ne $callbackToolId -and $currentTool -and
+                    (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) {
+                    $activateToolIds += $currentToolId
+                }
+                foreach ($activateToolId in @($activateToolIds | Select-Object -Unique)) {
+                    if ($callbackPages.ContainsKey($activateToolId) -and $callbackPages[$activateToolId].Activate) {
+                        & $callbackPages[$activateToolId].Activate
+                    }
+                }
                 [System.Windows.MessageBox]::Show(
                     "$($callbackPages[$callbackToolId].Title) 组件已安装到最新版本。",
                     'CK免费工具箱 - 组件管理',
@@ -828,6 +859,7 @@ function Start-CkComponentOperation {
     $runtime = Start-CkLoggedProcess -FileName $powershellExe -Arguments $arguments -WorkingDirectory $ScriptRoot -Dispatcher $context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onError
     $componentState.Process = [pscustomobject]@{
         ToolId = $ToolId
+        ComponentKey = $componentKey
         Action = $Action
         Runtime = $runtime
         Percent = 2
@@ -847,8 +879,9 @@ function Continue-CkStartupComponentChecks {
             & $componentOperationActions.Start 'check' $toolId $true
             if ($componentState.Process) { return }
         } catch {
-            $componentState.Checked[$toolId] = $true
-            $componentState.Remote[$toolId] = [pscustomobject]@{
+            $componentKey = & $getComponentKeyAction $tool
+            $componentState.Checked[$componentKey] = $true
+            $componentState.Remote[$componentKey] = [pscustomobject]@{
                 status = 'error'
                 error = $_.Exception.Message
             }
@@ -863,9 +896,14 @@ function Start-CkStartupComponentChecks {
     if ($componentState.StartupActive -or $componentState.Process) { return }
 
     $componentState.StartupQueue.Clear()
+    $queuedComponents = @{}
     foreach ($tool in $tools) {
         if ($tool.PSObject.Properties['component']) {
-            $componentState.StartupQueue.Enqueue([string]$tool.id)
+            $componentKey = & $getComponentKeyAction $tool
+            if ($componentKey -and -not $queuedComponents.ContainsKey($componentKey)) {
+                $queuedComponents[$componentKey] = $true
+                $componentState.StartupQueue.Enqueue([string]$tool.id)
+            }
         }
     }
     if ($componentState.StartupQueue.Count -eq 0) { return }
@@ -1125,6 +1163,7 @@ function Show-ToolPage {
 
 }
 
+$getComponentKeyAction = (Get-Command Get-CkComponentKey).ScriptBlock.GetNewClosure()
 $getLocalComponentStateAction = (Get-Command Get-CkLocalComponentState).ScriptBlock.GetNewClosure()
 $refreshComponentHeaderAction = (Get-Command Update-CkComponentHeader).ScriptBlock.GetNewClosure()
 $componentOperationActions.Continue = (Get-Command Continue-CkStartupComponentChecks).ScriptBlock.GetNewClosure()

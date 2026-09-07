@@ -159,8 +159,17 @@ git push origin v1.0.2
 - 每次任务结束都会生成 Markdown 和 JSON 报告；页面可直接打开本次报告或报告历史，报告不会写入 CFX key 或 Bearer Token。
 - Node.js 18+ 和 Java 都使用用户外部安装；Java 可选，缺失或反编译失败时保留 `.luac`。
 - 可选模型修复只复制本次完整解密成功的 FXAP 资源，在原输出目录旁生成完整副本，并仅处理副本内的 `.ydr`、`.yft`、`.ydd`；原解密结果不会被覆盖。
-- “完成后自动打开文件夹”默认勾选；生成修复副本时打开副本，否则打开原解密目录。模型修复客户端为自包含 EXE/DLL，无需另装 .NET 8 Runtime。
+- “完成后自动打开文件夹”默认勾选；生成修复副本时打开副本，否则打开原解密目录。当前模型修复 CLI 需要 .NET 8 Runtime。
 - 组件从 [ch-jack/fxap_only](https://github.com/ch-jack/fxap_only) 的稳定 Release 安装并校验 SHA-256，不包含 `decrypt-eup-stream.js` 功能。
+
+### 模型修复
+
+- 选择单个 FiveM resource、整个 `resources` 目录或其他模型父目录，递归处理 `.ydr`、`.yft`、`.ydd`。
+- 页面直接复用 `fxap-decryptor/tools/vertex-fixer/FivemDecryptFixer.Cli.exe`，与 FXAP 文件夹解密共用同一组件安装目录和稳定 Release，不维护第二份修复程序。
+- 修复成功的模型在原目录中原子替换；一个模型内任一 Buffer 失败时该模型原文件保持不变。开始前会明确确认原地修改，重要资源仍建议先备份。
+- 已修复或没有受保护 VertexBuffer 的模型会跳过；页面实时显示扫描、修复、无需修复和失败数量，并支持停止任务。
+- 每次执行同时保留组件原生日志以及工具箱生成的 Markdown/JSON 报告。部分 type 2 VertexBuffer 会上传单个 Buffer 到现有私有修复服务。
+- 当前组件需要 .NET 8 Runtime，不需要 Node.js、Java、CFX key，也不会执行 FXAP 解密。
 
 ### 服务器 Dump
 
@@ -172,7 +181,7 @@ git push origin v1.0.2
 - “解密 FXAP”默认勾选；取消后不会执行 FXAP 解密或模型修复，也不要求 Java，而是在逐资源临时目录清理前，将 `.fxap`、加密文件、脚本和所有子目录完整复制到输出目录。
 - 包含服务器 Dump 和 FXAP 解密；可选的模型修复只对本次成功解密的 FXAP 资源生效，会在原输出目录旁复制完整资源目录，仅处理副本中的 `.ydr`、`.yft`、`.ydd`，不覆盖原解密输出。
 - “完成后自动打开输出文件夹”默认勾选；启用模型修复时打开修复副本，否则打开原解密目录。
-- 模型修复客户端为自包含 EXE/DLL，无需另装 .NET 8 Runtime。
+- 当前模型修复 CLI 需要 .NET 8 Runtime。
 
 ### 扫描移除后门
 
@@ -286,7 +295,7 @@ ck_free_toolbox/
   static/
 ~~~
 
-当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、服务器 Dump、FXAP 文件夹解密、扫描移除后门、秒杀小哈、地图冲突合并、衣服资源打包、图片批量压缩、FiveM NUI 调试和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
+当前工具注册表启用模型自动截图、NUI 自动去墙、RPF 转 FiveM、载具武器声浪、服务器 Dump、FXAP 文件夹解密、模型修复、扫描移除后门、秒杀小哈、地图冲突合并、衣服资源打包、图片批量压缩、FiveM NUI 调试和增强版转换器。新增功能时，新建一个 app/pages/*.ps1 页面工厂，并在 app/config/tools.json 注册 id/title/icon/page/factory。主窗口只负责加载、导航和公共运行时，不需要把所有功能继续堆进一个脚本。
 地图冲突合并以 snowy-merger 注册为外置 Release 组件，页面工厂为 New-CkSnowyMergerPage。
 衣服资源打包以 clothing-repacker 注册为外置 Release 组件，页面工厂为 New-CkClothingRepackerPage。
 图片批量压缩以 image-compressor 注册为外置 Release 组件，页面工厂为 New-CkImageCompressorPage。
