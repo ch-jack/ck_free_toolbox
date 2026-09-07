@@ -215,7 +215,7 @@
         [void]$state.Output.AppendLine([string]$Line)
         Add-CkLogLine -TextBox $ui.LogBox -Line ([string]$Line)
 
-        $outputEvent = Update-CkModelRepairOutputState -State $state -Line $Line
+        $outputEvent = & $updateOutputStateAction -State $state -Line $Line
         switch ($outputEvent.Kind) {
         'native-log' {
             $ui.OpenNativeLogButton.IsEnabled = Test-Path -LiteralPath $state.NativeLogPath -PathType Leaf
@@ -306,6 +306,8 @@
         return [pscustomobject]@{ Markdown = [IO.Path]::GetFullPath($markdownPath); Json = [IO.Path]::GetFullPath($jsonPath) }
     }
 
+    $updateOutputStateAction = (Get-Command Update-CkModelRepairOutputState).ScriptBlock.GetNewClosure()
+    $resolveResultAction = (Get-Command Resolve-CkModelRepairResult).ScriptBlock.GetNewClosure()
     $getComponentInfoAction = (Get-Command Get-ModelRepairComponentInfo).ScriptBlock.GetNewClosure()
     $updateStartStateAction = (Get-Command Update-ModelRepairStartState).ScriptBlock.GetNewClosure()
     $updateEnvironmentAction = (Get-Command Update-ModelRepairEnvironment).ScriptBlock.GetNewClosure()
@@ -396,6 +398,7 @@
         $callbackSetRunning = $setRunningAction
         $callbackSaveReport = $saveReportAction
         $callbackUpdateEnvironment = $updateEnvironmentAction
+        $callbackResolveResult = $resolveResultAction
         $onOutput = { param($Line) & $callbackParse ([string]$Line) }.GetNewClosure()
         $onProcessError = { param($Message) $callbackUi.StatusLine.Text = [string]$Message }.GetNewClosure()
         $onExit = {
@@ -405,7 +408,7 @@
             $callbackState.Process = $null
             & $callbackSetRunning $false
 
-            $result = Resolve-CkModelRepairResult -ExitCode $ExitCode -Cancelled $cancelled `
+            $result = & $callbackResolveResult -ExitCode $ExitCode -Cancelled $cancelled `
                 -Scanned $callbackState.Scanned -Repaired $callbackState.Repaired `
                 -Skipped $callbackState.Skipped -Failed $callbackState.Failed
             $reportStatus = [string]$result.Status

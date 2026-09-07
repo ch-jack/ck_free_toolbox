@@ -182,6 +182,15 @@ jobs:
             }
           }
 
+      - name: Validate model repair page and callbacks
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File .\tests\Test-ModelRepairPage.ps1
+          if ($LASTEXITCODE -ne 0) {
+            throw "Model repair page test exited with code $LASTEXITCODE"
+          }
+
       - name: Validate themes and all WPF pages
         shell: powershell
         run: |
@@ -261,6 +270,7 @@ jobs:
             'app\pages\ModelToolsPage.ps1',
             'app\pages\ServerDumpPage.ps1',
             'app/pages/FxapDecryptorPage.ps1',
+            'app\pages\ModelRepairPage.ps1',
             'app\pages\SnowyMergerPage.ps1',
             'app\pages\ClothingRepackerPage.ps1',
             'app\pages\ImageCompressorPage.ps1',

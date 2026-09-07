@@ -90,6 +90,21 @@ try {
     [void](Update-CkModelRepairOutputState -State $parsedState -Line '[MODEL ERROR] late stderr duplicate')
     Assert-ModelRepairPage ($parsedState.Failed -eq 1) 'A late stderr error after the stdout summary must not be double-counted.'
 
+    $detachedUpdateAction = (Get-Command Update-CkModelRepairOutputState).ScriptBlock.GetNewClosure()
+    $detachedResolveAction = (Get-Command Resolve-CkModelRepairResult).ScriptBlock.GetNewClosure()
+    $detachedCallback = {
+        param($CallbackState)
+        [void](& $detachedUpdateAction -State $CallbackState -Line '[MODEL] scanned=1, repaired=1, failed=0')
+        return & $detachedResolveAction -ExitCode 0 -Cancelled $false -Scanned $CallbackState.Scanned `
+            -Repaired $CallbackState.Repaired -Skipped $CallbackState.Skipped -Failed $CallbackState.Failed
+    }.GetNewClosure()
+    Remove-Item -LiteralPath Function:\Update-CkModelRepairOutputState
+    Remove-Item -LiteralPath Function:\Resolve-CkModelRepairResult
+    $detachedState = New-ModelRepairOutputStateFixture
+    $detachedResult = & $detachedCallback $detachedState
+    Assert-ModelRepairPage ($detachedState.SummarySeen -and $detachedResult.Status -ceq 'success') 'Captured parser and resolver must remain callable after their defining functions leave callback scope.'
+    . (Join-Path $appRoot 'pages\ModelRepairPage.ps1')
+
     $page = New-CkModelRepairPage -Context $context
     Assert-ModelRepairPage ($page -and $page.Root -is [System.Windows.UIElement]) 'Model repair page returned an invalid root element.'
     Assert-ModelRepairPage ([string]$page.Id -ceq 'model-repair') 'Model repair page id is invalid.'
@@ -152,11 +167,17 @@ try {
     $fxapSource = [IO.File]::ReadAllText((Join-Path $appRoot 'pages\FxapDecryptorPage.ps1'))
     $dumpSource = [IO.File]::ReadAllText((Join-Path $appRoot 'pages\ServerDumpPage.ps1'))
     $mainSource = [IO.File]::ReadAllText($mainPath)
+    $releaseBuilderSource = [IO.File]::ReadAllText((Join-Path $repoRoot 'tools\Build-ReleasePackage.ps1'))
+    $releaseWorkflowSource = [IO.File]::ReadAllText((Join-Path $repoRoot '.github\workflows\build-release.yml'))
     Assert-ModelRepairPage ($source.Contains("-Arguments @('fix-models', `$target)")) 'Page does not directly invoke the shared CLI fix-models command.'
     Assert-ModelRepairPage ($source.Contains('不能把整个磁盘作为模型修复目录')) 'Page is missing the drive-root safety guard.'
     Assert-ModelRepairPage ($source.Contains('部分 type 2 VertexBuffer')) 'Page is missing the remote Buffer disclosure.'
     Assert-ModelRepairPage ($source.Contains('$dotnet = Get-CkDotNet8Info')) 'Page must detect the .NET 8 runtime required by the shared FXAP CLI.'
-    Assert-ModelRepairPage ($source.Contains('Update-CkModelRepairOutputState -State $state -Line $Line')) 'Page UI must use the behavior-tested output parser.'
+    Assert-ModelRepairPage ($source.Contains('$updateOutputStateAction = (Get-Command Update-CkModelRepairOutputState).ScriptBlock.GetNewClosure()')) 'Page must capture the output parser for asynchronous callbacks.'
+    Assert-ModelRepairPage ($source.Contains('$resolveResultAction = (Get-Command Resolve-CkModelRepairResult).ScriptBlock.GetNewClosure()')) 'Page must capture the result resolver for asynchronous callbacks.'
+    Assert-ModelRepairPage ($source.Contains('$outputEvent = & $updateOutputStateAction -State $state -Line $Line')) 'Page UI must invoke the captured behavior-tested output parser.'
+    Assert-ModelRepairPage ($source.Contains('$callbackResolveResult = $resolveResultAction')) 'Exit callback must retain the captured result resolver.'
+    Assert-ModelRepairPage ($source.Contains('$result = & $callbackResolveResult')) 'Exit callback must invoke the captured result resolver instead of relying on caller scope.'
     Assert-ModelRepairPage ($source.Contains('$reportStatus = [string]$result.Status')) 'Page report status must use the behavior-tested result classification.'
     Assert-ModelRepairPage ($source.Contains('$callbackUi.ResultStatus.Text = [string]$result.ResultText')) 'Page UI status must use the same result classification as the report.'
 
@@ -179,6 +200,11 @@ try {
     Assert-ModelRepairPage ($dumpSource.Contains("if (`$vertexFixRequested -and -not (Get-CkDotNet8Info).Ok)")) 'Server Dump page must recheck .NET 8 immediately before starting model repair.'
     Assert-ModelRepairPage ($dumpSource.Contains('Register-CkButtonAction -Button $ui.DotNet8DownloadButton')) 'Server Dump .NET 8 download button must be wired.'
     Assert-ModelRepairPage (-not $dumpSource.Contains('自包含 EXE / DLL')) 'Server Dump page must not claim the framework-dependent repair CLI is self-contained.'
+
+    Assert-ModelRepairPage ($releaseBuilderSource.Contains("app\pages\ModelRepairPage.ps1")) 'Release package verification must require ModelRepairPage.ps1.'
+    Assert-ModelRepairPage (-not $releaseBuilderSource.Contains('模型修复客户端为自包含 EXE/DLL')) 'Packaged user guide must not claim the repair CLI is self-contained.'
+    Assert-ModelRepairPage ($releaseWorkflowSource.Contains('Validate model repair page and callbacks')) 'Release CI must run the model repair callback regression test.'
+    Assert-ModelRepairPage ($releaseWorkflowSource.Contains("'app\pages\ModelRepairPage.ps1'")) 'Release CI package verification must require ModelRepairPage.ps1.'
 
     if (Test-Path -LiteralPath $repairExe -PathType Leaf) {
         $probeRoot = Join-Path $tempRoot '空 模型 [probe]'
