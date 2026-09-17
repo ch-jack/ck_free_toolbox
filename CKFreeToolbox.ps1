@@ -763,6 +763,7 @@ function Start-CkComponentOperation {
     $callbackState = $componentState
     $callbackToolId = $ToolId
     $callbackComponentKey = $componentKey
+    $callbackToolConfigs = $toolConfigs
     $callbackGetComponentKey = $getComponentKeyAction
     $callbackAction = $Action
     $callbackRefresh = $refreshComponentHeaderAction
@@ -778,7 +779,7 @@ function Start-CkComponentOperation {
                 if ($callbackState.Process -and $callbackState.Process.ComponentKey -eq $callbackComponentKey) {
                     $callbackState.Process.Percent = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
                     $callbackState.Process.Message = [string]$progress.message
-                    $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+                    $currentTool = $callbackToolConfigs[$callbackState.CurrentToolId]
                     if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) { & $callbackRefresh }
                 }
             } catch { }
@@ -788,7 +789,7 @@ function Start-CkComponentOperation {
     }.GetNewClosure()
     $onError = {
         param($message)
-        $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+        $currentTool = $callbackToolConfigs[$callbackState.CurrentToolId]
         if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) {
             $componentStatusText.Text = $message
             $componentStatusText.Foreground = (Get-CkThemeBrush '#EF7C86')
@@ -809,7 +810,7 @@ function Start-CkComponentOperation {
             }
             $callbackState.Checked[$callbackComponentKey] = $true
             $callbackState.Remote[$callbackComponentKey] = $payload
-            $currentTool = $toolConfigs[$callbackState.CurrentToolId]
+            $currentTool = $callbackToolConfigs[$callbackState.CurrentToolId]
             if ($currentTool -and (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) { & $callbackRefresh }
             if ($payload.status -eq 'error' -or $exitCode -ne 0) {
                 if (-not $callbackSilent) {
@@ -825,7 +826,7 @@ function Start-CkComponentOperation {
             if ($callbackAction -eq 'install') {
                 $activateToolIds = @($callbackToolId)
                 $currentToolId = [string]$callbackState.CurrentToolId
-                $currentTool = if ($currentToolId) { $toolConfigs[$currentToolId] } else { $null }
+                $currentTool = if ($currentToolId) { $callbackToolConfigs[$currentToolId] } else { $null }
                 if ($currentToolId -and $currentToolId -ne $callbackToolId -and $currentTool -and
                     (& $callbackGetComponentKey $currentTool) -eq $callbackComponentKey) {
                     $activateToolIds += $currentToolId

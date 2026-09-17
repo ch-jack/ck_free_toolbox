@@ -186,6 +186,9 @@ try {
     Assert-ModelRepairPage ($mainSource.Contains('$queuedComponents.ContainsKey($componentKey)')) 'Startup component checks must deduplicate shared component identities.'
     Assert-ModelRepairPage ($mainSource.Contains('ComponentKey = $componentKey')) 'Active component operations must retain their shared component identity.'
     Assert-ModelRepairPage ($mainSource.Contains('$activateToolIds += $currentToolId')) 'Installing a shared component must refresh the currently visible alias page.'
+    Assert-ModelRepairPage ($mainSource.Contains('$callbackToolConfigs = $toolConfigs')) 'Component callbacks must capture the tool registry for asynchronous refresh checks.'
+    Assert-ModelRepairPage (-not $mainSource.Contains('$toolConfigs[$callbackState.CurrentToolId]')) 'Component callbacks must not resolve the tool registry through the caller scope.'
+    Assert-ModelRepairPage ($mainSource.Contains('$callbackToolConfigs[$callbackState.CurrentToolId]')) 'Progress callbacks must resolve the current tool from the captured registry.'
 
     Assert-ModelRepairPage ($fxapSource.Contains('$dotnetRequired = [bool]$ui.VertexFixBox.IsChecked')) 'FXAP page must require .NET 8 only when model repair is selected.'
     Assert-ModelRepairPage ($fxapSource.Contains('$state.Ready = $nodeOk -and $componentOk -and ($dotnetOk -or -not $dotnetRequired)')) 'FXAP readiness must include the conditional .NET 8 requirement.'
