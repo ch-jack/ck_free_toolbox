@@ -475,7 +475,7 @@ function Get-CkDotNet8Info {
             if ($process.ExitCode -ne 0) { continue }
             $matches = [regex]::Matches($output, '(?m)^Microsoft\.NETCore\.App\s+(?<version>8\.[^\s]+)\s+\[')
             if ($matches.Count -gt 0) {
-                $versions = @($matches | ForEach-Object { $_.Groups['version'].Value } | Sort-Object { [Version]$_ } -Descending)
+                $versions = @($matches | ForEach-Object { $_.Groups['version'].Value } | Sort-Object { [Version]($_ -replace '-.*$', '') } -Descending)
                 return [pscustomobject]@{
                     Ok = $true
                     Label = ".NET 8 Runtime $($versions[0])"
