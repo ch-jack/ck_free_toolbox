@@ -219,9 +219,44 @@ jobs:
           if ($launchers.Count -ne 1) {
             throw "Expected one root launcher EXE, found $($launchers.Count)."
           }
-          $process = Start-Process -FilePath $launchers[0].FullName -ArgumentList '-SmokeTest' -PassThru -Wait -WindowStyle Hidden
+          $hostRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox\process-hosts'
+          $process = Start-Process -FilePath $launchers[0].FullName -ArgumentList '-SmokeTest' -PassThru -WindowStyle Hidden
+          $observedHost = $null
+          for ($attempt = 0; $attempt -lt 240 -and -not $observedHost; $attempt++) {
+            $observedHost = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
+              Where-Object {
+                $_.ExecutablePath -and
+                $_.ExecutablePath.StartsWith($hostRoot, [StringComparison]::OrdinalIgnoreCase)
+              } | Select-Object -First 1)[0]
+            if ($observedHost) { break }
+            if ($process.HasExited) { break }
+            Start-Sleep -Milliseconds 50
+          }
+          $process.WaitForExit()
           if ($process.ExitCode -ne 0) {
             throw "Packaged launcher smoke test exited with code $($process.ExitCode)"
+          }
+          if (-not $observedHost) {
+            throw 'Random launcher host process was not observed.'
+          }
+          $hostName = [IO.Path]::GetFileNameWithoutExtension([string]$observedHost.Name)
+          if ($hostName -notmatch '^[0-9a-f]{32}$') {
+            throw "Random launcher process name has an unexpected format: $hostName"
+          }
+          if ([string]$observedHost.Name -ieq 'CK免费工具箱.exe') {
+            throw 'Packaged launcher still ran under the fixed process name.'
+          }
+          for ($attempt = 0; $attempt -lt 40 -and @(
+              Get-ChildItem -LiteralPath $hostRoot -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^[0-9a-f]{32}\.exe$' }
+            ).Count -ne 0; $attempt++) {
+            Start-Sleep -Milliseconds 50
+          }
+          if (@(
+              Get-ChildItem -LiteralPath $hostRoot -File -ErrorAction SilentlyContinue |
+                Where-Object { $_.Name -match '^[0-9a-f]{32}\.exe$' }
+            ).Count -ne 0) {
+            throw 'Random launcher host file was not cleaned up.'
           }
 
       - name: Bundle latest default components

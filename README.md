@@ -36,7 +36,7 @@ FiveM NUI 调试页面接入 [ch-jack/vjmidevtools](https://github.com/ch-jack/v
 D:\fivem\ck_free_toolbox\CK免费工具箱.exe
 ~~~
 
-start_toolbox.cmd 仅用于开发排错。不要只复制 EXE；主脚本、app/ 和 static/ 必须与 EXE 保持原目录结构。
+启动器会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成每次不同的随机进程名，固定入口只负责启动、等待和清理，主界面在随机副本中运行；主界面窗口标题也会在每次启动时随机变化，任务栏图标仍显示 CK免费工具箱。`start_toolbox.cmd` 有 EXE 时通过同一个 EXE 启动并等待退出，源码目录没有 EXE 时回退到 PowerShell 开发入口。不要只复制 EXE；主脚本、app/ 和 static/ 必须与 EXE 保持原目录结构。
 
 ## 一键打包
 

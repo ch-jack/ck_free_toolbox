@@ -1,6 +1,7 @@
 ﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory)][int]$ParentPid,
+    [int]$LauncherPid = 0,
     [Parameter(Mandatory)][string]$SourceRoot,
     [Parameter(Mandatory)][string]$TargetRoot,
     [Parameter(Mandatory)][string]$ExpectedVersion,
@@ -90,12 +91,18 @@ try {
         }
     }
 
-    if ($ParentPid -gt 0) {
-        $parent = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue
+    $waitPids = New-Object System.Collections.Generic.List[int]
+    foreach ($candidatePid in @($ParentPid, $LauncherPid)) {
+        if ($candidatePid -gt 0 -and -not $waitPids.Contains($candidatePid)) {
+            [void]$waitPids.Add($candidatePid)
+        }
+    }
+    foreach ($waitPid in $waitPids) {
+        $parent = Get-Process -Id $waitPid -ErrorAction SilentlyContinue
         if ($parent) {
-            Write-CkUpdateLog "等待工具箱进程退出: PID=$ParentPid"
+            Write-CkUpdateLog "等待工具箱进程退出: PID=$waitPid"
             if (-not $parent.WaitForExit(120000)) {
-                throw "等待工具箱退出超时: PID=$ParentPid"
+                throw "等待工具箱退出超时: PID=$waitPid"
             }
         }
     }

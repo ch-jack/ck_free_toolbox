@@ -16,6 +16,7 @@ dist/
 ~~~
 
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
+固定入口 EXE 启动后会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成随机副本，以每次不同的 32 位十六进制进程名运行主界面；主窗口标题也会在每次启动时随机变化，任务栏图标保持 CK 图标；随机副本不进入发布包，正常退出后由固定入口清理，强制终止时可能留下临时副本。
 SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件工作器按需创建。
 Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-packer，发布包只保留中文 CLI 页面和组件登记。
 Arya FiveM Tool 同样不预装；其运行目录为 arya-fivem-tool，发布包只保留中文启动页和组件登记。

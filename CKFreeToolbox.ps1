@@ -5,6 +5,15 @@ Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $SmokeTest = (@($args) -contains '-SmokeTest')
+$LauncherPid = 0
+$launcherPidText = [Environment]::GetEnvironmentVariable('CK_TOOLBOX_LAUNCHER_PID')
+if ($launcherPidText) {
+    [void][int]::TryParse($launcherPidText, [ref]$LauncherPid)
+}
+$WindowTitle = [Environment]::GetEnvironmentVariable('CK_TOOLBOX_WINDOW_TITLE')
+if ([string]::IsNullOrWhiteSpace($WindowTitle)) {
+    $WindowTitle = 'CK免费工具箱'
+}
 
 $ScriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $PortableRenderer = Join-Path $ScriptRoot 'vehicle_renderer\render_all_vehicles.py'
@@ -495,6 +504,7 @@ $shellXaml = @"
 "@
 
 $window = Import-CkXaml $shellXaml
+$window.Title = $WindowTitle
 
 function Set-CkResponsiveWindowSize {
     param([Parameter(Mandatory)]$Window)
@@ -1087,6 +1097,9 @@ function Start-CkSelfUpdateOperation {
             '-TargetRoot', $callbackInstallRoot,
             '-ExpectedVersion', $targetVersion
         )
+        if ($LauncherPid -gt 0 -and $LauncherPid -ne $callbackCurrentPid) {
+            $updaterArguments += @('-LauncherPid', [string]$LauncherPid)
+        }
         Start-Process -FilePath $powershellExe -ArgumentList (Join-CkArgumentList -Arguments $updaterArguments) -WindowStyle Hidden
         $callbackState.Status = 'applying'
         $callbackState.Message = '正在退出并应用更新'
