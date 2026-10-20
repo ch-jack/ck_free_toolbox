@@ -1,5 +1,46 @@
 ﻿$script:CkLogBoxStates = @{}
 
+function Ensure-CkWindowDisplayAffinityNative {
+    if ('CkWindowDisplayAffinityNative' -as [type]) { return $true }
+
+    try {
+        Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class CkWindowDisplayAffinityNative
+{
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetWindowDisplayAffinity(IntPtr hWnd, uint dwAffinity);
+}
+'@ -ErrorAction Stop
+    } catch {
+        return (('CkWindowDisplayAffinityNative' -as [type]) -ne $null)
+    }
+
+    return $true
+}
+
+function Enable-CkWindowCaptureProtection {
+    param([Parameter(Mandatory)]$Window)
+
+    if (-not ($Window -is [System.Windows.Window])) { return }
+    if (-not (Ensure-CkWindowDisplayAffinityNative)) { return }
+
+    $applyProtectionAction = {
+        try {
+            $handle = (New-Object System.Windows.Interop.WindowInteropHelper($Window)).Handle
+            if ($handle -eq [IntPtr]::Zero) { return }
+
+            # WDA_MONITOR keeps the window visible locally and black in normal captures.
+            [void][CkWindowDisplayAffinityNative]::SetWindowDisplayAffinity($handle, [uint32]1)
+        } catch { }
+    }.GetNewClosure()
+
+    $Window.Add_SourceInitialized($applyProtectionAction)
+}
+
 $script:CkCurrentTheme = 'Dark'
 $script:CkThemeRoots = New-Object System.Collections.ArrayList
 $script:CkRuntimeThemeBrushes = @{}
@@ -360,6 +401,9 @@ function Import-CkXaml {
     $root = [Windows.Markup.XamlReader]::Load($reader)
     [void]$script:CkThemeRoots.Add([System.WeakReference]::new($root))
     Enable-CkPageMouseWheelRouting -Root $root
+    if ($root -is [System.Windows.Window]) {
+        Enable-CkWindowCaptureProtection -Window $root
+    }
     return $root
 }
 
