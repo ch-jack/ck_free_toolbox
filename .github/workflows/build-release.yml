@@ -215,12 +215,17 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $launcherPath = Join-Path (Get-Location) 'CK免费工具箱.exe'
-          $adminLauncherPath = Join-Path (Get-Location) 'CK免费工具箱-管理员.exe'
-          if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
-            throw 'Normal launcher EXE was not built.'
+          $launchers = @(Get-ChildItem -LiteralPath (Get-Location) -File -Filter '*.exe')
+          $normalLaunchers = @($launchers | Where-Object {
+            $bytes = [IO.File]::ReadAllBytes($_.FullName)
+            -not ([Text.Encoding]::ASCII.GetString($bytes)).Contains('requireAdministrator')
+          })
+          if ($normalLaunchers.Count -ne 1 -or $launchers.Count -ne 2) {
+            throw 'Expected one normal launcher and one administrator launcher EXE.'
           }
-          if (-not (Test-Path -LiteralPath $adminLauncherPath -PathType Leaf)) {
+          $launcherPath = $normalLaunchers[0].FullName
+          $adminLaunchers = @($launchers | Where-Object { $_.FullName -ine $launcherPath })
+          if ($adminLaunchers.Count -ne 1) {
             throw 'Administrator launcher EXE was not built.'
           }
           $hostRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox\process-hosts'
@@ -242,9 +247,6 @@ jobs:
           $hostName = [IO.Path]::GetFileNameWithoutExtension([string]$observedHost.Name)
           if ($hostName -notmatch '^[0-9a-f]{32}$') {
             throw "Random launcher process name has an unexpected format: $hostName"
-          }
-          if ([string]$observedHost.Name -ieq 'CK免费工具箱.exe') {
-            throw 'Packaged launcher still ran under the fixed process name.'
           }
           $hostVersion = (Get-Item -LiteralPath ([string]$observedHost.ExecutablePath)).VersionInfo
           if ($hostVersion.FileDescription -match 'CK免费工具箱' -or $hostVersion.ProductName -match 'CK免费工具箱') {
@@ -299,9 +301,14 @@ jobs:
           if ([string]$manifest.flavor -ne 'standard') {
             throw "Expected standard package flavor, found: $($manifest.flavor)"
           }
+          $adminExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter '*.exe' |
+            Where-Object { $_.Name -ine [string]$manifest.entry })
+          if ($adminExecutables.Count -ne 1) {
+            throw 'Package is missing the administrator launcher EXE.'
+          }
           $required = @(
             [string]$manifest.entry,
-            'CK免费工具箱-管理员.exe',
+            $adminExecutables[0].Name,
             'CKFreeToolbox.ps1',
             'app\modules\ToolboxConfig.psm1',
             'app\config\tools.json',
