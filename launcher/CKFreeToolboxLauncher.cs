@@ -11,11 +11,6 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-[assembly: AssemblyTitle("CK免费工具箱")]
-[assembly: AssemblyDescription("CK Free Toolbox native launcher")]
-[assembly: AssemblyCompany("CK")]
-[assembly: AssemblyProduct("CK免费工具箱")]
-[assembly: AssemblyCopyright("Copyright (c) CK")]
 [assembly: AssemblyVersion("1.0.2.0")]
 [assembly: AssemblyFileVersion("1.0.2.0")]
 
@@ -26,6 +21,7 @@ namespace CKFreeToolbox
         private const string AppTitle = "CK免费工具箱";
         private const string ChildArgument = "--ck-random-host";
         private const string WaitArgument = "--ck-wait";
+        private const string SmokeTestArgument = "-SmokeTest";
         private const string LauncherPidVariable = "CK_TOOLBOX_LAUNCHER_PID";
         private const string WindowTitleVariable = "CK_TOOLBOX_WINDOW_TITLE";
         private const string HostDirectoryName = "process-hosts";
@@ -134,8 +130,13 @@ namespace CKFreeToolbox
 
                 using (var child = Process.Start(startInfo))
                 {
-                    child.WaitForExit();
-                    return child.ExitCode;
+                    if (ShouldWaitForChild(args))
+                    {
+                        child.WaitForExit();
+                        return child.ExitCode;
+                    }
+
+                    return 0;
                 }
             }
             finally
@@ -149,7 +150,14 @@ namespace CKFreeToolbox
 
         private static int RunRandomHost(ChildLaunch launch)
         {
-            return RunPowerShell(launch.InstallRoot, launch.UserArguments);
+            try
+            {
+                return RunPowerShell(launch.InstallRoot, launch.UserArguments);
+            }
+            finally
+            {
+                ScheduleHostFileCleanup(Assembly.GetExecutingAssembly().Location);
+            }
         }
 
         private static int RunPowerShell(string root, string[] args)
@@ -202,6 +210,54 @@ namespace CKFreeToolbox
             }
 
             userArguments = filtered.ToArray();
+        }
+
+        private static bool ShouldWaitForChild(string[] args)
+        {
+            foreach (var arg in args ?? new string[0])
+            {
+                if (string.Equals(arg, WaitArgument, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(arg, SmokeTestArgument, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static void ScheduleHostFileCleanup(string hostPath)
+        {
+            try
+            {
+                var escapedHostPath = hostPath.Replace("'", "''");
+                var command = "$ErrorActionPreference = 'SilentlyContinue'; " +
+                    "Start-Sleep -Milliseconds 500; " +
+                    "Remove-Item -LiteralPath '" + escapedHostPath + "' -Force -ErrorAction SilentlyContinue";
+                var powershellPath = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.System),
+                    "WindowsPowerShell",
+                    "v1.0",
+                    "powershell.exe");
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = powershellPath,
+                    Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -Command " + ProcessArgumentQuote(command),
+                    WorkingDirectory = Path.GetDirectoryName(hostPath),
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    WindowStyle = ProcessWindowStyle.Hidden
+                };
+                var cleanupProcess = Process.Start(startInfo);
+                if (cleanupProcess != null)
+                {
+                    cleanupProcess.Dispose();
+                }
+            }
+            catch
+            {
+                // Cleanup is best-effort; the host file is safe to remove on the next launch.
+            }
         }
 
         private static string GetHostRoot()

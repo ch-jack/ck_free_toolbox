@@ -232,10 +232,6 @@ jobs:
             if ($process.HasExited) { break }
             Start-Sleep -Milliseconds 50
           }
-          $process.WaitForExit()
-          if ($process.ExitCode -ne 0) {
-            throw "Packaged launcher smoke test exited with code $($process.ExitCode)"
-          }
           if (-not $observedHost) {
             throw 'Random launcher host process was not observed.'
           }
@@ -245,6 +241,14 @@ jobs:
           }
           if ([string]$observedHost.Name -ieq 'CK免费工具箱.exe') {
             throw 'Packaged launcher still ran under the fixed process name.'
+          }
+          $hostVersion = (Get-Item -LiteralPath ([string]$observedHost.ExecutablePath)).VersionInfo
+          if ($hostVersion.FileDescription -match 'CK免费工具箱' -or $hostVersion.ProductName -match 'CK免费工具箱') {
+            throw 'Random launcher host still exposes the fixed toolbox display name.'
+          }
+          $process.WaitForExit()
+          if ($process.ExitCode -ne 0) {
+            throw "Packaged launcher smoke test exited with code $($process.ExitCode)"
           }
           for ($attempt = 0; $attempt -lt 40 -and @(
               Get-ChildItem -LiteralPath $hostRoot -File -ErrorAction SilentlyContinue |
