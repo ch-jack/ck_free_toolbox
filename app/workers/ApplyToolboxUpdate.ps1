@@ -59,6 +59,7 @@ $source = Assert-CkChildPath -Path $SourceRoot -Parent $updateRoot
 $launcher = Join-Path $target 'CK免费工具箱.exe'
 $coreItems = @(
     'CK免费工具箱.exe',
+    'CK免费工具箱-管理员.exe',
     'CKFreeToolbox.ps1',
     'app',
     'static',

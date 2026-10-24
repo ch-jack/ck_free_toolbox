@@ -215,12 +215,16 @@ jobs:
         shell: powershell
         run: |
           $ErrorActionPreference = 'Stop'
-          $launchers = @(Get-ChildItem -LiteralPath . -File -Filter '*.exe')
-          if ($launchers.Count -ne 1) {
-            throw "Expected one root launcher EXE, found $($launchers.Count)."
+          $launcherPath = Join-Path (Get-Location) 'CK免费工具箱.exe'
+          $adminLauncherPath = Join-Path (Get-Location) 'CK免费工具箱-管理员.exe'
+          if (-not (Test-Path -LiteralPath $launcherPath -PathType Leaf)) {
+            throw 'Normal launcher EXE was not built.'
+          }
+          if (-not (Test-Path -LiteralPath $adminLauncherPath -PathType Leaf)) {
+            throw 'Administrator launcher EXE was not built.'
           }
           $hostRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox\process-hosts'
-          $process = Start-Process -FilePath $launchers[0].FullName -ArgumentList '-SmokeTest' -PassThru -WindowStyle Hidden
+          $process = Start-Process -FilePath $launcherPath -ArgumentList '-SmokeTest' -PassThru -WindowStyle Hidden
           $observedHost = $null
           for ($attempt = 0; $attempt -lt 240 -and -not $observedHost; $attempt++) {
             $observedHost = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue |
@@ -297,6 +301,7 @@ jobs:
           }
           $required = @(
             [string]$manifest.entry,
+            'CK免费工具箱-管理员.exe',
             'CKFreeToolbox.ps1',
             'app\modules\ToolboxConfig.psm1',
             'app\config\tools.json',

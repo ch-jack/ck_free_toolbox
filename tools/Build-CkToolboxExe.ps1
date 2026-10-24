@@ -7,6 +7,8 @@ $ErrorActionPreference = 'Stop'
 $Root = Split-Path -Parent $PSScriptRoot
 $SourcePath = Join-Path $Root 'launcher\CKFreeToolboxLauncher.cs'
 $OutputPath = Join-Path $Root 'CK免费工具箱.exe'
+$AdminOutputPath = Join-Path $Root 'CK免费工具箱-管理员.exe'
+$AdminManifestPath = Join-Path $Root 'launcher\CKFreeToolboxLauncher.admin.manifest'
 $IconPath = Join-Path $Root 'static\cklogo.ico'
 $CscPath = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $PowerShellAssemblyCandidates = @(
@@ -134,30 +136,49 @@ if (-not $PowerShellAssembly -or -not (Test-Path -LiteralPath $PowerShellAssembl
 if (-not (Test-Path -LiteralPath $SourcePath)) {
     throw "找不到启动器源码: $SourcePath"
 }
+if (-not (Test-Path -LiteralPath $AdminManifestPath)) {
+    throw "找不到管理员启动清单: $AdminManifestPath"
+}
 
 if ($ForceIcon -or -not (Test-Path -LiteralPath $IconPath)) {
     New-CkIco -Path $IconPath
 }
 
-$compilerArgs = @(
-    '/nologo',
-    '/target:winexe',
-    '/platform:anycpu',
-    '/optimize+',
-    "/win32icon:$IconPath",
-    "/reference:System.dll",
-    "/reference:System.Core.dll",
-    "/reference:System.Windows.Forms.dll",
-    "/reference:$PowerShellAssembly",
-    "/out:$OutputPath",
-    $SourcePath
-)
+function Build-CkLauncher {
+    param(
+        [Parameter(Mandatory)][string]$OutputPath,
+        [string]$ManifestPath = ''
+    )
 
-& $CscPath @compilerArgs
-if ($LASTEXITCODE -ne 0) {
-    throw "EXE 编译失败，退出码: $LASTEXITCODE"
+    $compilerArgs = @(
+        '/nologo',
+        '/target:winexe',
+        '/platform:anycpu',
+        '/optimize+',
+        "/win32icon:$IconPath",
+        "/reference:System.dll",
+        "/reference:System.Core.dll",
+        "/reference:System.Windows.Forms.dll",
+        "/reference:$PowerShellAssembly",
+        "/out:$OutputPath",
+        $SourcePath
+    )
+    if ($ManifestPath) {
+        $compilerArgs += "/win32manifest:$ManifestPath"
+    }
+
+    & $CscPath @compilerArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "EXE 编译失败，退出码: $LASTEXITCODE"
+    }
 }
+
+Build-CkLauncher -OutputPath $OutputPath
+Build-CkLauncher -OutputPath $AdminOutputPath -ManifestPath $AdminManifestPath
 
 $item = Get-Item -LiteralPath $OutputPath
 Write-Host "Built: $($item.FullName)"
 Write-Host "Size : $($item.Length) bytes"
+$adminItem = Get-Item -LiteralPath $AdminOutputPath
+Write-Host "Built: $($adminItem.FullName)"
+Write-Host "Size : $($adminItem.Length) bytes"

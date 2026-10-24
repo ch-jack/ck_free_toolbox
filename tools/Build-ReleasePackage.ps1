@@ -108,7 +108,7 @@ if (-not (Test-Path -LiteralPath $ExeBuildScript -PathType Leaf)) {
     throw "找不到 EXE 构建脚本: $ExeBuildScript"
 }
 
-Write-CkStep '重新构建 CK免费工具箱.exe'
+Write-CkStep '重新构建工具箱 EXE'
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $ExeBuildScript
 if ($LASTEXITCODE -ne 0) {
     throw "EXE 构建失败，退出码: $LASTEXITCODE"
@@ -128,7 +128,7 @@ Remove-CkBuildArtifact -Path $archivePath
 New-Item -ItemType Directory -Path $packagePath | Out-Null
 
 Write-CkStep '复制工具箱客户端文件'
-foreach ($fileName in @('CK免费工具箱.exe', 'CKFreeToolbox.ps1')) {
+foreach ($fileName in @('CK免费工具箱.exe', 'CK免费工具箱-管理员.exe', 'CKFreeToolbox.ps1')) {
     Copy-CkRequiredFile -Source (Join-Path $ToolboxRoot $fileName) -Destination (Join-Path $packagePath $fileName)
 }
 foreach ($directoryName in @('app', 'static')) {
@@ -150,14 +150,15 @@ $userGuide = @(
     '',
     '1. 解压完整 ZIP，不能只复制 EXE。',
     '2. 双击 CK免费工具箱.exe。',
-    '3. 首次启动需阅读并同意使用及免责条款；同意状态只记录在工具箱根目录 config.json。',
-    '4. “扫描移除后门”和“秒杀小哈”已内置；其他页面显示“组件缺失”时，可点击“安装组件”下载并校验最新稳定 GitHub Release。',
-    '5. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
-    '6. NUI/RPF/载具武器声浪/扫描移除后门页面缺少 Python 时，点击“官网”自行安装 Python 3.7+；“秒杀小哈”优先使用独立 EXE，仅旧组件回退入口需要 Python。',
-    '7. Blender、Python 等依赖路径和条款同意状态统一保存在工具箱根目录 config.json，自更新不会删除。',
-    '8. 选择模型所在目录，点击“扫描模型”。',
-    '9. 勾选需要处理的模型，点击“开始渲染”。',
-    '10. 点击“打开输出”查看 PNG。',
+    '3. 如果普通权限被其他软件结束，可改用 CK免费工具箱-管理员.exe；系统启用 UAC 时会弹出 Windows 管理员确认。',
+    '4. 首次启动需阅读并同意使用及免责条款；同意状态只记录在工具箱根目录 config.json。',
+    '5. “扫描移除后门”和“秒杀小哈”已内置；其他页面显示“组件缺失”时，可点击“安装组件”下载并校验最新稳定 GitHub Release。',
+    '6. 如果 Blender 显示未安装或版本过低，先安装 Blender 4.2+（推荐 5.1），再点击选择并指定 blender.exe。',
+    '7. NUI/RPF/载具武器声浪/扫描移除后门页面缺少 Python 时，点击“官网”自行安装 Python 3.7+；“秒杀小哈”优先使用独立 EXE，仅旧组件回退入口需要 Python。',
+    '8. Blender、Python 等依赖路径和条款同意状态统一保存在工具箱根目录 config.json，自更新不会删除。',
+    '9. 选择模型所在目录，点击“扫描模型”。',
+    '10. 勾选需要处理的模型，点击“开始渲染”。',
+    '11. 点击“打开输出”查看 PNG。',
     '',
     'NUI 自动去墙：',
     '1. 打开“NUI 自动去墙”，选择单个 FiveM resource 或 resources 目录。',
@@ -253,6 +254,7 @@ $userGuide = @(
 
 $requiredPackageFiles = @(
     (Join-Path $packagePath 'CK免费工具箱.exe'),
+    (Join-Path $packagePath 'CK免费工具箱-管理员.exe'),
     (Join-Path $packagePath 'CKFreeToolbox.ps1'),
     (Join-Path $packagePath 'app\modules\ToolboxConfig.psm1'),
     (Join-Path $packagePath 'app\config\tools.json'),
@@ -343,6 +345,7 @@ $manifest = [ordered]@{
     bundledComponents = [ordered]@{}
     sha256 = [ordered]@{
         executable = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CK免费工具箱.exe')).Hash
+        adminExecutable = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CK免费工具箱-管理员.exe')).Hash
         mainScript = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'CKFreeToolbox.ps1')).Hash
         toolboxConfig = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\modules\ToolboxConfig.psm1')).Hash
         componentWorker = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $packagePath 'app\workers\ComponentWorker.ps1')).Hash
