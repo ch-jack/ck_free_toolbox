@@ -149,11 +149,12 @@
         </Grid>
         <TextBlock x:Name="ResourceSelectionText" AutomationProperties.AutomationId="ServerDump.ResourceSelectionText" Text="尚未获取资源清单" Foreground="#686E78" FontSize="11" Margin="0,6,0,0" TextTrimming="CharacterEllipsis"/>
         <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+          <CheckBox x:Name="DownloadStreamBox" AutomationProperties.AutomationId="ServerDump.DownloadStreamBox" Content="是否下载流文件" IsChecked="True" ToolTip="默认下载资源 stream 目录下的文件；取消后跳过 stream 文件"/>
           <CheckBox x:Name="DecryptFxapBox" AutomationProperties.AutomationId="ServerDump.DecryptFxapBox" Content="解密 FXAP" IsChecked="True" ToolTip="默认解密；取消后不解密，并将包含 .fxap、加密文件、脚本和子目录的原始资源完整复制到输出"/>
           <CheckBox x:Name="VertexFixBox" AutomationProperties.AutomationId="ServerDump.VertexFixBox" Content="解密后生成副本并进行模型修复" Margin="26,0,0,0" ToolTip="只复制并处理本次成功解密的 FXAP 资源；不会覆盖原解密目录"/>
           <CheckBox x:Name="AutoOpenBox" AutomationProperties.AutomationId="ServerDump.AutoOpenBox" Content="完成后自动打开输出文件夹" Margin="26,0,0,0" IsChecked="True"/>
         </StackPanel>
-        <TextBlock Text="取消“解密 FXAP”后不会执行解密或模型修复；输出会完整保留原始 .fxap、加密文件及目录结构。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11" Margin="0,7,0,0"/>
+        <TextBlock Text="取消“下载流文件”后会跳过资源 stream 目录；取消“解密 FXAP”后不会执行解密或模型修复，输出会完整保留已下载的原始文件。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="11" Margin="0,7,0,0"/>
       </StackPanel>
     </Border>
 
@@ -214,7 +215,7 @@
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
-        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
+        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DownloadStreamBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
         'StartButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
@@ -430,7 +431,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton)) {
             $control.IsEnabled = -not $Running
         }
         if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
@@ -598,7 +599,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -1259,6 +1260,7 @@
         $selectedResources = @()
         if (-not $retryMode) { $selectedResources = @($state.SelectedResources) }
         $decryptFxapRequested = if ($retryMode) { -not [bool]$retryInfo.RawMode } else { [bool]$ui.DecryptFxapBox.IsChecked }
+        $downloadStreamRequested = [bool]$ui.DownloadStreamBox.IsChecked
         $vertexFixRequested = if ($retryMode) { $false } else { [bool]$ui.VertexFixBox.IsChecked }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
         if (-not $decryptFxapRequested -and $vertexFixRequested) {
@@ -1323,6 +1325,7 @@
             '--non-interactive'
         )
         if ($retryMode) { $args += @('--retry-failed-report', [string]$retryInfo.Path) } else { $args += @('--resources-file', $selectionPath) }
+        if (-not $downloadStreamRequested) { $args += '--no-download-stream' }
         if ($decryptFxapRequested) { $args += @('--java', $java) } else { $args += '--no-fxap-decrypt' }
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
         if ($vertexFixRequested) { $args += '--vertex-fix' }
@@ -1336,10 +1339,11 @@
         $ui.OpenReportButton.IsEnabled = $false
         foreach ($counter in @($ui.ResourceCount,$ui.DownloadedCount,$ui.RpfCount,$ui.DecryptedCount,$ui.OutputFileCount,$ui.WarningErrorCount)) { $counter.Text = '0' }
         $tempPolicy = if ($ui.KeepTempBox.IsChecked) { '保留本次临时目录（会持续占用空间）' } else { '逐资源完成所选处理后立即清理临时文件' }
+        $streamPolicy = if ($downloadStreamRequested) { '下载 stream 文件' } else { '跳过 stream 文件' }
         $fxapPolicy = if ($decryptFxapRequested) { '解密 FXAP' } else { '不解密；完整保留 .fxap、加密文件、脚本及目录结构' }
         $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
         $operationText = if ($retryMode) { "开始补充失败下载...`r`n来源报告: $($retryInfo.Path)`r`n失败文件: $($retryInfo.FailedCount) 个" } else { '开始服务器 Dump...' }
-        $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`nFXAP 处理: $fxapPolicy。`r`n模型修复: $vertexPolicy。"
+        $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n流文件: $streamPolicy。`r`nFXAP 处理: $fxapPolicy。`r`n模型修复: $vertexPolicy。"
         & $setRunningAction $true
 
         $output = New-Object Text.StringBuilder
