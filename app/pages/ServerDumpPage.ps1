@@ -1823,7 +1823,7 @@
     Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.RetryFailedButton -Action $retryFailedAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ContinueButton -Action $continueAction -OnError $showPageError
-    Register-CkButtonAction -Button $ui.SilentDumpButton -Action { & $startSilentAction } -OnError $showPageError
+    Register-CkButtonAction -Button $ui.SilentDumpButton -Action { & $startSilentAction }.GetNewClosure() -OnError $showPageError
     Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
