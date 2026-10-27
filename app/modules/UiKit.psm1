@@ -401,7 +401,8 @@ function Import-CkXaml {
     $root = [Windows.Markup.XamlReader]::Load($reader)
     [void]$script:CkThemeRoots.Add([System.WeakReference]::new($root))
     Enable-CkPageMouseWheelRouting -Root $root
-    if ($root -is [System.Windows.Window]) {
+    $captureProtectionDisabled = [Environment]::GetEnvironmentVariable('CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION') -eq '1'
+    if ($root -is [System.Windows.Window] -and -not $captureProtectionDisabled) {
         Enable-CkWindowCaptureProtection -Window $root
     }
     return $root

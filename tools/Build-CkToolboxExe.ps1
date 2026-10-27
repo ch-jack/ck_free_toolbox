@@ -8,6 +8,7 @@ $Root = Split-Path -Parent $PSScriptRoot
 $SourcePath = Join-Path $Root 'launcher\CKFreeToolboxLauncher.cs'
 $OutputPath = Join-Path $Root 'CK免费工具箱.exe'
 $AdminOutputPath = Join-Path $Root 'CK免费工具箱-管理员.exe'
+$RemoteOutputPath = Join-Path $Root 'CK免费工具箱-远程.exe'
 $AdminManifestPath = Join-Path $Root 'launcher\CKFreeToolboxLauncher.admin.manifest'
 $IconPath = Join-Path $Root 'static\cklogo.ico'
 $CscPath = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
@@ -147,7 +148,8 @@ if ($ForceIcon -or -not (Test-Path -LiteralPath $IconPath)) {
 function Build-CkLauncher {
     param(
         [Parameter(Mandatory)][string]$OutputPath,
-        [string]$ManifestPath = ''
+        [string]$ManifestPath = '',
+        [switch]$DisableCaptureProtection
     )
 
     $compilerArgs = @(
@@ -166,6 +168,9 @@ function Build-CkLauncher {
     if ($ManifestPath) {
         $compilerArgs += "/win32manifest:$ManifestPath"
     }
+    if ($DisableCaptureProtection) {
+        $compilerArgs += '/define:CK_NO_CAPTURE_PROTECTION'
+    }
 
     & $CscPath @compilerArgs
     if ($LASTEXITCODE -ne 0) {
@@ -175,6 +180,7 @@ function Build-CkLauncher {
 
 Build-CkLauncher -OutputPath $OutputPath
 Build-CkLauncher -OutputPath $AdminOutputPath -ManifestPath $AdminManifestPath
+Build-CkLauncher -OutputPath $RemoteOutputPath -DisableCaptureProtection
 
 $item = Get-Item -LiteralPath $OutputPath
 Write-Host "Built: $($item.FullName)"
@@ -182,3 +188,6 @@ Write-Host "Size : $($item.Length) bytes"
 $adminItem = Get-Item -LiteralPath $AdminOutputPath
 Write-Host "Built: $($adminItem.FullName)"
 Write-Host "Size : $($adminItem.Length) bytes"
+$remoteItem = Get-Item -LiteralPath $RemoteOutputPath
+Write-Host "Built: $($remoteItem.FullName)"
+Write-Host "Size : $($remoteItem.Length) bytes"

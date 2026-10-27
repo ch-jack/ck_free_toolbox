@@ -24,6 +24,7 @@ namespace CKFreeToolbox
         private const string SmokeTestArgument = "-SmokeTest";
         private const string LauncherPidVariable = "CK_TOOLBOX_LAUNCHER_PID";
         private const string WindowTitleVariable = "CK_TOOLBOX_WINDOW_TITLE";
+        private const string DisableCaptureProtectionVariable = "CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION";
         private const string HostDirectoryName = "process-hosts";
         private const int RandomNameBytes = 16;
 
@@ -127,6 +128,9 @@ namespace CKFreeToolbox
                 startInfo.EnvironmentVariables[LauncherPidVariable] =
                     Process.GetCurrentProcess().Id.ToString(System.Globalization.CultureInfo.InvariantCulture);
                 startInfo.EnvironmentVariables[WindowTitleVariable] = RandomHex(RandomNameBytes);
+#if CK_NO_CAPTURE_PROTECTION
+                startInfo.EnvironmentVariables[DisableCaptureProtectionVariable] = "1";
+#endif
 
                 using (var child = Process.Start(startInfo))
                 {

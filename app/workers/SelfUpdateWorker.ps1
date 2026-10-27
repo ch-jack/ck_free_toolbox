@@ -271,6 +271,7 @@ function Assert-CkPackage {
     $required = @(
         'CK免费工具箱.exe',
         'CK免费工具箱-管理员.exe',
+        'CK免费工具箱-远程.exe',
         'CKFreeToolbox.ps1',
         'app\modules\ToolboxConfig.psm1',
         'app\config\tools.json',
@@ -288,6 +289,7 @@ function Assert-CkPackage {
     $hashChecks = [ordered]@{
         executable = 'CK免费工具箱.exe'
         adminExecutable = 'CK免费工具箱-管理员.exe'
+        remoteExecutable = 'CK免费工具箱-远程.exe'
         mainScript = 'CKFreeToolbox.ps1'
         toolboxConfig = 'app\modules\ToolboxConfig.psm1'
         componentWorker = 'app\workers\ComponentWorker.ps1'

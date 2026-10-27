@@ -35,15 +35,16 @@ FiveM NUI 调试页面接入 [ch-jack/vjmidevtools](https://github.com/ch-jack/v
 ~~~text
 D:\fivem\ck_free_toolbox\CK免费工具箱.exe
 D:\fivem\ck_free_toolbox\CK免费工具箱-管理员.exe
+D:\fivem\ck_free_toolbox\CK免费工具箱-远程.exe
 ~~~
 
-启动器会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成每次不同的随机进程名，固定入口启动后立即退出，主界面在随机副本中运行；启动器 EXE 不包含固定的应用显示名称，因此任务管理器也会按随机进程名显示，主界面窗口标题也会在每次启动时随机变化，任务栏图标仍显示 CK 图标。`CK免费工具箱-管理员.exe` 是同一启动器的管理员权限版本，在系统启用 UAC 时会弹出确认；普通版仍保持正常权限。`start_toolbox.cmd` 有 EXE 时通过普通版启动，源码目录没有 EXE 时回退到 PowerShell 开发入口。不要只复制 EXE；主脚本、app/ 和 static/ 必须与 EXE 保持原目录结构。
+启动器会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成每次不同的随机进程名，固定入口启动后立即退出，主界面在随机副本中运行；启动器 EXE 不包含固定的应用显示名称，因此任务管理器也会按随机进程名显示，主界面窗口标题也会在每次启动时随机变化，任务栏图标仍显示 CK 图标。`CK免费工具箱-管理员.exe` 是同一启动器的管理员权限版本，在系统启用 UAC 时会弹出确认；普通版仍保持正常权限。`CK免费工具箱-远程.exe` 用于远程登录或需要正常截屏的场景，不启用窗口截屏保护。`start_toolbox.cmd` 有 EXE 时通过普通版启动，源码目录没有 EXE 时回退到 PowerShell 开发入口。不要只复制 EXE；主脚本、app/ 和 static/ 必须与 EXE 保持原目录结构。
 
 ## 一键打包
 
 开发者双击 `一键打包发布包.cmd`，脚本会自动：
 
-- 重新构建 `CK免费工具箱.exe` 和 `CK免费工具箱-管理员.exe`。
+- 重新构建 `CK免费工具箱.exe`、`CK免费工具箱-管理员.exe` 和 `CK免费工具箱-远程.exe`。
 - 不预先下载或打包 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`dump-tool`、`fxap-decryptor`、`ck_anti_john` 和 `xiaoha_cleaner`。
 - SnowyMerger 的 snowy-merger 目录也不预装；页面缺少组件时通过统一组件管理器下载、校验、备份并切换。
 - Red40 Clothing Repacker 的 red40-clothing-packer 目录也不预装，只保留中文 CLI 操作页面。
@@ -52,7 +53,7 @@ D:\fivem\ck_free_toolbox\CK免费工具箱-管理员.exe
 - 生成可以直接发给用户的轻量客户端目录和 ZIP。
 - 写入使用说明、版本、运行时组件策略和 SHA-256 清单。
 
-默认产物位于 `dist/CK免费工具箱-v1.0.2/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`；如果普通权限进程被其他软件结束，可改用 `CK免费工具箱-管理员.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender、Python、Node.js 和 Java 均需用户独立安装。
+默认产物位于 `dist/CK免费工具箱-v1.0.2/` 和同名 ZIP。用户解压后直接双击最外层 `CK免费工具箱.exe`；如果普通权限进程被其他软件结束，可改用 `CK免费工具箱-管理员.exe`；远程登录或需要正常截屏时使用 `CK免费工具箱-远程.exe`。页面检测到组件缺失时，点击“安装组件”才会从对应 GitHub 仓库下载。Blender、Python、Node.js 和 Java 均需用户独立安装。
 
 命令行用法：
 
@@ -291,6 +292,7 @@ git push origin v1.0.2
 ck_free_toolbox/
   CK免费工具箱.exe
   CK免费工具箱-管理员.exe
+  CK免费工具箱-远程.exe
   CKFreeToolbox.ps1
   config.json                    # 首次运行生成，统一用户配置
   app/config/tools.json          # 静态工具注册表

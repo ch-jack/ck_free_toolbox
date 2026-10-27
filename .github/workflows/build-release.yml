@@ -216,17 +216,23 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $launchers = @(Get-ChildItem -LiteralPath (Get-Location) -File -Filter '*.exe')
-          $normalLaunchers = @($launchers | Where-Object {
-            $bytes = [IO.File]::ReadAllBytes($_.FullName)
-            -not ([Text.Encoding]::ASCII.GetString($bytes)).Contains('requireAdministrator')
-          })
-          if ($normalLaunchers.Count -ne 1 -or $launchers.Count -ne 2) {
-            throw 'Expected one normal launcher and one administrator launcher EXE.'
+          $normalLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱.exe' })
+          $remoteLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱-远程.exe' })
+          $adminLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱-管理员.exe' })
+          if ($normalLaunchers.Count -ne 1 -or $remoteLaunchers.Count -ne 1 -or $adminLaunchers.Count -ne 1 -or $launchers.Count -ne 3) {
+            throw 'Expected normal, remote, and administrator launcher EXEs.'
           }
           $launcherPath = $normalLaunchers[0].FullName
-          $adminLaunchers = @($launchers | Where-Object { $_.FullName -ine $launcherPath })
-          if ($adminLaunchers.Count -ne 1) {
-            throw 'Administrator launcher EXE was not built.'
+          $remotePath = $remoteLaunchers[0].FullName
+          $adminRaw = [IO.File]::ReadAllBytes($adminLaunchers[0].FullName)
+          $adminBytes = [Text.Encoding]::ASCII.GetString($adminRaw) + [Text.Encoding]::Unicode.GetString($adminRaw)
+          if (-not $adminBytes.Contains('requireAdministrator')) {
+            throw 'Administrator launcher manifest was not embedded.'
+          }
+          $remoteRaw = [IO.File]::ReadAllBytes($remotePath)
+          $remoteBytes = [Text.Encoding]::ASCII.GetString($remoteRaw) + [Text.Encoding]::Unicode.GetString($remoteRaw)
+          if (-not $remoteBytes.Contains('CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION')) {
+            throw 'Remote launcher does not contain the no-capture-protection marker.'
           }
           $hostRoot = Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox\process-hosts'
           $process = Start-Process -FilePath $launcherPath -ArgumentList '-SmokeTest' -PassThru -WindowStyle Hidden
@@ -301,14 +307,18 @@ jobs:
           if ([string]$manifest.flavor -ne 'standard') {
             throw "Expected standard package flavor, found: $($manifest.flavor)"
           }
-          $adminExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter '*.exe' |
-            Where-Object { $_.Name -ine [string]$manifest.entry })
+          $adminExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter 'CK免费工具箱-管理员.exe')
           if ($adminExecutables.Count -ne 1) {
             throw 'Package is missing the administrator launcher EXE.'
           }
+          $remoteExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter 'CK免费工具箱-远程.exe')
+          if ($remoteExecutables.Count -ne 1) {
+            throw 'Package is missing the remote launcher EXE.'
+          }
           $required = @(
             [string]$manifest.entry,
-            $adminExecutables[0].Name,
+            'CK免费工具箱-管理员.exe',
+            [string]$manifest.remoteEntry,
             'CKFreeToolbox.ps1',
             'app\modules\ToolboxConfig.psm1',
             'app\config\tools.json',
@@ -339,6 +349,15 @@ jobs:
             if (-not (Test-Path -LiteralPath (Join-Path $package $relativePath) -PathType Leaf)) {
               throw "Missing release file: $relativePath"
             }
+          }
+          $packageExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter '*.exe')
+          if ($packageExecutables.Count -ne 3) {
+            throw "Expected three launcher EXEs in the package, found $($packageExecutables.Count)."
+          }
+          $remoteRaw = [IO.File]::ReadAllBytes($remoteExecutables[0].FullName)
+          $remoteBytes = [Text.Encoding]::ASCII.GetString($remoteRaw) + [Text.Encoding]::Unicode.GetString($remoteRaw)
+          if (-not $remoteBytes.Contains('CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION')) {
+            throw 'Packaged remote launcher does not contain the no-capture-protection marker.'
           }
 
           if (-not $manifest.bundled.alchemist) {

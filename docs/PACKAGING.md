@@ -7,6 +7,7 @@ dist/
   CK免费工具箱-v1.0.2/
     CK免费工具箱.exe
     CK免费工具箱-管理员.exe
+    CK免费工具箱-远程.exe
     CKFreeToolbox.ps1
     app/
     static/
@@ -17,7 +18,7 @@ dist/
 ~~~
 
 发布包是纯客户端，不启动 HTTP 服务，不包含后端，也不预装 `vehicle_renderer`、`nui-wallfix`、`rpf_to_fivem`、`ck_anti_john` 和 `xiaoha_cleaner`。用户必须解压完整 ZIP，不能只复制 EXE。
-固定入口 EXE 启动后会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成随机副本，以每次不同的 32 位十六进制进程名运行主界面；启动器 EXE 不包含固定的应用显示名称，任务管理器也按随机进程名显示；主窗口标题也会在每次启动时随机变化，任务栏图标保持 CK 图标。`CK免费工具箱-管理员.exe` 使用同一启动器和管理员权限清单，在系统启用 UAC 时会弹出确认，普通版仍使用正常权限。固定入口正常启动后立即退出；随机副本不进入发布包，主界面正常退出时会安排后台清理，强制终止时可能留下临时副本。
+固定入口 EXE 启动后会在 `%LOCALAPPDATA%\CKFreeToolbox\process-hosts` 生成随机副本，以每次不同的 32 位十六进制进程名运行主界面；启动器 EXE 不包含固定的应用显示名称，任务管理器也按随机进程名显示；主窗口标题也会在每次启动时随机变化，任务栏图标保持 CK 图标。`CK免费工具箱-管理员.exe` 使用同一启动器和管理员权限清单，在系统启用 UAC 时会弹出确认，普通版仍使用正常权限。`CK免费工具箱-远程.exe` 是不启用窗口截屏保护的远程登录版本。固定入口正常启动后立即退出；随机副本不进入发布包，主界面正常退出时会安排后台清理，强制终止时可能留下临时副本。
 SnowyMerger 同样不预装；其运行目录为 snowy-merger，由统一组件工作器按需创建。
 Red40 Clothing Repacker 同样不预装；其运行目录为 red40-clothing-packer，发布包只保留中文 CLI 页面和组件登记。
 Arya FiveM Tool 同样不预装；其运行目录为 arya-fivem-tool，发布包只保留中文启动页和组件登记。
