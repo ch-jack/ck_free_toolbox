@@ -1807,7 +1807,7 @@
 
     $state.SilentStatusTimer = New-Object System.Windows.Threading.DispatcherTimer
     $state.SilentStatusTimer.Interval = [TimeSpan]::FromSeconds(1)
-    $state.SilentStatusTimer.Add_Tick({ & $updateSilentStatusAction })
+    $state.SilentStatusTimer.Add_Tick({ & $updateSilentStatusAction }.GetNewClosure())
     $state.SilentStatusTimer.Start()
 
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
