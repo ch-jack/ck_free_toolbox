@@ -2,6 +2,7 @@
     param([Parameter(Mandatory)]$Context)
 
     $reportRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'server-dump-reports'
+    $silentRoot = Join-Path (Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'CKFreeToolbox') 'silent-dump'
     $state = [pscustomobject]@{
         Process = $null
         DependencyInstallProcess = $null
@@ -20,6 +21,9 @@
         ResourceTarget = ''
         ResourceNames = @()
         SelectedResources = @()
+        SilentRoot = $silentRoot
+        SilentStatusPath = ''
+        SilentStatusTimer = $null
     }
 
     $xaml = @"
@@ -166,13 +170,14 @@
           <TextBlock Text="默认 token_choice=1，自动扫描 FiveM 进程 token" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,12">
-          <TextBlock AutomationProperties.AutomationId="ServerDump.UsageInstructions" Text="用法：先启动 FiveM，选择服务器并点击进服；服务器加载界面出现后，再点击“开始服务器 Dump”。游戏断开后重新进服，点击“继续 Dump”。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="12"/>
+          <TextBlock AutomationProperties.AutomationId="ServerDump.UsageInstructions" Text="用法：普通 Dump 先启动 FiveM 并进服；也可以点击“静默 Dump”，关闭工具箱后等待进服自动开始。游戏断开后静默任务会自动继续，普通任务可点击“继续 Dump”。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="12"/>
         </Border>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="140"/><ColumnDefinition Width="140"/><ColumnDefinition Width="140"/></Grid.ColumnDefinitions>
           <Button x:Name="StartButton" AutomationProperties.AutomationId="ServerDump.StartButton" Content="开始服务器 Dump" Height="44" IsEnabled="False" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/>
           <Button x:Name="ContinueButton" AutomationProperties.AutomationId="ServerDump.ContinueButton" Grid.Column="1" Content="继续 Dump" Height="44" Margin="7,0" Foreground="#58A6FF" IsEnabled="False"/>
-          <Button x:Name="StopButton" AutomationProperties.AutomationId="ServerDump.StopButton" Grid.Column="2" Content="停止任务" Height="44" Margin="7,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
+          <Button x:Name="SilentDumpButton" AutomationProperties.AutomationId="ServerDump.SilentDumpButton" Grid.Column="2" Content="静默 Dump" Height="44" Margin="7,0" Foreground="#C4A7FF" IsEnabled="False" ToolTip="复制 Dump 组件并隐藏运行，等待 FiveM 进服后自动 Dump"/>
+          <Button x:Name="StopButton" AutomationProperties.AutomationId="ServerDump.StopButton" Grid.Column="3" Content="停止任务" Height="44" Margin="7,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
         </Grid>
       </StackPanel>
     </Border>
@@ -198,6 +203,7 @@
         </UniformGrid>
         <ProgressBar x:Name="ProgressBar" AutomationProperties.AutomationId="ServerDump.ProgressBar" Height="8" Minimum="0" Maximum="100" Value="0"/>
         <TextBlock x:Name="StatusLine" AutomationProperties.AutomationId="ServerDump.StatusLine" Text="输入目标地址后开始；请确保 FiveM 已进入目标服务器。" Foreground="#8B9099" FontSize="13" Margin="0,9,0,0"/>
+        <TextBlock x:Name="SilentStatusText" AutomationProperties.AutomationId="ServerDump.SilentStatusText" Text="静默任务：无" Foreground="#C4A7FF" FontSize="12" Margin="0,5,0,0" TextTrimming="CharacterEllipsis"/>
       </StackPanel>
     </Border>
 
@@ -218,8 +224,8 @@
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
         'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DownloadStreamBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
-        'StartButton','ContinueButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
-        'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
+        'StartButton','ContinueButton','SilentDumpButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
+        'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','SilentStatusText','LogBox'
     )
 
     $ui.OutputBox.Text = [string]$Context.Paths.DefaultServerDumpOutput
@@ -428,12 +434,13 @@
         $allOk = $pythonOk -and ($javaOk -or -not $javaRequired) -and $depsInfo.Ok -and $componentOk -and ($dotnetOk -or -not $dotnetRequired)
         $ui.EnvironmentStatus.Text = if ($allOk) { '运行环境就绪' } else { '请处理缺失项' }
         $ui.EnvironmentStatus.Foreground = if ($allOk) { (Get-CkThemeBrush '#31D69A') } else { (Get-CkThemeBrush '#F4B860') }
+        if (-not $state.Process) { $ui.SilentDumpButton.IsEnabled = $allOk }
     }
 
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton,$ui.ContinueButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton,$ui.ContinueButton,$ui.SilentDumpButton)) {
             $control.IsEnabled = -not $Running
         }
         if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
@@ -461,6 +468,75 @@
         param($Summary, [string]$Name)
         if ($Summary -and $Summary.PSObject.Properties[$Name]) { return [int]$Summary.$Name }
         return 0
+    }
+
+    function Get-SilentDumpStatus {
+        if (-not (Test-Path -LiteralPath $state.SilentRoot -PathType Container)) { return $null }
+        foreach ($directory in @(Get-ChildItem -LiteralPath $state.SilentRoot -Directory -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending)) {
+            $file = Join-Path $directory.FullName 'status.json'
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
+            try {
+                $payload = Get-Content -LiteralPath $file -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($payload) {
+                    return [pscustomobject]@{ Path = $file; Payload = $payload }
+                }
+            } catch { }
+        }
+        return $null
+    }
+
+    function Update-SilentDumpStatus {
+        $statusInfo = & $getSilentStatusAction
+        if (-not $statusInfo) {
+            $ui.SilentStatusText.Text = '静默任务：无'
+            return
+        }
+
+        $state.SilentStatusPath = [IO.Path]::GetFullPath([string]$statusInfo.Path)
+        $payload = $statusInfo.Payload
+        $status = [string]$payload.status
+        $percent = if ($null -ne $payload.percent) { [Math]::Max(0, [Math]::Min(100, [int]$payload.percent)) } else { 0 }
+        $message = [string]$payload.message
+        $completed = if ($null -ne $payload.completed_resources) { [int]$payload.completed_resources } else { 0 }
+        if ($payload.report_file -and (Test-Path -LiteralPath ([string]$payload.report_file) -PathType Leaf)) {
+            $state.ReportPath = [IO.Path]::GetFullPath([string]$payload.report_file)
+            $ui.OpenReportButton.IsEnabled = $true
+        }
+        $active = $status -in @('waiting-game','running','paused')
+        if (-not $state.Process) {
+            $ui.SilentDumpButton.IsEnabled = -not $active -and $ui.EnvironmentStatus.Text -eq '运行环境就绪'
+            if ($active) {
+                $ui.StartButton.IsEnabled = $false
+                $ui.ContinueButton.IsEnabled = $false
+            } else {
+                $ui.StartButton.IsEnabled = $state.EnvironmentChecked -and @($state.SelectedResources).Count -gt 0
+                $ui.ContinueButton.IsEnabled = $false
+                if ($state.ResumeSessionPath -and (Test-Path -LiteralPath $state.ResumeSessionPath -PathType Leaf)) {
+                    try {
+                        $resume = Get-Content -LiteralPath $state.ResumeSessionPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                        $ui.ContinueButton.IsEnabled = [string]$resume.status -in @('running','paused')
+                    } catch { }
+                }
+            }
+        }
+        $label = switch ($status) {
+            'waiting-game' { '等待 FiveM 进服' }
+            'running' { '正在运行' }
+            'paused' { '等待重新连接' }
+            'success' { '已完成' }
+            'partial' { '完成，需检查' }
+            'stopped' { '已停止' }
+            default { if ($status) { $status } else { '未知状态' } }
+        }
+        $ui.SilentStatusText.Text = "静默任务：$label | $percent% | 已完成资源 $completed | $message"
+        if (-not $state.Process) {
+            $ui.ProgressBar.Value = $percent
+            $ui.ResultStatus.Text = $label
+            $ui.ResultStatus.Foreground = if ($status -in @('success')) { Get-CkThemeBrush '#31D69A' } elseif ($status -in @('error','failed')) { Get-CkThemeBrush '#EF6B73' } else { Get-CkThemeBrush '#C4A7FF' }
+            if ($message) {
+                $ui.StatusLine.Text = if ($status -eq 'partial') { $message + ' 可点击“补充失败下载”继续。' } else { $message }
+            }
+        }
     }
 
     function Show-ServerDumpResult {
@@ -626,9 +702,96 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
+    }
+
+    function Start-SilentServerDump {
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
+        $existing = & $getSilentStatusAction
+        if ($existing -and [string]$existing.Payload.status -in @('waiting-game','running','paused')) {
+            $existingPid = 0
+            try { $existingPid = [int]$existing.Payload.pid } catch { }
+            if ($existingPid -gt 0 -and (Get-Process -Id $existingPid -ErrorAction SilentlyContinue)) {
+                throw '已有静默 Dump 任务正在运行。'
+            }
+        }
+
+        & $assertResourceSelectionSupportAction
+        $target = $ui.TargetBox.Text.Trim()
+        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
+        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+            throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
+        }
+        if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
+        if (-not $state.PythonPath -or -not (Test-Path -LiteralPath $state.PythonPath -PathType Leaf)) { throw 'Python 不可用，请先在页面顶部完成 Python 设置。' }
+        if (-not $state.DependenciesOk) { throw ([string]$state.DependenciesReason) }
+        $decryptRequested = [bool]$ui.DecryptFxapBox.IsChecked
+        if ($decryptRequested -and (-not $state.JavaPath -or -not (Test-Path -LiteralPath $state.JavaPath -PathType Leaf))) { throw 'Java 不可用，请先在页面顶部选择 Java 目录。' }
+        if ([bool]$ui.VertexFixBox.IsChecked -and -not (Get-CkDotNet8Info).Ok) { throw '.NET 8 Runtime 不可用，启用模型修复前请先安装 .NET 8 Runtime。' }
+        if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolDir -PathType Container)) { throw '服务器 Dump 组件未安装。' }
+
+        $outputPath = $ui.OutputBox.Text.Trim()
+        if (-not $outputPath) { throw '请选择输出目录。' }
+        $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
+        $outputRoot = [IO.Path]::GetPathRoot($outputPath).TrimEnd('\')
+        if ($outputPath.Equals($outputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '不能直接输出到磁盘根目录。' }
+        New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
+
+        $runRoot = Join-Path $state.SilentRoot ([Guid]::NewGuid().ToString('N'))
+        $componentCopy = Join-Path $runRoot 'dump-tool'
+        New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
+        Copy-Item -LiteralPath $Context.Paths.DumpToolDir -Destination $componentCopy -Recurse -Force
+
+        $statusPath = Join-Path $runRoot 'status.json'
+        $sessionPath = Join-Path $runRoot 'session.json'
+        $reportPath = Join-Path $runRoot 'report.json'
+        $logPath = Join-Path $runRoot 'dump.log'
+        $errorLogPath = Join-Path $runRoot 'dump-error.log'
+        $status = [ordered]@{
+            schemaVersion = 1
+            status = 'waiting-game'
+            percent = 0
+            stage = 'waiting-game'
+            message = '等待 FiveM 进服。'
+            target = $target
+            output = $outputPath
+            session_file = $sessionPath
+            report_file = $reportPath
+            pid = 0
+            updated_at = (Get-Date).ToString('o')
+        }
+        [IO.File]::WriteAllText($statusPath, ($status | ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding($false)))
+
+        $resourcePattern = $ui.ResourcesBox.Text.Trim()
+        if (-not $resourcePattern) { $resourcePattern = '*' }
+        $arguments = @(
+            '-u', (Join-Path $componentCopy 'auto.py'),
+            $target,
+            '--token-choice', '1',
+            '--resources', $resourcePattern,
+            '--output', $outputPath,
+            '--report', $reportPath,
+            '--session-file', $sessionPath,
+            '--status-file', $statusPath,
+            '--wait-for-game',
+            '--non-interactive'
+        )
+        if (-not [bool]$ui.DownloadStreamBox.IsChecked) { $arguments += '--no-download-stream' }
+        if ($decryptRequested) { $arguments += @('--java', [string]$state.JavaPath) } else { $arguments += '--no-fxap-decrypt' }
+        if ([bool]$ui.KeepTempBox.IsChecked) { $arguments += '--keep-temp' }
+        if ([bool]$ui.VertexFixBox.IsChecked) { $arguments += '--vertex-fix' }
+
+        $process = Start-Process -FilePath ([string]$state.PythonPath) -ArgumentList ([string](& Join-CkArgumentList -Arguments $arguments)) -WorkingDirectory $componentCopy -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError $errorLogPath -PassThru -ErrorAction Stop
+        if ($process) { $process.Dispose() }
+        $state.SilentStatusPath = $statusPath
+        $ui.ResultStatus.Text = '等待 FiveM 进服'
+        $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#C4A7FF')
+        $ui.ProgressBar.Value = 0
+        $ui.StatusLine.Text = '静默 Dump 已启动；工具箱可以关闭，进入服务器后会自动继续。'
+        $ui.LogBox.Text = "静默 Dump 已启动。`r`n目标: $target`r`n资源匹配: $resourcePattern`r`n日志: $logPath`r`n报告: $reportPath"
+        & $updateSilentStatusAction
     }
 
     function Test-ServerDumpResourceSelector {
@@ -792,6 +955,9 @@
     $updateEnvironmentAction = (Get-Command Update-ServerDumpEnvironment).ScriptBlock.GetNewClosure()
     $setRunningAction = (Get-Command Set-ServerDumpRunning).ScriptBlock.GetNewClosure()
     $getSummaryValueAction = (Get-Command Get-ServerDumpSummaryValue).ScriptBlock.GetNewClosure()
+    $getSilentStatusAction = (Get-Command Get-SilentDumpStatus).ScriptBlock.GetNewClosure()
+    $updateSilentStatusAction = (Get-Command Update-SilentDumpStatus).ScriptBlock.GetNewClosure()
+    $startSilentAction = (Get-Command Start-SilentServerDump).ScriptBlock.GetNewClosure()
     $showResultAction = (Get-Command Show-ServerDumpResult).ScriptBlock.GetNewClosure()
     $assertResourceSelectionSupportAction = (Get-Command Assert-ServerDumpResourceSelectionSupport).ScriptBlock.GetNewClosure()
     $testResourceSelectorAction = (Get-Command Test-ServerDumpResourceSelector).ScriptBlock.GetNewClosure()
@@ -1258,6 +1424,12 @@
             }
         }
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
+        $silentStatus = & $getSilentStatusAction
+        if ($silentStatus -and [string]$silentStatus.Payload.status -in @('waiting-game','running','paused')) {
+            $silentPid = 0
+            try { $silentPid = [int]$silentStatus.Payload.pid } catch { }
+            if ($silentPid -gt 0 -and (Get-Process -Id $silentPid -ErrorAction SilentlyContinue)) { throw '已有静默 Dump 任务正在运行。' }
+        }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) { throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。' }
         & $assertResourceSelectionSupportAction
         foreach ($relative in @(
@@ -1633,6 +1805,11 @@
     $ui.VertexFixBox.Add_Checked($vertexFixChangedAction)
     $ui.VertexFixBox.Add_Unchecked($vertexFixChangedAction)
 
+    $state.SilentStatusTimer = New-Object System.Windows.Threading.DispatcherTimer
+    $state.SilentStatusTimer.Interval = [TimeSpan]::FromSeconds(1)
+    $state.SilentStatusTimer.Add_Tick({ & $updateSilentStatusAction })
+    $state.SilentStatusTimer.Start()
+
     Register-CkButtonAction -Button $ui.PythonDownloadButton -Action $openPythonDownloadAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.PythonBrowseButton -Action $selectPythonAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.InstallDependenciesButton -Action $installDependenciesAction -OnError $showPageError
@@ -1646,11 +1823,13 @@
     Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.RetryFailedButton -Action $retryFailedAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.ContinueButton -Action $continueAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.SilentDumpButton -Action { & $startSilentAction } -OnError $showPageError
     Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
 
     & $updateEnvironmentAction
+    & $updateSilentStatusAction
     return [pscustomobject]@{
         Id = 'server-dump'
         Title = '服务器 Dump'
