@@ -15,6 +15,7 @@
         DependenciesReason = ''
         EnvironmentChecked = $false
         Operation = ''
+        ResumeSessionPath = ''
         ResourceListPayload = $null
         ResourceTarget = ''
         ResourceNames = @()
@@ -165,12 +166,13 @@
           <TextBlock Text="默认 token_choice=1，自动扫描 FiveM 进程 token" HorizontalAlignment="Right" Foreground="#686E78" FontSize="12" VerticalAlignment="Center"/>
         </Grid>
         <Border Background="#111A24" BorderBrush="#24415F" BorderThickness="1" CornerRadius="6" Padding="10,8" Margin="0,0,0,12">
-          <TextBlock AutomationProperties.AutomationId="ServerDump.UsageInstructions" Text="用法：先启动 FiveM，选择服务器并点击进服；服务器加载界面出现后，再点击“开始服务器 Dump”。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="12"/>
+          <TextBlock AutomationProperties.AutomationId="ServerDump.UsageInstructions" Text="用法：先启动 FiveM，选择服务器并点击进服；服务器加载界面出现后，再点击“开始服务器 Dump”。游戏断开后重新进服，点击“继续 Dump”。" TextWrapping="Wrap" Foreground="#8FC7F3" FontSize="12"/>
         </Border>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="150"/><ColumnDefinition Width="150"/></Grid.ColumnDefinitions>
           <Button x:Name="StartButton" AutomationProperties.AutomationId="ServerDump.StartButton" Content="开始服务器 Dump" Height="44" IsEnabled="False" Margin="0,0,7,0" Background="#124834" Foreground="#54E0A9" FontSize="15" FontWeight="Bold"/>
-          <Button x:Name="StopButton" AutomationProperties.AutomationId="ServerDump.StopButton" Grid.Column="1" Content="停止任务" Height="44" Margin="7,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
+          <Button x:Name="ContinueButton" AutomationProperties.AutomationId="ServerDump.ContinueButton" Grid.Column="1" Content="继续 Dump" Height="44" Margin="7,0" Foreground="#58A6FF" IsEnabled="False"/>
+          <Button x:Name="StopButton" AutomationProperties.AutomationId="ServerDump.StopButton" Grid.Column="2" Content="停止任务" Height="44" Margin="7,0,0,0" Foreground="#F28B94" IsEnabled="False"/>
         </Grid>
       </StackPanel>
     </Border>
@@ -216,7 +218,7 @@
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
         'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DownloadStreamBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
-        'StartButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
+        'StartButton','ContinueButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','LogBox'
     )
 
@@ -431,10 +433,20 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton,$ui.ContinueButton)) {
             $control.IsEnabled = -not $Running
         }
         if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
+        if (-not $Running) {
+            $canResume = $false
+            if ($state.ResumeSessionPath -and (Test-Path -LiteralPath $state.ResumeSessionPath -PathType Leaf)) {
+                try {
+                    $session = Get-Content -LiteralPath $state.ResumeSessionPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                    $canResume = [string]$session.status -in @('running', 'paused')
+                } catch { }
+            }
+            $ui.ContinueButton.IsEnabled = $canResume
+        }
         $ui.StopButton.IsEnabled = $Running
         $ui.ProgressBar.IsIndeterminate = $false
         if ($Running) {
@@ -488,6 +500,10 @@
             $state.ReportPath = ''
             $ui.OpenReportButton.IsEnabled = $false
         }
+        $isRetryPayload = [bool]($Payload.PSObject.Properties['retry_failed'] -and $Payload.retry_failed -and $Payload.retry_failed.enabled)
+        if (-not $isRetryPayload -and $Payload.PSObject.Properties['resume'] -and $Payload.resume -and $Payload.resume.session_file) {
+            $state.ResumeSessionPath = [IO.Path]::GetFullPath([string]$Payload.resume.session_file)
+        }
 
         $lines = New-Object System.Collections.Generic.List[string]
         $lines.Add("状态: $($Payload.status)")
@@ -534,6 +550,9 @@
             foreach ($warning in @($vertexFix.warnings)) { $lines.Add("模型修复警告: $warning") }
         }
         if ($state.ReportPath) { $lines.Add("本次报告: $($state.ReportPath)") }
+        if ($state.ResumeSessionPath -and (Test-Path -LiteralPath $state.ResumeSessionPath -PathType Leaf)) {
+            $lines.Add("继续任务: $($state.ResumeSessionPath)")
+        }
         foreach ($errorItem in @($Payload.errors)) { $lines.Add("错误: $errorItem") }
         $lines.Add('')
 
@@ -583,9 +602,17 @@
 
         $retryResult = [bool]($Payload.PSObject.Properties['retry_failed'] -and $Payload.retry_failed -and $Payload.retry_failed.enabled)
         if ($Payload.status -eq 'success' -and $ExitCode -eq 0) {
+            $state.ResumeSessionPath = ''
+            $ui.ContinueButton.IsEnabled = $false
+            $ui.StartButton.Content = '开始服务器 Dump'
             $ui.ResultStatus.Text = if ($retryResult) { '补充下载完成' } else { 'Dump 完成' }
             $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
             $ui.StatusLine.Text = if ($retryResult) { "失败文件已补充完成，本次下载成功 $($Payload.retry_failed.recovered_files) 个。" } else { "已输出 $outputFiles 个文件。" }
+        } elseif ($Payload.status -eq 'paused' -or $ExitCode -eq 11) {
+            $ui.StartButton.Content = '开始新 Dump'
+            $ui.ResultStatus.Text = '任务已暂停'
+            $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
+            $ui.StatusLine.Text = '游戏连接已中断；重新打开游戏并进入目标服务器后，点击“继续 Dump”。'
         } elseif ($Payload.status -eq 'partial' -or $ExitCode -eq 10) {
             $ui.ResultStatus.Text = if ($retryResult) { '补充完成，仍需检查' } else { '完成，需检查' }
             $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
@@ -599,7 +626,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -1196,6 +1223,7 @@
             $callbackUi.ResourceSelectionText.ToolTip = ($callbackState.SelectedResources -join [Environment]::NewLine)
             $callbackUi.ResourceSelectionText.Foreground = (Get-CkThemeBrush '#54E0A9')
             $callbackUi.ResourceCount.Text = [string]$selectedCount
+            $callbackUi.StartButton.Content = '开始服务器 Dump'
             $callbackUi.StartButton.IsEnabled = $true
             $callbackUi.ResultStatus.Text = '资源已确认'
             $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
@@ -1217,7 +1245,10 @@
     }
 
     function Start-ServerDump {
-        param([string]$RetryReportPath = '')
+        param(
+            [string]$RetryReportPath = '',
+            [string]$ResumeSessionPath = ''
+        )
 
         if ($state.DependencyInstallProcess) {
             try {
@@ -1238,28 +1269,45 @@
             if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "服务器 Dump 组件不完整，缺少: $relative" }
         }
 
+        if ($RetryReportPath -and $ResumeSessionPath) { throw '补充失败下载和继续 Dump 不能同时使用。' }
+        $resumeInfo = $null
+        if ($ResumeSessionPath) {
+            if (-not (Test-Path -LiteralPath $ResumeSessionPath -PathType Leaf)) { throw "Dump 任务状态不存在: $ResumeSessionPath" }
+            try { $resumeInfo = Get-Content -LiteralPath $ResumeSessionPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { throw "无法读取 Dump 任务状态: $($_.Exception.Message)" }
+            if (-not $resumeInfo -or [string]$resumeInfo.command -ne 'server-dump') { throw 'Dump 任务状态格式无效。' }
+        }
         $retryInfo = if ($RetryReportPath) { & $getRetryReportInfoAction $RetryReportPath } else { $null }
         $retryMode = $null -ne $retryInfo
-        if ($retryMode) {
+        $resumeMode = $null -ne $resumeInfo
+        if ($resumeMode) {
+            $ui.TargetBox.Text = [string]$resumeInfo.target
+            $ui.OutputBox.Text = [string]$resumeInfo.output
+            $resumeSettings = $resumeInfo.settings
+            if ($resumeSettings) {
+                if ($resumeSettings.PSObject.Properties['download_stream']) { $ui.DownloadStreamBox.IsChecked = [bool]$resumeSettings.download_stream }
+                if ($resumeSettings.PSObject.Properties['fxap_decrypt']) { $ui.DecryptFxapBox.IsChecked = [bool]$resumeSettings.fxap_decrypt }
+                if ($resumeSettings.PSObject.Properties['vertex_fix']) { $ui.VertexFixBox.IsChecked = [bool]$resumeSettings.vertex_fix }
+            }
+        } elseif ($retryMode) {
             $ui.TargetBox.Text = [string]$retryInfo.Target
             $ui.OutputBox.Text = [string]$retryInfo.Output
             $ui.DecryptFxapBox.IsChecked = -not [bool]$retryInfo.RawMode
             $ui.VertexFixBox.IsChecked = $false
         }
 
-        $target = if ($retryMode) { [string]$retryInfo.Target } else { $ui.TargetBox.Text.Trim() }
+        $target = if ($resumeMode) { [string]$resumeInfo.target } elseif ($retryMode) { [string]$retryInfo.Target } else { $ui.TargetBox.Text.Trim() }
         if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
         if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
 
-        if (-not $retryMode -and ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count)) {
+        if (-not $retryMode -and -not $resumeMode -and ($state.ResourceTarget -ne $target -or -not @($state.SelectedResources).Count)) {
             throw '请先点击“获取资源清单”，在菜单中确认要 Dump 的资源。'
         }
         # An if-expression enumerates its output, which turns a one-item array into a scalar.
         $selectedResources = @()
-        if (-not $retryMode) { $selectedResources = @($state.SelectedResources) }
-        $decryptFxapRequested = if ($retryMode) { -not [bool]$retryInfo.RawMode } else { [bool]$ui.DecryptFxapBox.IsChecked }
+        if (-not $retryMode -and -not $resumeMode) { $selectedResources = @($state.SelectedResources) }
+        $decryptFxapRequested = if ($resumeMode) { [bool]$ui.DecryptFxapBox.IsChecked } elseif ($retryMode) { -not [bool]$retryInfo.RawMode } else { [bool]$ui.DecryptFxapBox.IsChecked }
         $downloadStreamRequested = [bool]$ui.DownloadStreamBox.IsChecked
         $vertexFixRequested = if ($retryMode) { $false } else { [bool]$ui.VertexFixBox.IsChecked }
         $autoOpenRequested = [bool]$ui.AutoOpenBox.IsChecked
@@ -1305,11 +1353,29 @@
             throw 'Java 不可用，请先在页面顶部选择 Java 目录；最低 Java 8，推荐 Java 17。'
         }
 
-        $runDir = Join-Path $state.ReportRoot ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
-        New-Item -ItemType Directory -Force -Path $runDir | Out-Null
-        $reportPath = Join-Path $runDir 'report.json'
+        if (-not $ResumeSessionPath -and $state.ResumeSessionPath -and (Test-Path -LiteralPath $state.ResumeSessionPath -PathType Leaf)) {
+            try {
+                $oldSession = Get-Content -LiteralPath $state.ResumeSessionPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ([string]$oldSession.status -in @('running', 'paused')) {
+                    $oldSession.status = 'abandoned'
+                    $oldSession.updated_at = (Get-Date).ToString('s')
+                    [IO.File]::WriteAllText($state.ResumeSessionPath, ($oldSession | ConvertTo-Json -Depth 20), (New-Object Text.UTF8Encoding($false)))
+                }
+            } catch { }
+        }
+
+        if ($resumeMode) {
+            $sessionPath = [IO.Path]::GetFullPath($ResumeSessionPath)
+            $runDir = Split-Path -Parent $sessionPath
+            $reportPath = if ($resumeInfo.report_path) { [IO.Path]::GetFullPath([string]$resumeInfo.report_path) } else { Join-Path $runDir 'report.json' }
+        } else {
+            $runDir = Join-Path $state.ReportRoot ((Get-Date -Format 'yyyyMMdd-HHmmss-fff') + '-' + [Guid]::NewGuid().ToString('N').Substring(0, 6))
+            New-Item -ItemType Directory -Force -Path $runDir | Out-Null
+            $reportPath = Join-Path $runDir 'report.json'
+        }
+        $sessionPath = if ($resumeMode) { $sessionPath } else { Join-Path $runDir 'session.json' }
         $selectionPath = ''
-        if (-not $retryMode) {
+        if (-not $retryMode -and -not $resumeMode) {
             $selectionPath = Join-Path $runDir 'selected-resources.json'
             $selectionJson = & $convertResourceSelectionJsonAction -Target $target -Resources @($selectedResources)
             [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
@@ -1324,14 +1390,19 @@
             '--min-free-gb', '5',
             '--non-interactive'
         )
-        if ($retryMode) { $args += @('--retry-failed-report', [string]$retryInfo.Path) } else { $args += @('--resources-file', $selectionPath) }
+        if ($resumeMode) { $args += @('--resume-session', $sessionPath) }
+        elseif ($retryMode) { $args += @('--retry-failed-report', [string]$retryInfo.Path) }
+        else { $args += @('--resources-file', $selectionPath) }
+        $args += @('--session-file', $sessionPath)
         if (-not $downloadStreamRequested) { $args += '--no-download-stream' }
         if ($decryptFxapRequested) { $args += @('--java', $java) } else { $args += '--no-fxap-decrypt' }
         if ($ui.KeepTempBox.IsChecked) { $args += '--keep-temp' }
         if ($vertexFixRequested) { $args += '--vertex-fix' }
 
         $state.CancelRequested = $false
-        $state.Operation = if ($retryMode) { 'retry-download' } else { 'dump' }
+        $state.Operation = if ($resumeMode) { 'resume-dump' } elseif ($retryMode) { 'retry-download' } else { 'dump' }
+        $state.ResumeSessionPath = if ($retryMode) { '' } else { [IO.Path]::GetFullPath($sessionPath) }
+        $ui.StartButton.Content = '开始服务器 Dump'
         $state.ReportPath = ''
         $state.StartedAt = Get-Date
         $logFlushTimer.Stop()
@@ -1342,7 +1413,7 @@
         $streamPolicy = if ($downloadStreamRequested) { '下载 stream 文件' } else { '跳过 stream 文件' }
         $fxapPolicy = if ($decryptFxapRequested) { '解密 FXAP' } else { '不解密；完整保留 .fxap、加密文件、脚本及目录结构' }
         $vertexPolicy = if ($vertexFixRequested) { '已启用；仅复制成功解密的 FXAP 完整资源并修复副本' } else { '未启用' }
-        $operationText = if ($retryMode) { "开始补充失败下载...`r`n来源报告: $($retryInfo.Path)`r`n失败文件: $($retryInfo.FailedCount) 个" } else { '开始服务器 Dump...' }
+        $operationText = if ($resumeMode) { "继续服务器 Dump...`r`n任务状态: $sessionPath" } elseif ($retryMode) { "开始补充失败下载...`r`n来源报告: $($retryInfo.Path)`r`n失败文件: $($retryInfo.FailedCount) 个" } else { '开始服务器 Dump...' }
         $ui.LogBox.Text = "$operationText`r`n目标: $target`r`n输出: $outputPath`r`n存储: $tempPolicy；输出盘剩余 $availableFreeText；至少保留 $minimumFreeGB GB。`r`n流文件: $streamPolicy。`r`nFXAP 处理: $fxapPolicy。`r`n模型修复: $vertexPolicy。"
         & $setRunningAction $true
 
@@ -1423,9 +1494,11 @@
                 & $callbackShowResult $payload $exitCode
             } else {
                 $callbackUi.ProgressBar.Value = 94
-                $callbackUi.ResultStatus.Text = '结果解析失败'
-                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#EF6B73')
-                $callbackUi.StatusLine.Text = "进程退出码: $exitCode；dump-tool 没有返回有效 JSON。"
+                $canResume = $callbackState.ResumeSessionPath -and (Test-Path -LiteralPath $callbackState.ResumeSessionPath -PathType Leaf)
+                if ($canResume) { $callbackUi.StartButton.Content = '开始新 Dump' }
+                $callbackUi.ResultStatus.Text = if ($canResume) { '任务已暂停' } else { '结果解析失败' }
+                $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush $(if ($canResume) { '#F4B860' } else { '#EF6B73' }))
+                $callbackUi.StatusLine.Text = if ($canResume) { '任务中断；重新打开游戏并点击“继续 Dump”。' } else { "进程退出码: $exitCode；dump-tool 没有返回有效 JSON。" }
                 $callbackUi.LogBox.Text = if ($raw) { $raw } else { 'dump-tool 没有返回输出。' }
             }
 
@@ -1498,6 +1571,11 @@
         if ($choice -ne [System.Windows.MessageBoxResult]::Yes) { return }
         & $startAction ([string]$info.Path)
     }.GetNewClosure()
+    $continueAction = {
+        if (-not $state.ResumeSessionPath) { throw '没有可继续的 Dump 任务。' }
+        if (-not (Test-Path -LiteralPath $state.ResumeSessionPath -PathType Leaf)) { throw 'Dump 任务状态文件不存在，无法继续。' }
+        & $startAction '' ([string]$state.ResumeSessionPath)
+    }.GetNewClosure()
     $stopAction = {
         if (-not $state.Process -or $state.Process.Process.HasExited) { return }
         $state.CancelRequested = $true
@@ -1567,6 +1645,7 @@
     Register-CkButtonAction -Button $ui.OpenReportButton -Action $openReportAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.OpenReportHistoryButton -Action $openReportHistoryAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.RetryFailedButton -Action $retryFailedAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.ContinueButton -Action $continueAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
