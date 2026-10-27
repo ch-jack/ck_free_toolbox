@@ -24,7 +24,9 @@ namespace CKFreeToolbox
         private const string SmokeTestArgument = "-SmokeTest";
         private const string LauncherPidVariable = "CK_TOOLBOX_LAUNCHER_PID";
         private const string WindowTitleVariable = "CK_TOOLBOX_WINDOW_TITLE";
+#if CK_NO_CAPTURE_PROTECTION
         private const string DisableCaptureProtectionVariable = "CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION";
+#endif
         private const string HostDirectoryName = "process-hosts";
         private const int RandomNameBytes = 16;
 

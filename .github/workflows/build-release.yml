@@ -216,14 +216,21 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $launchers = @(Get-ChildItem -LiteralPath (Get-Location) -File -Filter '*.exe')
-          $normalLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱.exe' })
-          $remoteLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱-远程.exe' })
-          $adminLaunchers = @($launchers | Where-Object { $_.Name -eq 'CK免费工具箱-管理员.exe' })
+          $adminLaunchers = @()
+          $remoteLaunchers = @()
+          foreach ($launcher in $launchers) {
+            $raw = [IO.File]::ReadAllBytes($launcher.FullName)
+            $text = [Text.Encoding]::ASCII.GetString($raw) + [Text.Encoding]::Unicode.GetString($raw)
+            if ($text.Contains('requireAdministrator')) { $adminLaunchers += $launcher }
+            if ($text.Contains('CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION')) { $remoteLaunchers += $launcher }
+          }
+          $adminPath = if ($adminLaunchers.Count -eq 1) { $adminLaunchers[0].FullName } else { '' }
+          $remotePath = if ($remoteLaunchers.Count -eq 1) { $remoteLaunchers[0].FullName } else { '' }
+          $normalLaunchers = @($launchers | Where-Object { $_.FullName -ne $adminPath -and $_.FullName -ne $remotePath })
           if ($normalLaunchers.Count -ne 1 -or $remoteLaunchers.Count -ne 1 -or $adminLaunchers.Count -ne 1 -or $launchers.Count -ne 3) {
             throw 'Expected normal, remote, and administrator launcher EXEs.'
           }
           $launcherPath = $normalLaunchers[0].FullName
-          $remotePath = $remoteLaunchers[0].FullName
           $adminRaw = [IO.File]::ReadAllBytes($adminLaunchers[0].FullName)
           $adminBytes = [Text.Encoding]::ASCII.GetString($adminRaw) + [Text.Encoding]::Unicode.GetString($adminRaw)
           if (-not $adminBytes.Contains('requireAdministrator')) {
@@ -307,17 +314,24 @@ jobs:
           if ([string]$manifest.flavor -ne 'standard') {
             throw "Expected standard package flavor, found: $($manifest.flavor)"
           }
-          $adminExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter 'CK免费工具箱-管理员.exe')
+          $rootExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter '*.exe')
+          $adminExecutables = @()
+          $remoteExecutables = @()
+          foreach ($executable in $rootExecutables) {
+            $raw = [IO.File]::ReadAllBytes($executable.FullName)
+            $text = [Text.Encoding]::ASCII.GetString($raw) + [Text.Encoding]::Unicode.GetString($raw)
+            if ($text.Contains('requireAdministrator')) { $adminExecutables += $executable }
+            if ($text.Contains('CK_TOOLBOX_DISABLE_CAPTURE_PROTECTION')) { $remoteExecutables += $executable }
+          }
           if ($adminExecutables.Count -ne 1) {
             throw 'Package is missing the administrator launcher EXE.'
           }
-          $remoteExecutables = @(Get-ChildItem -LiteralPath $package -File -Filter 'CK免费工具箱-远程.exe')
           if ($remoteExecutables.Count -ne 1) {
             throw 'Package is missing the remote launcher EXE.'
           }
           $required = @(
             [string]$manifest.entry,
-            'CK免费工具箱-管理员.exe',
+            $adminExecutables[0].Name,
             [string]$manifest.remoteEntry,
             'CKFreeToolbox.ps1',
             'app\modules\ToolboxConfig.psm1',
