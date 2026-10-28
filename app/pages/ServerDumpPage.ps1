@@ -702,7 +702,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--auto-open') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -782,6 +782,7 @@
         if ($decryptRequested) { $arguments += @('--java', [string]$state.JavaPath) } else { $arguments += '--no-fxap-decrypt' }
         if ([bool]$ui.KeepTempBox.IsChecked) { $arguments += '--keep-temp' }
         if ([bool]$ui.VertexFixBox.IsChecked) { $arguments += '--vertex-fix' }
+        if ([bool]$ui.AutoOpenBox.IsChecked) { $arguments += '--auto-open' }
 
         $process = Start-Process -FilePath ([string]$state.PythonPath) -ArgumentList ([string](& Join-CkArgumentList -Arguments $arguments)) -WorkingDirectory $componentCopy -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError $errorLogPath -PassThru -ErrorAction Stop
         if ($process) { $process.Dispose() }
