@@ -503,6 +503,13 @@
             $ui.OpenReportButton.IsEnabled = $true
         }
         $active = $status -in @('waiting-game','running','paused')
+        if ($active) {
+            $silentPid = 0
+            try { $silentPid = [int]$payload.pid } catch { }
+            if ($silentPid -le 0 -or -not (Get-Process -Id $silentPid -ErrorAction SilentlyContinue)) {
+                $active = $false
+            }
+        }
         if (-not $state.Process) {
             $ui.SilentDumpButton.IsEnabled = -not $active -and $ui.EnvironmentStatus.Text -eq '运行环境就绪'
             if ($active) {
