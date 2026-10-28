@@ -709,7 +709,17 @@
 
     function Start-SilentServerDump {
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
+        $target = $ui.TargetBox.Text.Trim()
+        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
+        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+            throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
+        }
+
         $existing = & $getSilentStatusAction
+        $resumeMode = $false
+        $resumeSessionPath = ''
+        $resumeRunRoot = ''
+        $resumeComponentCopy = ''
         if ($existing -and [string]$existing.Payload.status -in @('waiting-game','running','paused')) {
             $existingPid = 0
             try { $existingPid = [int]$existing.Payload.pid } catch { }
@@ -717,13 +727,22 @@
                 throw '已有静默 Dump 任务正在运行。'
             }
         }
+        if ($existing -and [string]$existing.Payload.status -in @('error','failed')) {
+            $previousTarget = ([string]$existing.Payload.target).Trim()
+            $candidateSession = [string]$existing.Payload.session_file
+            if ($previousTarget -and $candidateSession -and $previousTarget.Equals($target, [StringComparison]::OrdinalIgnoreCase) -and (Test-Path -LiteralPath $candidateSession -PathType Leaf)) {
+                $candidateRunRoot = Split-Path -Parent $candidateSession
+                $candidateComponentCopy = Join-Path $candidateRunRoot 'dump-tool'
+                if (Test-Path -LiteralPath (Join-Path $candidateComponentCopy 'auto.py') -PathType Leaf) {
+                    $resumeMode = $true
+                    $resumeSessionPath = [IO.Path]::GetFullPath($candidateSession)
+                    $resumeRunRoot = $candidateRunRoot
+                    $resumeComponentCopy = $candidateComponentCopy
+                }
+            }
+        }
 
         & $assertResourceSelectionSupportAction
-        $target = $ui.TargetBox.Text.Trim()
-        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
-        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
-            throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
-        }
         if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
         if (-not $state.PythonPath -or -not (Test-Path -LiteralPath $state.PythonPath -PathType Leaf)) { throw 'Python 不可用，请先在页面顶部完成 Python 设置。' }
         if (-not $state.DependenciesOk) { throw ([string]$state.DependenciesReason) }
@@ -732,66 +751,88 @@
         if ([bool]$ui.VertexFixBox.IsChecked -and -not (Get-CkDotNet8Info).Ok) { throw '.NET 8 Runtime 不可用，启用模型修复前请先安装 .NET 8 Runtime。' }
         if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolDir -PathType Container)) { throw '服务器 Dump 组件未安装。' }
 
-        $outputPath = $ui.OutputBox.Text.Trim()
+        $outputPath = if ($resumeMode) { [string]$existing.Payload.output } else { $ui.OutputBox.Text.Trim() }
         if (-not $outputPath) { throw '请选择输出目录。' }
         $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
         $outputRoot = [IO.Path]::GetPathRoot($outputPath).TrimEnd('\')
         if ($outputPath.Equals($outputRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '不能直接输出到磁盘根目录。' }
         New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
 
-        $runRoot = Join-Path $state.SilentRoot ([Guid]::NewGuid().ToString('N'))
-        $componentCopy = Join-Path $runRoot 'dump-tool'
-        New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
-        Copy-Item -LiteralPath $Context.Paths.DumpToolDir -Destination $componentCopy -Recurse -Force
+        if ($resumeMode) {
+            $runRoot = $resumeRunRoot
+            $componentCopy = $resumeComponentCopy
+            $sessionPath = $resumeSessionPath
+            $statusPath = Join-Path $runRoot 'status.json'
+            $reportPath = if ($existing.Payload.report_file) { [IO.Path]::GetFullPath([string]$existing.Payload.report_file) } else { Join-Path $runRoot 'report.json' }
+            $logPath = Join-Path $runRoot 'dump-resume.log'
+            $errorLogPath = Join-Path $runRoot 'dump-resume-error.log'
+            $resourcePattern = [string]$existing.Payload.resources
+            if (-not $resourcePattern) { $resourcePattern = '*' }
+            $arguments = @(
+                '-u', (Join-Path $componentCopy 'auto.py'),
+                '--resume-session', $sessionPath,
+                '--status-file', $statusPath,
+                '--wait-for-game',
+                '--non-interactive'
+            )
+        } else {
+            $runRoot = Join-Path $state.SilentRoot ([Guid]::NewGuid().ToString('N'))
+            $componentCopy = Join-Path $runRoot 'dump-tool'
+            New-Item -ItemType Directory -Force -Path $runRoot | Out-Null
+            Copy-Item -LiteralPath $Context.Paths.DumpToolDir -Destination $componentCopy -Recurse -Force
 
-        $statusPath = Join-Path $runRoot 'status.json'
-        $sessionPath = Join-Path $runRoot 'session.json'
-        $reportPath = Join-Path $runRoot 'report.json'
-        $logPath = Join-Path $runRoot 'dump.log'
-        $errorLogPath = Join-Path $runRoot 'dump-error.log'
-        $status = [ordered]@{
-            schemaVersion = 1
-            status = 'waiting-game'
-            percent = 0
-            stage = 'waiting-game'
-            message = '等待 FiveM 进服。'
-            target = $target
-            output = $outputPath
-            session_file = $sessionPath
-            report_file = $reportPath
-            pid = 0
-            updated_at = (Get-Date).ToString('o')
+            $statusPath = Join-Path $runRoot 'status.json'
+            $sessionPath = Join-Path $runRoot 'session.json'
+            $reportPath = Join-Path $runRoot 'report.json'
+            $logPath = Join-Path $runRoot 'dump.log'
+            $errorLogPath = Join-Path $runRoot 'dump-error.log'
+            $status = [ordered]@{
+                schemaVersion = 1
+                status = 'waiting-game'
+                percent = 0
+                stage = 'waiting-game'
+                message = '等待 FiveM 进服。'
+                target = $target
+                output = $outputPath
+                session_file = $sessionPath
+                report_file = $reportPath
+                pid = 0
+                updated_at = (Get-Date).ToString('o')
+            }
+            [IO.File]::WriteAllText($statusPath, ($status | ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding($false)))
+
+            $resourcePattern = $ui.ResourcesBox.Text.Trim()
+            if (-not $resourcePattern) { $resourcePattern = '*' }
+            $arguments = @(
+                '-u', (Join-Path $componentCopy 'auto.py'),
+                $target,
+                '--token-choice', '1',
+                '--resources', $resourcePattern,
+                '--output', $outputPath,
+                '--report', $reportPath,
+                '--session-file', $sessionPath,
+                '--status-file', $statusPath,
+                '--wait-for-game',
+                '--non-interactive'
+            )
+            if (-not [bool]$ui.DownloadStreamBox.IsChecked) { $arguments += '--no-download-stream' }
+            if ($decryptRequested) { $arguments += @('--java', [string]$state.JavaPath) } else { $arguments += '--no-fxap-decrypt' }
+            if ([bool]$ui.KeepTempBox.IsChecked) { $arguments += '--keep-temp' }
+            if ([bool]$ui.VertexFixBox.IsChecked) { $arguments += '--vertex-fix' }
         }
-        [IO.File]::WriteAllText($statusPath, ($status | ConvertTo-Json -Depth 6), (New-Object Text.UTF8Encoding($false)))
-
-        $resourcePattern = $ui.ResourcesBox.Text.Trim()
-        if (-not $resourcePattern) { $resourcePattern = '*' }
-        $arguments = @(
-            '-u', (Join-Path $componentCopy 'auto.py'),
-            $target,
-            '--token-choice', '1',
-            '--resources', $resourcePattern,
-            '--output', $outputPath,
-            '--report', $reportPath,
-            '--session-file', $sessionPath,
-            '--status-file', $statusPath,
-            '--wait-for-game',
-            '--non-interactive'
-        )
-        if (-not [bool]$ui.DownloadStreamBox.IsChecked) { $arguments += '--no-download-stream' }
-        if ($decryptRequested) { $arguments += @('--java', [string]$state.JavaPath) } else { $arguments += '--no-fxap-decrypt' }
-        if ([bool]$ui.KeepTempBox.IsChecked) { $arguments += '--keep-temp' }
-        if ([bool]$ui.VertexFixBox.IsChecked) { $arguments += '--vertex-fix' }
-        if ([bool]$ui.AutoOpenBox.IsChecked) { $arguments += '--auto-open' }
+        $autoOpenScript = Join-Path $componentCopy 'auto.py'
+        if ([bool]$ui.AutoOpenBox.IsChecked -and (Test-Path -LiteralPath $autoOpenScript -PathType Leaf) -and [IO.File]::ReadAllText($autoOpenScript, [Text.Encoding]::UTF8).Contains('--auto-open')) {
+            $arguments += '--auto-open'
+        }
 
         $process = Start-Process -FilePath ([string]$state.PythonPath) -ArgumentList ([string](& Join-CkArgumentList -Arguments $arguments)) -WorkingDirectory $componentCopy -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError $errorLogPath -PassThru -ErrorAction Stop
         if ($process) { $process.Dispose() }
         $state.SilentStatusPath = $statusPath
-        $ui.ResultStatus.Text = '等待 FiveM 进服'
+        $ui.ResultStatus.Text = if ($resumeMode) { '继续静默 Dump' } else { '等待 FiveM 进服' }
         $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#C4A7FF')
         $ui.ProgressBar.Value = 0
-        $ui.StatusLine.Text = '静默 Dump 已启动；工具箱可以关闭，进入服务器后会自动继续。'
-        $ui.LogBox.Text = "静默 Dump 已启动。`r`n目标: $target`r`n资源匹配: $resourcePattern`r`n日志: $logPath`r`n报告: $reportPath"
+        $ui.StatusLine.Text = if ($resumeMode) { '正在继续上一次静默 Dump；工具箱可以关闭，进入服务器后会自动继续。' } else { '静默 Dump 已启动；工具箱可以关闭，进入服务器后会自动继续。' }
+        $ui.LogBox.Text = "$(if ($resumeMode) { '继续上一次静默 Dump' } else { '静默 Dump 已启动' })。`r`n目标: $target`r`n资源匹配: $resourcePattern`r`n日志: $logPath`r`n报告: $reportPath"
         & $updateSilentStatusAction
     }
 
