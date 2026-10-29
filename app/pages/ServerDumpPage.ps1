@@ -123,7 +123,7 @@
         <Grid Margin="0,0,0,10">
           <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="104"/></Grid.ColumnDefinitions>
           <StackPanel>
-            <TextBlock Text="cfx.re link 或 IP:端口" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
+            <TextBlock Text="cfx.re link 或 IP:端口（可留空自动识别）" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
             <TextBox x:Name="TargetBox" AutomationProperties.AutomationId="ServerDump.TargetBox" Height="36"/>
           </StackPanel>
           <Button x:Name="PasteExampleButton" AutomationProperties.AutomationId="ServerDump.PasteExampleButton" Grid.Column="1" Content="示例格式" Height="36" Margin="7,22,0,0" ToolTip="轮流填入 cfx.re 与 IP:端口示例"/>
@@ -709,7 +709,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--auto-open') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--auto-open') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file') -or -not $scriptText.Contains('--auto-target')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -717,8 +717,8 @@
     function Start-SilentServerDump {
         if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器 Dump 任务正在运行。' }
         $target = $ui.TargetBox.Text.Trim()
-        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
-        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+        $autoTarget = [string]::IsNullOrWhiteSpace($target)
+        if (-not $autoTarget -and $target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
 
@@ -810,9 +810,13 @@
 
             $resourcePattern = $ui.ResourcesBox.Text.Trim()
             if (-not $resourcePattern) { $resourcePattern = '*' }
-            $arguments = @(
-                '-u', (Join-Path $componentCopy 'auto.py'),
-                $target,
+            $arguments = @('-u', (Join-Path $componentCopy 'auto.py'))
+            if ($autoTarget) {
+                $arguments += '--auto-target'
+            } else {
+                $arguments += $target
+            }
+            $arguments += @(
                 '--token-choice', '1',
                 '--resources', $resourcePattern,
                 '--output', $outputPath,
@@ -835,11 +839,11 @@
         $process = Start-Process -FilePath ([string]$state.PythonPath) -ArgumentList ([string](& Join-CkArgumentList -Arguments $arguments)) -WorkingDirectory $componentCopy -WindowStyle Hidden -RedirectStandardOutput $logPath -RedirectStandardError $errorLogPath -PassThru -ErrorAction Stop
         if ($process) { $process.Dispose() }
         $state.SilentStatusPath = $statusPath
-        $ui.ResultStatus.Text = if ($resumeMode) { '继续静默 Dump' } else { '等待 FiveM 进服' }
+        $ui.ResultStatus.Text = if ($resumeMode) { '继续静默 Dump' } elseif ($autoTarget) { '等待并自动识别 FiveM' } else { '等待 FiveM 进服' }
         $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#C4A7FF')
         $ui.ProgressBar.Value = 0
-        $ui.StatusLine.Text = if ($resumeMode) { '正在继续上一次静默 Dump；工具箱可以关闭，进入服务器后会自动继续。' } else { '静默 Dump 已启动；工具箱可以关闭，进入服务器后会自动继续。' }
-        $ui.LogBox.Text = "$(if ($resumeMode) { '继续上一次静默 Dump' } else { '静默 Dump 已启动' })。`r`n目标: $target`r`n资源匹配: $resourcePattern`r`n日志: $logPath`r`n报告: $reportPath"
+        $ui.StatusLine.Text = if ($resumeMode) { '正在继续上一次静默 Dump；工具箱可以关闭，进入服务器后会自动继续。' } elseif ($autoTarget) { '静默 Dump 已启动；等待进入服务器后自动扫描并验证地址。' } else { '静默 Dump 已启动；工具箱可以关闭，进入服务器后会自动继续。' }
+        $ui.LogBox.Text = "$(if ($resumeMode) { '继续上一次静默 Dump' } else { '静默 Dump 已启动' })。`r`n目标: $(if ($autoTarget) { '当前 FiveM（自动识别）' } else { $target })`r`n资源匹配: $resourcePattern`r`n日志: $logPath`r`n报告: $reportPath"
         & $updateSilentStatusAction
     }
 
@@ -1300,8 +1304,8 @@
         & $assertResourceSelectionSupportAction
 
         $target = $ui.TargetBox.Text.Trim()
-        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
-        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+        $autoTarget = [string]::IsNullOrWhiteSpace($target)
+        if (-not $autoTarget -and $target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
         if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
@@ -1323,18 +1327,19 @@
         $logFlushTimer.Stop()
         [void]$pendingLog.Clear()
         $newLine = [Environment]::NewLine
-        $ui.LogBox.Text = "正在获取服务器资源清单..." + $newLine + "目标: $target" + $newLine + "此步骤不会创建输出或开始 Dump。"
+        $targetText = if ($autoTarget) { '当前 FiveM（自动扫描并验证）' } else { $target }
+        $ui.LogBox.Text = "正在获取服务器资源清单..." + $newLine + "目标: $targetText" + $newLine + "此步骤不会创建输出或开始 Dump。"
         & $setRunningAction $true
         $ui.ResultStatus.Text = '获取资源清单'
-        $ui.StatusLine.Text = '正在扫描 token 并请求服务器资源配置。'
+        $ui.StatusLine.Text = if ($autoTarget) { '正在扫描当前 FiveM 地址、验证 Token 并请求资源配置。' } else { '正在扫描 token 并请求服务器资源配置。' }
 
-        $args = @(
-            '-u', $Context.Paths.DumpToolScript,
-            $target,
-            '--token-choice', '1',
-            '--list-resources',
-            '--non-interactive'
-        )
+        $args = @('-u', $Context.Paths.DumpToolScript)
+        if ($autoTarget) {
+            $args += '--auto-target'
+        } else {
+            $args += $target
+        }
+        $args += @('--token-choice', '1', '--list-resources', '--non-interactive')
         $output = New-Object Text.StringBuilder
         $callbackOutput = $output
         $callbackState = $state
@@ -1429,8 +1434,14 @@
                 return
             }
 
+            $resolvedTarget = [string]$payload.target
+            if ($resolvedTarget) {
+                $callbackUi.TargetBox.Text = $resolvedTarget
+                $callbackTarget = $resolvedTarget
+                Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 已自动识别并验证服务器: $resolvedTarget"
+            }
             $callbackUi.ResourcesBox.Text = [string]$selection.Pattern
-            $callbackState.ResourceTarget = $callbackTarget
+            $callbackState.ResourceTarget = if ($resolvedTarget) { $resolvedTarget } else { $callbackTarget }
             $callbackState.ResourceNames = @($payload.resources | ForEach-Object { [string]$_.name })
             $callbackState.SelectedResources = @($selection.Resources)
             $selectedCount = $callbackState.SelectedResources.Count
@@ -1517,8 +1528,9 @@
         }
 
         $target = if ($resumeMode) { [string]$resumeInfo.target } elseif ($retryMode) { [string]$retryInfo.Target } else { $ui.TargetBox.Text.Trim() }
-        if (-not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
-        if ($target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+        $autoTarget = [string]::IsNullOrWhiteSpace($target) -and -not $resumeMode -and -not $retryMode
+        if (-not $autoTarget -and -not $target) { throw '请输入 cfx.re link 或 IP:端口。' }
+        if (-not $autoTarget -and $target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
             throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
         }
 
@@ -1602,15 +1614,13 @@
             [IO.File]::WriteAllText($selectionPath, $selectionJson, (New-Object Text.UTF8Encoding($false)))
         }
 
-        $args = @(
-            '-u', $Context.Paths.DumpToolScript,
-            $target,
-            '--token-choice', '1',
-            '--output', $outputPath,
-            '--report', $reportPath,
-            '--min-free-gb', '5',
-            '--non-interactive'
-        )
+        $args = @('-u', $Context.Paths.DumpToolScript)
+        if ($autoTarget) {
+            $args += '--auto-target'
+        } else {
+            $args += $target
+        }
+        $args += @('--token-choice', '1', '--output', $outputPath, '--report', $reportPath, '--min-free-gb', '5', '--non-interactive')
         if ($resumeMode) { $args += @('--resume-session', $sessionPath) }
         elseif ($retryMode) { $args += @('--retry-failed-report', [string]$retryInfo.Path) }
         else { $args += @('--resources-file', $selectionPath) }
