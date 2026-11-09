@@ -33,8 +33,11 @@ function Enable-CkWindowCaptureProtection {
             $handle = (New-Object System.Windows.Interop.WindowInteropHelper($Window)).Handle
             if ($handle -eq [IntPtr]::Zero) { return }
 
-            # WDA_MONITOR keeps the window visible locally and black in normal captures.
-            [void][CkWindowDisplayAffinityNative]::SetWindowDisplayAffinity($handle, [uint32]1)
+            # WDA_EXCLUDEFROMCAPTURE omits the window on Windows 10 2004+;
+            # older Windows versions treat it as WDA_MONITOR (black in captures).
+            if (-not [CkWindowDisplayAffinityNative]::SetWindowDisplayAffinity($handle, [uint32]0x11)) {
+                [void][CkWindowDisplayAffinityNative]::SetWindowDisplayAffinity($handle, [uint32]1)
+            }
         } catch { }
     }.GetNewClosure()
 
