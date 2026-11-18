@@ -17,6 +17,8 @@
         EnvironmentChecked = $false
         Operation = ''
         ResumeSessionPath = ''
+        FileListPath = ''
+        FileListPayload = $null
         ResourceListPayload = $null
         ResourceTarget = ''
         ResourceNames = @()
@@ -142,13 +144,14 @@
           <TextBlock Text="存储说明：临时文件默认跟随输出盘，并在每个资源完成所选处理后立即清理；请至少保留 5 GB 可用空间。勾选“保留临时目录”会持续占用空间。" TextWrapping="Wrap" Foreground="#D8B968" FontSize="11"/>
         </Border>
         <Grid>
-          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="116"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
+          <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="116"/><ColumnDefinition Width="116"/><ColumnDefinition Width="220"/></Grid.ColumnDefinitions>
           <StackPanel>
             <TextBlock Text="资源匹配" Foreground="#8B9099" FontSize="12" Margin="0,0,0,5"/>
             <TextBox x:Name="ResourcesBox" AutomationProperties.AutomationId="ServerDump.ResourcesBox" Height="36" Text="*" ToolTip="支持 all、序号、精确资源名以及 *、? 通配符；多个条件用逗号分隔"/>
           </StackPanel>
           <Button x:Name="LoadResourcesButton" AutomationProperties.AutomationId="ServerDump.LoadResourcesButton" Grid.Column="1" Content="获取资源清单" Height="36" Margin="8,22,0,0" Background="#173055" Foreground="#58A6FF"/>
-          <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="10,23,0,0">
+          <Button x:Name="DownloadFileListButton" AutomationProperties.AutomationId="ServerDump.DownloadFileListButton" Grid.Column="2" Content="下载文件列表" Height="36" Margin="8,22,0,0" Background="#173055" Foreground="#58A6FF" ToolTip="只获取服务器文件列表，不下载实际文件；完成后自动打开输出目录"/>
+          <StackPanel Grid.Column="3" Orientation="Horizontal" Margin="10,23,0,0">
             <CheckBox x:Name="KeepTempBox" AutomationProperties.AutomationId="ServerDump.KeepTempBox" Content="保留临时目录"/>
           </StackPanel>
         </Grid>
@@ -223,7 +226,7 @@
     $root = Import-CkXaml $xaml
     $ui = Get-CkNamedControls -Root $root -Names @(
         'EnvironmentStatus','PythonDot','PythonText','PythonDownloadButton','PythonBrowseButton','JavaDot','JavaText','JavaDownloadButton','JavaBrowseButton','DepsDot','DepsText','InstallDependenciesButton','DotNet8Dot','DotNet8Text','DotNet8DownloadButton','ComponentDot','ComponentText',
-        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','ResourceSelectionText','KeepTempBox','DownloadStreamBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
+        'TargetBox','PasteExampleButton','OutputBox','ChooseOutputButton','OpenOutputButton','ResourcesBox','LoadResourcesButton','DownloadFileListButton','ResourceSelectionText','KeepTempBox','DownloadStreamBox','DecryptFxapBox','VertexFixBox','AutoOpenBox',
         'StartButton','ContinueButton','SilentDumpButton','StopButton','ResultStatus','RetryFailedButton','OpenReportButton','OpenReportHistoryButton','ResourceCount','DownloadedCount',
         'RpfCount','DecryptedCount','OutputFileCount','WarningErrorCount','ProgressBar','StatusLine','SilentStatusText','LogBox'
     )
@@ -440,7 +443,7 @@
     function Set-ServerDumpRunning {
         param([bool]$Running)
 
-        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton,$ui.ContinueButton,$ui.SilentDumpButton)) {
+        foreach ($control in @($ui.TargetBox,$ui.PasteExampleButton,$ui.OutputBox,$ui.ChooseOutputButton,$ui.OpenOutputButton,$ui.ResourcesBox,$ui.LoadResourcesButton,$ui.DownloadFileListButton,$ui.KeepTempBox,$ui.DownloadStreamBox,$ui.DecryptFxapBox,$ui.VertexFixBox,$ui.AutoOpenBox,$ui.PythonDownloadButton,$ui.PythonBrowseButton,$ui.JavaDownloadButton,$ui.JavaBrowseButton,$ui.InstallDependenciesButton,$ui.DotNet8DownloadButton,$ui.RetryFailedButton,$ui.StartButton,$ui.ContinueButton,$ui.SilentDumpButton)) {
             $control.IsEnabled = -not $Running
         }
         if (-not $Running) { $ui.VertexFixBox.IsEnabled = [bool]$ui.DecryptFxapBox.IsChecked }
@@ -709,7 +712,7 @@
 
     function Assert-ServerDumpResourceSelectionSupport {
         $scriptText = [IO.File]::ReadAllText($Context.Paths.DumpToolScript, [Text.Encoding]::UTF8)
-        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--auto-open') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file') -or -not $scriptText.Contains('--auto-target')) {
+        if (-not $scriptText.Contains('--list-resources') -or -not $scriptText.Contains('--list-files') -or -not $scriptText.Contains('--file-list-output') -or -not $scriptText.Contains('--resources-file') -or -not $scriptText.Contains('--vertex-fix') -or -not $scriptText.Contains('--auto-open') -or -not $scriptText.Contains('--no-fxap-decrypt') -or -not $scriptText.Contains('--retry-failed-report') -or -not $scriptText.Contains('--no-download-stream') -or -not $scriptText.Contains('--session-file') -or -not $scriptText.Contains('--resume-session') -or -not $scriptText.Contains('--wait-for-game') -or -not $scriptText.Contains('--status-file') -or -not $scriptText.Contains('--auto-target')) {
             throw '服务器 Dump 组件版本过旧，请先点击页面顶部的“更新组件”。'
         }
     }
@@ -1470,6 +1473,163 @@
         }
     }
 
+    function Start-ServerFileList {
+        if ($state.DependencyInstallProcess) {
+            try {
+                if (-not $state.DependencyInstallProcess.HasExited) { throw 'Python 依赖正在安装，请等待安装窗口完成。' }
+            } catch {
+                if ($_.Exception.Message -eq 'Python 依赖正在安装，请等待安装窗口完成。') { throw }
+            }
+        }
+        if ($state.Process -and -not $state.Process.Process.HasExited) { throw '已有服务器任务正在运行。' }
+        if (-not (Test-Path -LiteralPath $Context.Paths.DumpToolScript -PathType Leaf)) {
+            throw '服务器 Dump 组件未安装，请先点击顶部“安装组件”。'
+        }
+        & $assertResourceSelectionSupportAction
+
+        $target = $ui.TargetBox.Text.Trim()
+        $autoTarget = [string]::IsNullOrWhiteSpace($target)
+        if (-not $autoTarget -and $target -notmatch '^(https?://)?(cfx\.re/join/[A-Za-z0-9]+|servers\.fivem\.net/servers/detail/[A-Za-z0-9]+|\d{1,3}(\.\d{1,3}){3}:\d{1,5})/?$') {
+            throw '目标格式不正确，请输入 cfx.re link 或 IP:端口。'
+        }
+        if (-not $state.EnvironmentChecked) { throw '运行环境仍在检测，请稍后再试。' }
+        $python = [string]$state.PythonPath
+        if (-not $python -or -not (Test-Path -LiteralPath $python -PathType Leaf)) {
+            throw 'Python 不可用，请先在页面顶部完成 Python 设置。'
+        }
+        if (-not $state.DependenciesOk) {
+            $reason = if ($state.DependenciesReason) { [string]$state.DependenciesReason } else { 'Python 依赖未就绪，请执行 pip install -r requirements.txt。' }
+            throw $reason
+        }
+
+        $outputPath = $ui.OutputBox.Text.Trim()
+        if (-not $outputPath) { throw '请选择输出目录。' }
+        $outputPath = [IO.Path]::GetFullPath($outputPath).TrimEnd('\')
+        $outputRoot = [IO.Path]::GetPathRoot($outputPath)
+        $driveRoot = $outputRoot.TrimEnd('\')
+        if ($outputPath.Equals($driveRoot, [StringComparison]::OrdinalIgnoreCase)) { throw '不能直接输出到磁盘根目录。' }
+        New-Item -ItemType Directory -Force -Path $outputPath | Out-Null
+        $fileListName = 'server_file_list_{0}.json' -f (Get-Date -Format 'yyyyMMdd-HHmmss-fff')
+        $fileListPath = Join-Path $outputPath $fileListName
+
+        $state.CancelRequested = $false
+        $state.Operation = 'file-list'
+        $state.FileListPath = ''
+        $state.FileListPayload = $null
+        $logFlushTimer.Stop()
+        [void]$pendingLog.Clear()
+        $newLine = [Environment]::NewLine
+        $targetText = if ($autoTarget) { '当前 FiveM（自动扫描并验证）' } else { $target }
+        $ui.LogBox.Text = "正在获取服务器文件列表..." + $newLine + "目标: $targetText" + $newLine + "输出: $fileListPath" + $newLine + "此步骤不会下载实际资源文件。"
+        & $setRunningAction $true
+        $ui.ResultStatus.Text = '获取文件列表'
+        $ui.StatusLine.Text = if ($autoTarget) { '正在扫描当前 FiveM 地址、验证 Token 并请求文件列表。' } else { '正在扫描 token 并请求服务器文件列表。' }
+
+        $args = @('-u', $Context.Paths.DumpToolScript)
+        if ($autoTarget) {
+            $args += '--auto-target'
+        } else {
+            $args += $target
+        }
+        $args += @('--token-choice', '1', '--list-files', '--file-list-output', $fileListPath, '--non-interactive', '--auto-open')
+        $output = New-Object Text.StringBuilder
+        $callbackOutput = $output
+        $callbackState = $state
+        $callbackUi = $ui
+        $callbackSetRunning = $setRunningAction
+        $callbackShowError = $showPageError
+        $callbackPendingLog = $pendingLog
+        $callbackLogTimer = $logFlushTimer
+        $callbackFlushLog = $flushLogAction
+
+        $onOutput = {
+            param($line)
+            if ($line -and $line.StartsWith('CK_PROGRESS ', [StringComparison]::Ordinal)) {
+                try {
+                    $progress = $line.Substring(12) | ConvertFrom-Json
+                    $callbackUi.ProgressBar.Value = [Math]::Max(0, [Math]::Min(100, [int]$progress.percent))
+                    $callbackUi.StatusLine.Text = [string]$progress.message
+                } catch { }
+                return
+            }
+            if ($line -and $line.StartsWith('CK_FILE_LIST ', [StringComparison]::Ordinal)) {
+                try {
+                    $callbackState.FileListPayload = $line.Substring(13) | ConvertFrom-Json
+                } catch {
+                    $callbackState.FileListPayload = [pscustomobject]@{
+                        status = 'error'
+                        error = "文件列表响应无法解析: $($_.Exception.Message)"
+                    }
+                }
+                return
+            }
+            [void]$callbackOutput.AppendLine($line)
+            if ($line) { [void]$callbackPendingLog.AppendLine($line) }
+        }.GetNewClosure()
+
+        $onProcessError = {
+            param($message)
+            $callbackUi.StatusLine.Text = $message
+        }.GetNewClosure()
+
+        $onExit = {
+            param($exitCode)
+            $callbackLogTimer.Stop()
+            [void](& $callbackFlushLog)
+            $wasCancelled = $callbackState.CancelRequested
+            $callbackState.CancelRequested = $false
+            $callbackState.Process = $null
+            $callbackState.Operation = ''
+            & $callbackSetRunning $false
+
+            if (-not @($callbackState.SelectedResources).Count) { $callbackUi.StartButton.IsEnabled = $false }
+            if ($wasCancelled) {
+                $callbackUi.ResultStatus.Text = '已停止'
+                $callbackUi.StatusLine.Text = '文件列表获取已停止。'
+                return
+            }
+
+            $payload = $callbackState.FileListPayload
+            if (-not $payload) {
+                $raw = $callbackOutput.ToString().Trim()
+                $lines = @($raw -split '\r?\n')
+                for ($i = $lines.Count - 1; $i -ge 0 -and -not $payload; $i--) {
+                    try {
+                        $candidate = $lines[$i] | ConvertFrom-Json
+                        if ($candidate.command -eq 'list-files') { $payload = $candidate }
+                    } catch { }
+                }
+            }
+            if (-not $payload -or $payload.status -ne 'success') {
+                $detail = if ($payload -and $payload.error) { [string]$payload.error } else { "进程退出码: $exitCode" }
+                & $callbackShowError "文件列表获取失败：$detail"
+                return
+            }
+
+            $callbackState.FileListPath = [string]$payload.output
+            $summary = $payload.summary
+            $resourceCount = if ($summary -and $summary.resources -ne $null) { [int]$summary.resources } else { 0 }
+            $fileCount = if ($summary -and $summary.total_files -ne $null) { [int]$summary.total_files } else { 0 }
+            $callbackUi.ProgressBar.Value = 100
+            $callbackUi.ResultStatus.Text = '文件列表已保存'
+            $callbackUi.ResultStatus.Foreground = (Get-CkThemeBrush '#31D69A')
+            $callbackUi.StatusLine.Text = "已保存 $resourceCount 个资源、$fileCount 个文件；输出目录已自动打开。"
+            Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 文件列表 JSON: $($payload.output)"
+            Add-CkLogLine -TextBox $callbackUi.LogBox -Line "[工具箱] 文件列表 TXT: $($payload.text_output)"
+        }.GetNewClosure()
+
+        try {
+            $state.Process = Start-CkLoggedProcess -FileName $python -Arguments $args -WorkingDirectory $Context.Paths.DumpToolDir -Dispatcher $Context.Dispatcher -OnOutput $onOutput -OnExit $onExit -OnError $onProcessError
+            $logFlushTimer.Start()
+        } catch {
+            $state.Operation = ''
+            $logFlushTimer.Stop()
+            [void]$pendingLog.Clear()
+            & $setRunningAction $false
+            throw
+        }
+    }
+
     function Start-ServerDump {
         param(
             [string]$RetryReportPath = '',
@@ -1779,6 +1939,7 @@
     }
 
     $loadResourcesAction = (Get-Command Start-ServerResourceList).ScriptBlock.GetNewClosure()
+    $downloadFileListAction = (Get-Command Start-ServerFileList).ScriptBlock.GetNewClosure()
     $startAction = (Get-Command Start-ServerDump).ScriptBlock.GetNewClosure()
     $runAction = { & $startAction }.GetNewClosure()
     $retryFailedAction = {
@@ -1815,6 +1976,8 @@
         $ui.ResultStatus.Foreground = (Get-CkThemeBrush '#F4B860')
         $ui.StatusLine.Text = if ($state.Operation -eq 'resource-list') {
             '正在停止资源清单获取...'
+        } elseif ($state.Operation -eq 'file-list') {
+            '正在停止文件列表获取...'
         } else {
             '正在停止 Python、RPF 解包和 Java 子进程...'
         }
@@ -1884,6 +2047,7 @@
     Register-CkButtonAction -Button $ui.ContinueButton -Action $continueAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.SilentDumpButton -Action { & $startSilentAction }.GetNewClosure() -OnError $showPageError
     Register-CkButtonAction -Button $ui.LoadResourcesButton -Action $loadResourcesAction -OnError $showPageError
+    Register-CkButtonAction -Button $ui.DownloadFileListButton -Action $downloadFileListAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StartButton -Action $runAction -OnError $showPageError
     Register-CkButtonAction -Button $ui.StopButton -Action $stopAction -OnError $showPageError
 
